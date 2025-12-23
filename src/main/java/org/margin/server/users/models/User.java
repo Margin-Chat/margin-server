@@ -49,6 +49,12 @@ public class User {
     @Column(length = 4096)
     private String encryptedPrivateKey;
 
+    @Column(length = 512)
+    private String salt;
+
+    @Column(length = 512)
+    private String iv;
+
     @Column(name = "failed_login_attempts", nullable = false)
     private Integer failedLoginAttempts = 0;
 

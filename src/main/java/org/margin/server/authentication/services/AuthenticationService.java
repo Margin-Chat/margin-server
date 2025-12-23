@@ -49,16 +49,21 @@ public class AuthenticationService {
             }
 
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
+                    new UsernamePasswordAuthenticationToken(user.getUsername(), password)
             );
 
             resetFailedAttempts(user);
 
-            String token = jwtService.generateToken(username, user.getId());
+            String token = jwtService.generateToken(user.getUsername(), user.getId());
 
-            log.info("User {} authenticated successfully", username);
+            log.info("User {} authenticated successfully", user.getUsername());
 
-            return new AuthResponse(true, "Login successful", username, token);
+            return new AuthResponse(true,
+                    "Login successful",
+                    token, user.getPublicKey(),
+                    user.getEncryptedPrivateKey(),
+                    user.getSalt(),
+                    user.getIv());
 
         } catch (BadCredentialsException e) {
             handleFailedLogin(username);
@@ -66,7 +71,13 @@ public class AuthenticationService {
         }
     }
 
-    public void registerUser(String username, String email, String password) {
+    public void registerUser(String username,
+                             String email,
+                             String password,
+                             String privateKey,
+                             String publicKey,
+                             String salt,
+                             String iv) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
@@ -77,6 +88,10 @@ public class AuthenticationService {
         user.setPassword(passwordEncoder.encode(password));
         user.setServerDomain(federationConfig.getServerDomain());
         user.setRole(Role.USER);
+        user.setSalt(salt);
+        user.setIv(iv);
+        user.setPublicKey(publicKey);
+        user.setEncryptedPrivateKey(privateKey);
 
         userRepository.save(user);
     }

@@ -35,7 +35,11 @@ public class AuthenticationController {
             authService.registerUser(
                     request.username(),
                     request.email(),
-                    request.password()
+                    request.password(),
+                    request.encryptedPrivateKey(),
+                    request.publicKey(),
+                    request.salt(),
+                    request.iv()
             );
 
             AuthResponse authResponse = authService.authenticateUser(
@@ -49,13 +53,28 @@ public class AuthenticationController {
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for username {}: {}", request.username(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthResponse(false, e.getMessage(), null, null));
+                    .body(new AuthResponse(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            null));
         }
     }
 
     public record LoginRequest(String username, String password) {
     }
 
-    public record RegisterRequest(String username, String email, String password) {
+    public record RegisterRequest(
+            String username,
+            String email,
+            String password,
+            String publicKey,
+            String encryptedPrivateKey,
+            String salt,
+            String iv
+    ) {
     }
 }
