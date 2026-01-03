@@ -2,12 +2,12 @@ package org.margin.server.websocket.factories;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.margin.server.websocket.models.WebSocketMessageType;
 import org.springframework.stereotype.Component;
 import org.margin.server.social.models.DirectMessage;
 import org.margin.server.users.UserService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessage;
-import org.margin.server.websocket.models.WebSocketMessageType;
 
 @Component
 public class WebSocketMessageFactory {
@@ -26,9 +26,18 @@ public class WebSocketMessageFactory {
 	}
 
 	public String createWebSocketChatMessage(DirectMessage directMessage) throws JsonProcessingException {
-		WebSocketMessage message = new WebSocketMessage(WebSocketMessageType.SEND_MESSAGE,
+		WebSocketMessage message = new WebSocketMessage(WebSocketMessageType.RECEIVE_DIRECT_MESSAGE,
 				mapper.writeValueAsString(userService.getById(directMessage.getToUserId())), System.currentTimeMillis(),
 				mapper.writeValueAsString(directMessage));
 		return mapper.writeValueAsString(message);
 	}
+
+    public String createWebSocketCallMessage(User fromUser, String offer, WebSocketMessageType callType) throws JsonProcessingException {
+        WebSocketMessage message = new WebSocketMessage(
+                callType,
+                mapper.writeValueAsString(fromUser),
+                System.currentTimeMillis(),
+                offer);
+        return mapper.writeValueAsString(message);
+    }
 }

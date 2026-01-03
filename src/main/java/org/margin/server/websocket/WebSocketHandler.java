@@ -12,7 +12,7 @@ import org.margin.server.authentication.services.JwtService;
 import org.margin.server.social.models.DirectMessage;
 import org.margin.server.users.UserService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.models.WebSocketTextFrameTypes;
+import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.services.WebSocketClientService;
 
 import java.util.Optional;
@@ -110,11 +110,15 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
         try {
             JsonNode message = parseMessage(payload);
-            WebSocketTextFrameTypes type = getMessageType(message);
+            WebSocketMessageType type = getMessageType(message);
 
             switch (type) {
                 case SEND_DIRECT_MESSAGE -> handleDirectMessage(user, message);
-                case SEND_CHANNEL_MESSAGE -> handleChannelMessage(user, message);
+                case SEND_SPACE_MESSAGE -> handleChannelMessage(user, message);
+                case CALL_OFFER -> clientService.sendCallOffer(user, message);
+                case CALL_RESPONSE -> clientService.sendCallResponse(user, message);
+                case CALL_CANDIDATE -> clientService.sendCallCandidate(user, message);
+                case CALL_END -> clientService.sendCallEnd(user, message);
             }
 
         } catch (IllegalArgumentException e) {
@@ -128,8 +132,8 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         return MAPPER.readTree(payload);
     }
 
-    private WebSocketTextFrameTypes getMessageType(JsonNode message) {
-        return WebSocketTextFrameTypes.valueOf(message.get("type").asText());
+    private WebSocketMessageType getMessageType(JsonNode message) {
+        return WebSocketMessageType.valueOf(message.get("type").asText());
     }
 
     private void handleDirectMessage(User user, JsonNode message) {
@@ -141,7 +145,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void handleChannelMessage(User user, JsonNode message) {
-        log.info("Received channel message from {}", user);
+        log.info("Received channel message from {}", user.getUsername());
     }
 
     private DirectMessage getChatMessage(User user, String toUserIdIdentifier, String messageText) {
