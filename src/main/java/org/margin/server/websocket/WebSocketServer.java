@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.repositories.SpaceRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -23,22 +24,21 @@ public class WebSocketServer {
 
     @Value("${websocket.port:8081}")
     private int port;
-
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
-
-
+    private final SpaceRepository spaceRepository;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
 
     public WebSocketServer(JwtService jwtService,
                            WebSocketClientService clientService,
-                           UserService userService) {
+                           UserService userService, SpaceRepository spaceRepository) {
         this.jwtService = jwtService;
         this.clientService = clientService;
         this.userService = userService;
+        this.spaceRepository = spaceRepository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -83,7 +83,7 @@ public class WebSocketServer {
     }
 
     private WebSocketHandler createWebSocketHandler() {
-        return new WebSocketHandler(jwtService, clientService, userService);
+        return new WebSocketHandler(jwtService, clientService, userService, spaceRepository);
     }
 
     @PreDestroy

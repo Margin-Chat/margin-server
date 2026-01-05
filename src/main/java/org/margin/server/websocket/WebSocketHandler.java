@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.repositories.SpaceRepository;
 import org.margin.server.users.UserService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageType;
@@ -24,13 +25,16 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
+    private final SpaceRepository spaceRepository;
 
     public WebSocketHandler(JwtService jwtService,
                             WebSocketClientService clientService,
-                            UserService userService) {
+                            UserService userService,
+                            SpaceRepository spaceRepository) {
         this.jwtService = jwtService;
         this.clientService = clientService;
         this.userService = userService;
+        this.spaceRepository = spaceRepository;
     }
 
     @Override
@@ -145,7 +149,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void handleChannelMessage(User user, JsonNode message) {
-        log.info("Received channel message from {}", user.getUsername());
+        Long toChannelId = Long.valueOf(message.get("toChannelId").asText());
+        String messageText = message.get("message").asText();
+
+        clientService.sendMessageToChannel(user, toChannelId, messageText);
     }
 
     private DirectMessage getChatMessage(User user, String toUserIdIdentifier, String messageText) {

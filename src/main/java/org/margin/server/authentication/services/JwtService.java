@@ -91,7 +91,7 @@ public class JwtService {
                     extractAllClaims(token).get("userId", Long.class)
             );
 
-            log.info("WebSocket authenticated user: {} (id: {})", username, user);
+            log.info("WebSocket authenticated user: {} (id: {})", username, user.getId());
             return Optional.of(user);
 
         } catch (Exception e) {

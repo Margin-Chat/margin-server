@@ -1,5 +1,0 @@
-ALTER TABLE users
-    ADD COLUMN iv VARCHAR(512);
-
-ALTER TABLE users
-    ADD COLUMN salt VARCHAR(512);

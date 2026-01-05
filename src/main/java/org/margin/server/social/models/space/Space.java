@@ -1,16 +1,17 @@
-package org.margin.server.social.models;
+package org.margin.server.social.models.space;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.margin.server.social.models.space.enums.SpaceVisibility;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "channels")
-public class Channel {
+@Table(name = "spaces")
+public class Space {
     @Id
     private Long id;
 
@@ -20,7 +21,6 @@ public class Channel {
     @Column(nullable = false, name = "description")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "space_id", nullable = false)
-    private Space space;
+    @Column(nullable = false, name = "visibility")
+    private SpaceVisibility visibility;
 }

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.margin.server.users.models.User;
+import org.margin.server.social.models.space.Space;
 
 import java.util.Date;
 
@@ -16,19 +16,18 @@ import java.util.Date;
 @AllArgsConstructor
 @Entity
 @Table(name = "channel_messages")
-public class ChannelMessage {
+public class SpaceChannelMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
     @NotNull
-    private User fromUserId;
+    @Column(name = "from_user_id", nullable = false)
+    private Long fromUserId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "channel_id", nullable = false)
-    private Channel channelId;
+    @NotNull
+    @Column(name = "to_channel_id", nullable = false)
+    private Long channelId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "space_id", nullable = false)
@@ -43,18 +42,15 @@ public class ChannelMessage {
 
     private Boolean isEdited = false;
     private Date createdAt;
-    private String federatedMessageId;
 
-    public ChannelMessage(User fromUserId,
-                          Channel channelId,
-                          Space space,
-                          String message,
-                          String federatedMessageId) {
+    public SpaceChannelMessage(Long fromUserId,
+                               Long channelId,
+                               Space space,
+                               String message) {
         this.fromUserId = fromUserId;
         this.channelId = channelId;
         this.space = space;
         this.message = message;
-        this.federatedMessageId = federatedMessageId;
         this.createdAt = new Date();
     }
 }

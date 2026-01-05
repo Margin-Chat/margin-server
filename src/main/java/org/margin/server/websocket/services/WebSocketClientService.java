@@ -5,6 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.models.SpaceChannelMessage;
+import org.margin.server.social.models.SpaceChannel;
+import org.margin.server.social.repositories.SpaceChannelRepository;
+import org.margin.server.social.repositories.SpaceRepository;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.springframework.stereotype.Service;
 import org.margin.server.social.models.DirectMessage;
@@ -14,45 +18,52 @@ import org.margin.server.federation.services.FederationService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.factories.WebSocketMessageFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class WebSocketClientService {
-	private final Map<Long, Channel> clients = new ConcurrentHashMap<>();
-	private final WebSocketMessageFactory messageFactory;
-	private final MessageService messageService;
+    private final Map<Long, Channel> clients = new ConcurrentHashMap<>();
+    private final WebSocketMessageFactory messageFactory;
+    private final MessageService messageService;
     private final FederationConfig federationConfig;
     private final FederationService federationService;
+    private final SpaceChannelRepository channelRepository;
+    private final SpaceRepository spaceRepository;
 
-	public WebSocketClientService(WebSocketMessageFactory messageFactory,
+    public WebSocketClientService(WebSocketMessageFactory messageFactory,
                                   MessageService messageService,
                                   FederationConfig federationConfig,
-                                  FederationService federationService) {
-		this.messageFactory = messageFactory;
-		this.messageService = messageService;
+                                  FederationService federationService,
+                                  SpaceChannelRepository channelRepository,
+                                  SpaceRepository spaceRepository) {
+        this.messageFactory = messageFactory;
+        this.messageService = messageService;
         this.federationConfig = federationConfig;
         this.federationService = federationService;
-	}
+        this.channelRepository = channelRepository;
+        this.spaceRepository = spaceRepository;
+    }
 
-	public void addClient(Long id, Channel channel) {
-		clients.put(id, channel);
-		log.info("User {} has connected", id);
-	}
+    public void addClient(Long id, Channel channel) {
+        clients.put(id, channel);
+        log.info("User {} has connected", id);
+    }
 
-	public void removeClient(Long id) {
-		clients.remove(id);
-		log.info("User {} has disconnected", id);
-	}
+    public void removeClient(Long id) {
+        clients.remove(id);
+        log.info("User {} has disconnected", id);
+    }
 
-	public Map<Long, Channel> getAllClients() {
-		return clients;
-	}
+    public Map<Long, Channel> getAllClients() {
+        return clients;
+    }
 
-	public Channel getClientChannel(Long toUserId) {
-		return clients.get(toUserId);
-	}
+    public Channel getClientChannel(Long toUserId) {
+        return clients.get(toUserId);
+    }
 
     public void broadcastUserLogin(User loggedInUser) {
         try {
@@ -99,6 +110,43 @@ public class WebSocketClientService {
             deliverLocalMessage(directMessage);
         } else {
             deliverFederatedMessage(directMessage, recipientServer);
+        }
+    }
+
+    public void sendMessageToChannel(User user, Long toChannelId, String messageText) {
+        SpaceChannel channel = channelRepository.getReferenceById(toChannelId);
+
+        SpaceChannelMessage channelMessage = new SpaceChannelMessage(
+                user.getId(),
+                toChannelId,
+                channel.getSpace(),
+                messageText
+        );
+
+        List<User> usersForSpace = spaceRepository.getUsersForSpace(channel.getSpace());
+
+        for (User recipientUser : usersForSpace) {
+            if (recipientUser.getId().equals(user.getId())) {
+                return;
+            }
+
+            Channel targetChannel = getClientChannel(recipientUser.getId());
+
+            try {
+                String messageJson = messageFactory.createWebSocketChannelMessage(channelMessage);
+                TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+
+                if (targetChannel.isActive()) {
+                    targetChannel.writeAndFlush(frame.copy());
+                } else {
+                    log.debug("Channel inactive for user {}", recipientUser.getId());
+                    // TODO: Send push notification for offline user
+                }
+
+                frame.release();
+            } catch (JsonProcessingException e) {
+                log.error("Error sending message: {}", e.getMessage());
+            }
         }
     }
 
@@ -182,17 +230,17 @@ public class WebSocketClientService {
         }
     }
 
-	public void clearAllClients() {
-		clients.clear();
-	}
+    public void clearAllClients() {
+        clients.clear();
+    }
 
     private void deliverLocalMessage(DirectMessage directMessage) {
         Channel targetChannel = getClientChannel(directMessage.getToUserId());
+        messageService.saveDirectMessage(directMessage);
 
         if (targetChannel == null) {
             log.debug("User {} is not connected, storing message for later", directMessage.getToUserId());
             // TODO: Send push notification for offline user
-            messageService.saveMessage(directMessage);
             return;
         }
 
@@ -202,11 +250,9 @@ public class WebSocketClientService {
 
             if (targetChannel.isActive()) {
                 targetChannel.writeAndFlush(frame.copy());
-                messageService.saveMessage(directMessage);
             } else {
                 log.debug("Channel inactive for user {}", directMessage.getToUserId());
                 // TODO: Send push notification for offline user
-                messageService.saveMessage(directMessage);
             }
 
             frame.release();
@@ -223,7 +269,7 @@ public class WebSocketClientService {
         }
         directMessage.setToUserServer(targetServer);
 
-        messageService.saveMessage(directMessage);
+        messageService.saveDirectMessage(directMessage);
 
         boolean success = federationService.sendFederatedMessage(directMessage);
         if (!success) {

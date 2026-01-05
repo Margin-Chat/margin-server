@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ChatMessageRepository extends JpaRepository<DirectMessage, Long> {
+public interface DirectChatMessageRepository extends JpaRepository<DirectMessage, Long> {
 	@Query("""
 			SELECT dm
 			FROM DirectMessage dm

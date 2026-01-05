@@ -1,7 +1,7 @@
 package org.margin.server.social.controllers;
 
 import org.margin.server.social.models.DirectMessage;
-import org.margin.server.social.repositories.ChatMessageRepository;
+import org.margin.server.social.repositories.DirectChatMessageRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,16 +14,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/chat_messages")
 public class ChatMessagesController {
-	private final ChatMessageRepository chatMessageRepository;
+	private final DirectChatMessageRepository directChatMessageRepository;
 
-	public ChatMessagesController(ChatMessageRepository chatMessageRepository) {
-		this.chatMessageRepository = chatMessageRepository;
+	public ChatMessagesController(DirectChatMessageRepository directChatMessageRepository) {
+		this.directChatMessageRepository = directChatMessageRepository;
 	}
 
 	@GetMapping("get_chat_history")
 	public List<DirectMessage> getChatHistory(@RequestParam Long userId, @RequestParam Long toUserId) {
-		List<DirectMessage> messagesFromUser = chatMessageRepository.findByFromUserIdAndToUserId(userId, toUserId);
-		List<DirectMessage> messagesToUser = chatMessageRepository.findByFromUserIdAndToUserId(toUserId, userId);
+		List<DirectMessage> messagesFromUser = directChatMessageRepository.findByFromUserIdAndToUserId(userId, toUserId);
+		List<DirectMessage> messagesToUser = directChatMessageRepository.findByFromUserIdAndToUserId(toUserId, userId);
 
 		List<DirectMessage> allMessages = new ArrayList<>();
 		allMessages.addAll(messagesFromUser);
