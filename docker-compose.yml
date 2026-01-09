@@ -14,7 +14,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   backend:
-    image: localhost/margin-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: margin-backend
     ports:
       - "8080:8080"
