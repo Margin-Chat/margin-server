@@ -13,6 +13,7 @@ import org.margin.server.social.models.space.Space;
 @Table(name = "channels")
 public class SpaceChannel {
     @Id
+    @Column(name = "channel_id")
     private Long id;
 
     @Column(nullable = false, name = "name")

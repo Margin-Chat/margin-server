@@ -27,7 +27,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>25Z</java.version>
+        <java.version>25</java.version>
     </properties>
     <dependencies>
         <dependency>
@@ -150,7 +150,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>11.7.2</version>
                 <configuration>
-                    <url>jdbc:postgresql://localhost:5432/agoradb</url>
+                    <url>jdbc:postgresql://localhost:5432/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
                     <user>${env.DB_USERNAME}</user>
                     <!--suppress UnresolvedMavenProperty -->

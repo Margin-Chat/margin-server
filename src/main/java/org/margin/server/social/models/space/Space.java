@@ -13,6 +13,7 @@ import org.margin.server.social.models.space.enums.SpaceVisibility;
 @Table(name = "spaces")
 public class Space {
     @Id
+    @Column(name = "space_id")
     private Long id;
 
     @Column(nullable = false, name = "name")

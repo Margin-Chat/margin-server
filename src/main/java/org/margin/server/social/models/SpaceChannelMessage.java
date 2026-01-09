@@ -19,6 +19,7 @@ import java.util.Date;
 public class SpaceChannelMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "channel_message_id")
     private Long id;
 
     @NotNull

@@ -94,7 +94,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
         switch (frame) {
             case CloseWebSocketFrame closeFrame -> {
-                log.info("Client requested close: {}", user);
+                log.info("Client requested close: {}", user.getId());
                 handshaker.close(ctx.channel(), closeFrame);
             }
             case PingWebSocketFrame pingFrame -> {
@@ -175,7 +175,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         if (user != null) {
             clientService.removeClient(user.getId());
             clientService.broadcastUserLogout(user);
-            log.info("User {} disconnected", user);
+            log.info("User {} disconnected", user.getId());
         }
     }
 

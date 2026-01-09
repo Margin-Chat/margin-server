@@ -18,6 +18,7 @@ import java.util.Date;
 public class DirectMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "direct_message_id")
     private Long id;
 
     @NotNull
