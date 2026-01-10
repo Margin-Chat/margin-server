@@ -56,14 +56,17 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/federation/**").permitAll()
                                 .requestMatchers("/.well-known/**").permitAll()
                                 .requestMatchers("/api/rooms/**").permitAll()
-                                .requestMatchers("/signaling").permitAll()
+                                .requestMatchers("/signaling/").permitAll()
+                                .requestMatchers("/spaces/**").permitAll()
+                                .requestMatchers("/channels/**").permitAll()
                                 .requestMatchers("/chat_messages/**").hasRole("USER")
                                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
