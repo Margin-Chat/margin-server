@@ -17,6 +17,6 @@ public class SpaceChannelDTO {
         this.id = channel.getId();
         this.name = channel.getName();
         this.description = channel.getDescription();
-        this.spaceId = channel.getSpace().getId();
+        this.spaceId = channel.getSpaceId();
     }
 }

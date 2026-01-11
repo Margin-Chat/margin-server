@@ -8,10 +8,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/channels")
-public class ChannelsController {
+public class SpaceChannelController {
     private final SpaceChannelService spaceChannelService;
 
-    public ChannelsController(SpaceChannelService spaceChannelService) {
+    public SpaceChannelController(SpaceChannelService spaceChannelService) {
         this.spaceChannelService = spaceChannelService;
     }
 

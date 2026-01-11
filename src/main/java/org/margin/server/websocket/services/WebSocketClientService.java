@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.models.SpaceChannelMessage;
 import org.margin.server.social.models.SpaceChannel;
+import org.margin.server.social.repositories.SpaceChannelMessageRepository;
 import org.margin.server.social.repositories.SpaceChannelRepository;
 import org.margin.server.social.repositories.SpaceRepository;
 import org.margin.server.websocket.models.WebSocketMessageType;
@@ -20,6 +21,7 @@ import org.margin.server.websocket.factories.WebSocketMessageFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -32,19 +34,22 @@ public class WebSocketClientService {
     private final FederationService federationService;
     private final SpaceChannelRepository channelRepository;
     private final SpaceRepository spaceRepository;
+    private final SpaceChannelMessageRepository spaceChannelMessageRepository;
 
     public WebSocketClientService(WebSocketMessageFactory messageFactory,
                                   MessageService messageService,
                                   FederationConfig federationConfig,
                                   FederationService federationService,
                                   SpaceChannelRepository channelRepository,
-                                  SpaceRepository spaceRepository) {
+                                  SpaceRepository spaceRepository,
+                                  SpaceChannelMessageRepository spaceChannelMessageRepository) {
         this.messageFactory = messageFactory;
         this.messageService = messageService;
         this.federationConfig = federationConfig;
         this.federationService = federationService;
         this.channelRepository = channelRepository;
         this.spaceRepository = spaceRepository;
+        this.spaceChannelMessageRepository = spaceChannelMessageRepository;
     }
 
     public void addClient(Long id, Channel channel) {
@@ -55,6 +60,11 @@ public class WebSocketClientService {
     public void removeClient(Long id) {
         clients.remove(id);
         log.info("User {} has disconnected", id);
+    }
+
+    public void logoutUser(Long userId) {
+        Channel channel = clients.get(userId);
+        channel.close();
     }
 
     public Map<Long, Channel> getAllClients() {
@@ -114,23 +124,30 @@ public class WebSocketClientService {
     }
 
     public void sendMessageToChannel(User user, Long toChannelId, String messageText) {
-        SpaceChannel channel = channelRepository.getReferenceById(toChannelId);
+        Optional<SpaceChannel> channel = channelRepository.findById(toChannelId);
+
+        if (channel.isEmpty()) {
+            return;
+        }
 
         SpaceChannelMessage channelMessage = new SpaceChannelMessage(
                 user.getId(),
                 toChannelId,
-                channel.getSpace(),
+                channel.get().getSpaceId(),
                 messageText
         );
+        spaceChannelMessageRepository.save(channelMessage);
 
-        List<User> usersForSpace = spaceRepository.getUsersForSpace(channel.getSpace());
+        List<User> usersForSpace = spaceRepository.getUsersForSpace(channel.get().getSpaceId());
 
         for (User recipientUser : usersForSpace) {
             if (recipientUser.getId().equals(user.getId())) {
-                return;
+                continue;
             }
 
+            log.info("Looking for user {} in clients map. Clients: {}", recipientUser.getId(), clients);
             Channel targetChannel = getClientChannel(recipientUser.getId());
+            log.info("Channel found: {}", targetChannel);
 
             try {
                 String messageJson = messageFactory.createWebSocketChannelMessage(channelMessage);

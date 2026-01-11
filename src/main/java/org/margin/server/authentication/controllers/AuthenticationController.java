@@ -1,6 +1,7 @@
 package org.margin.server.authentication.controllers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.websocket.services.WebSocketClientService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.authentication.models.AuthResponse;
@@ -15,9 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class AuthenticationController {
     private final AuthenticationService authService;
+    private final WebSocketClientService webSocketClientService;
 
-    public AuthenticationController(AuthenticationService authService) {
+    public AuthenticationController(AuthenticationService authService,
+                                    WebSocketClientService webSocketClientService) {
         this.authService = authService;
+        this.webSocketClientService = webSocketClientService;
     }
 
     @PostMapping("/login")
@@ -25,6 +29,15 @@ public class AuthenticationController {
         log.info("Login attempt for username: {}", request.username());
 
         return authService.authenticateUser(request.username(), request.password());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody Long userId) {
+        log.info("Logout attempt for user: {}", userId);
+
+        webSocketClientService.logoutUser(userId);
+
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/register")

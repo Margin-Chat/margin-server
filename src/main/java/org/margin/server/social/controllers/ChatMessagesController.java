@@ -1,11 +1,10 @@
 package org.margin.server.social.controllers;
 
 import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.models.SpaceChannelMessage;
 import org.margin.server.social.repositories.DirectChatMessageRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.margin.server.social.services.SpaceChannelService;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -15,9 +14,12 @@ import java.util.List;
 @RequestMapping("/chat_messages")
 public class ChatMessagesController {
 	private final DirectChatMessageRepository directChatMessageRepository;
+	private final SpaceChannelService spaceChannelService;
 
-	public ChatMessagesController(DirectChatMessageRepository directChatMessageRepository) {
+	public ChatMessagesController(DirectChatMessageRepository directChatMessageRepository,
+								  SpaceChannelService spaceChannelService) {
 		this.directChatMessageRepository = directChatMessageRepository;
+		this.spaceChannelService = spaceChannelService;
 	}
 
 	@GetMapping("get_chat_history")
@@ -32,5 +34,10 @@ public class ChatMessagesController {
 		allMessages.sort(Comparator.comparing(DirectMessage::getCreatedAt));
 
 		return allMessages;
+	}
+
+	@GetMapping("{channelId}/get_messages_for_channel")
+	public List<SpaceChannelMessage> getMessagesForChannel(@PathVariable Long channelId) {
+		return spaceChannelService.getMessagesForChannel(channelId);
 	}
 }

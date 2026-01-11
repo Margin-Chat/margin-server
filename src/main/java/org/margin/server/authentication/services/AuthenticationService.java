@@ -1,6 +1,10 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.models.space.SpaceMember;
+import org.margin.server.social.models.space.SpaceMemberId;
+import org.margin.server.social.models.space.enums.SpaceMemberRole;
+import org.margin.server.social.repositories.SpaceMemberRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,18 +29,21 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final FederationConfig federationConfig;
+    private final SpaceMemberRepository spaceMemberRepository;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            FederationConfig federationConfig) {
+            FederationConfig federationConfig,
+            SpaceMemberRepository spaceMemberRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.federationConfig = federationConfig;
+        this.spaceMemberRepository = spaceMemberRepository;
     }
 
     public AuthResponse authenticateUser(String username, String password) {
@@ -94,6 +101,15 @@ public class AuthenticationService {
         user.setEncryptedPrivateKey(privateKey);
 
         userRepository.save(user);
+
+        // it's only temporarily I've added new users to general chat like this
+        SpaceMember member = new SpaceMember();
+        member.setId(new SpaceMemberId(1L, user.getId()));
+        member.setUser(user);
+        member.setJoinedAt(LocalDateTime.now());
+        member.setRole(SpaceMemberRole.MEMBER);
+
+        spaceMemberRepository.save(member);
     }
 
     private boolean isAccountLocked(User user) {

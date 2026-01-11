@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.margin.server.social.models.space.Space;
 
 import java.util.Date;
 
@@ -30,9 +29,9 @@ public class SpaceChannelMessage {
     @Column(name = "to_channel_id", nullable = false)
     private Long channelId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "space_id", nullable = false)
-    private Space space;
+    @NotNull
+    @Column(name = "space_id", nullable = false)
+    private Long spaceId;
 
     @Column(name = "from_user_server")
     private String fromUserServer;
@@ -46,11 +45,11 @@ public class SpaceChannelMessage {
 
     public SpaceChannelMessage(Long fromUserId,
                                Long channelId,
-                               Space space,
+                               Long spaceId,
                                String message) {
         this.fromUserId = fromUserId;
         this.channelId = channelId;
-        this.space = space;
+        this.spaceId = spaceId;
         this.message = message;
         this.createdAt = new Date();
     }

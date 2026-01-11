@@ -118,7 +118,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
             switch (type) {
                 case SEND_DIRECT_MESSAGE -> handleDirectMessage(user, message);
-                case SEND_SPACE_MESSAGE -> handleChannelMessage(user, message);
+                case SEND_CHANNEL_MESSAGE -> handleChannelMessage(user, message);
                 case CALL_OFFER -> clientService.sendCallOffer(user, message);
                 case CALL_RESPONSE -> clientService.sendCallResponse(user, message);
                 case CALL_CANDIDATE -> clientService.sendCallCandidate(user, message);

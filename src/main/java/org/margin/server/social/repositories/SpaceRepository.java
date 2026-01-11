@@ -13,6 +13,6 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
     @Query("SELECT sp FROM Space sp")
     List<Space> getSpaces();
 
-    @Query("SELECT spm.user FROM SpaceMember spm")
-    public List<User> getUsersForSpace(Space space);
+    @Query("SELECT spm.user FROM SpaceMember spm WHERE spm.id.spaceId = :spaceId")
+    List<User> getUsersForSpace(Long spaceId);
 }
