@@ -32,10 +32,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody Long userId) {
-        log.info("Logout attempt for user: {}", userId);
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
+        log.info("Logout attempt for user: {}", logoutRequest.userId);
 
-        webSocketClientService.logoutUser(userId);
+        webSocketClientService.logoutUser(logoutRequest.userId);
 
         return ResponseEntity.ok().build();
     }
@@ -78,6 +78,9 @@ public class AuthenticationController {
     }
 
     public record LoginRequest(String username, String password) {
+    }
+
+    public record LogoutRequest(Long userId) {
     }
 
     public record RegisterRequest(

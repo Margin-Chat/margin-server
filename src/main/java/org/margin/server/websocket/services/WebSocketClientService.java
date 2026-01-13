@@ -64,7 +64,9 @@ public class WebSocketClientService {
 
     public void logoutUser(Long userId) {
         Channel channel = clients.get(userId);
-        channel.close();
+        if (channel.isActive() || channel.isOpen()) {
+            channel.close();
+        }
     }
 
     public Map<Long, Channel> getAllClients() {
