@@ -1,5 +1,6 @@
 package org.margin.server.websocket;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -7,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.repositories.SpaceRepository;
@@ -24,6 +26,7 @@ public class WebSocketServer {
 
     @Value("${websocket.port:8081}")
     private int port;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
@@ -61,6 +64,7 @@ public class WebSocketServer {
                             ch.pipeline()
                                     .addLast(new HttpServerCodec())
                                     .addLast(new HttpObjectAggregator(65536))
+                                    .addLast(new WebSocketMessageDecoder(objectMapper))
                                     .addLast(createWebSocketHandler());
                         }
                     })

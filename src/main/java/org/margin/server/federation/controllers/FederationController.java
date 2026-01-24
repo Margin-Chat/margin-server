@@ -3,7 +3,7 @@ package org.margin.server.federation.controllers;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.config.FederationConfig;
 import org.margin.server.federation.models.FederatedMessageDTO;
 import org.margin.server.federation.models.FederationInfo;

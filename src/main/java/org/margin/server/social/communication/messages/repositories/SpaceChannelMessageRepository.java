@@ -1,4 +1,4 @@
-package org.margin.server.social.repositories;
+package org.margin.server.social.communication.messages.repositories;
 
 import org.margin.server.social.models.SpaceChannelMessage;
 import org.springframework.data.jpa.repository.JpaRepository;

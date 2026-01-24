@@ -2,7 +2,7 @@ package org.margin.server.social.services;
 
 import org.margin.server.social.models.SpaceChannel;
 import org.margin.server.social.models.SpaceChannelMessage;
-import org.margin.server.social.repositories.SpaceChannelMessageRepository;
+import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
 import org.margin.server.social.repositories.SpaceChannelRepository;
 import org.springframework.stereotype.Service;
 

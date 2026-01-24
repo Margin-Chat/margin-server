@@ -1,23 +1,28 @@
 package org.margin.server.websocket.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.communication.calls.models.CallStatus;
+import org.margin.server.social.communication.calls.models.CallType;
+import org.margin.server.social.communication.calls.repositories.CallRepository;
+import org.margin.server.social.communication.calls.services.CallService;
 import org.margin.server.social.models.SpaceChannelMessage;
 import org.margin.server.social.models.SpaceChannel;
-import org.margin.server.social.repositories.SpaceChannelMessageRepository;
+import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
 import org.margin.server.social.repositories.SpaceChannelRepository;
 import org.margin.server.social.repositories.SpaceRepository;
+import org.margin.server.users.UserService;
+import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.models.payloads.*;
 import org.springframework.stereotype.Service;
-import org.margin.server.social.models.DirectMessage;
-import org.margin.server.social.services.MessageService;
+import org.margin.server.social.communication.messages.models.DirectMessage;
+import org.margin.server.social.communication.messages.services.MessageService;
 import org.margin.server.config.FederationConfig;
 import org.margin.server.federation.services.FederationService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.factories.WebSocketMessageFactory;
+import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 
 import java.util.List;
 import java.util.Map;
@@ -28,21 +33,25 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class WebSocketClientService {
     private final Map<Long, Channel> clients = new ConcurrentHashMap<>();
-    private final WebSocketMessageFactory messageFactory;
+    private final WebSocketMessageBuilder messageFactory;
     private final MessageService messageService;
     private final FederationConfig federationConfig;
     private final FederationService federationService;
     private final SpaceChannelRepository channelRepository;
     private final SpaceRepository spaceRepository;
     private final SpaceChannelMessageRepository spaceChannelMessageRepository;
+    private final CallRepository callRepository;
+    private final UserService userService;
+    private final CallService callService;
 
-    public WebSocketClientService(WebSocketMessageFactory messageFactory,
+    public WebSocketClientService(WebSocketMessageBuilder messageFactory,
                                   MessageService messageService,
                                   FederationConfig federationConfig,
                                   FederationService federationService,
                                   SpaceChannelRepository channelRepository,
                                   SpaceRepository spaceRepository,
-                                  SpaceChannelMessageRepository spaceChannelMessageRepository) {
+                                  SpaceChannelMessageRepository spaceChannelMessageRepository,
+                                  CallRepository callRepository, UserService userService, CallService callService) {
         this.messageFactory = messageFactory;
         this.messageService = messageService;
         this.federationConfig = federationConfig;
@@ -50,6 +59,9 @@ public class WebSocketClientService {
         this.channelRepository = channelRepository;
         this.spaceRepository = spaceRepository;
         this.spaceChannelMessageRepository = spaceChannelMessageRepository;
+        this.callRepository = callRepository;
+        this.userService = userService;
+        this.callService = callService;
     }
 
     public void addClient(Long id, Channel channel) {
@@ -151,101 +163,87 @@ public class WebSocketClientService {
             Channel targetChannel = getClientChannel(recipientUser.getId());
             log.info("Channel found: {}", targetChannel);
 
-            try {
-                String messageJson = messageFactory.createWebSocketChannelMessage(channelMessage);
-                TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+            String messageJson = messageFactory.createWebSocketChannelMessage(channelMessage);
+            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
 
-                if (targetChannel.isActive()) {
-                    targetChannel.writeAndFlush(frame.copy());
-                } else {
-                    log.debug("Channel inactive for user {}", recipientUser.getId());
-                    // TODO: Send push notification for offline user
-                }
-
-                frame.release();
-            } catch (JsonProcessingException e) {
-                log.error("Error sending message: {}", e.getMessage());
+            if (targetChannel.isActive()) {
+                targetChannel.writeAndFlush(frame.copy());
+            } else {
+                log.debug("Channel inactive for user {}", recipientUser.getId());
+                // TODO: Send push notification for offline user
             }
+
+            frame.release();
         }
     }
 
-    public void sendCallOffer(User fromUser, JsonNode receivedMessage) {
-        String offerMessage = receivedMessage.get("message").toString();
-        String toUserIdIdentifier = receivedMessage.get("toUserId").asText();
-        Channel targetChannel = getClientChannel(Long.valueOf(toUserIdIdentifier));
+    public void sendCallOffer(User fromUser, WebSocketMessageIn<IncomingCallOfferPayload> request) {
+        Long callId = callService.createNewCall(
+                fromUser.getId(),
+                request.getRecipientId(),
+                CallStatus.OFFERED,
+                CallType.AUDIO,
+                request.getPayload().sdp());
 
-        try {
-            String messageJson = messageFactory.createWebSocketCallMessage(
-                    fromUser,
-                    offerMessage,
-                    WebSocketMessageType.CALL_OFFER);
-            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
-            if (targetChannel.isActive()) {
-                targetChannel.writeAndFlush(frame.copy());
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error sending message: {}", e.getMessage());
-            // TODO: Call back error to calling user
+        String messageJson = messageFactory.createWebSocketCallOfferMessage(
+                callId,
+                fromUser.getId(),
+                request.getPayload().sdp(),
+                CallType.AUDIO.toString()
+        );
+        TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+        Channel targetChannel = getClientChannel(request.getRecipientId());
+
+        if (targetChannel.isActive()) {
+            targetChannel.writeAndFlush(frame.copy());
         }
     }
 
-    public void sendCallResponse(User fromUser, JsonNode receivedMessage) {
-        String offerMessage = receivedMessage.get("message").toString();
-        String toUserIdIdentifier = receivedMessage.get("toUserId").asText();
-        Channel targetChannel = getClientChannel(Long.valueOf(toUserIdIdentifier));
+    public void sendCallResponse(WebSocketMessageIn<IncomingCallResponsePayload> response) {
+        IncomingCallResponsePayload payload = response.getPayload();
+        Channel targetChannel = getClientChannel(response.getRecipientId());
 
-        try {
-            String messageJson = messageFactory.createWebSocketCallMessage(
-                    fromUser,
-                    offerMessage,
-                    WebSocketMessageType.CALL_RESPONSE);
-            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
-            if (targetChannel.isActive()) {
-                targetChannel.writeAndFlush(frame.copy());
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error sending message: {}", e.getMessage());
-            // TODO: Call back error to calling user
+        callService.updateCallStatus(response.getPayload().callId(), CallStatus.ACCEPTED);
+
+        CallResponsePayload outPayload = new CallResponsePayload(
+                payload.callId(),
+                payload.callerId(),
+                payload.response()
+        );
+
+        String messageJson = messageFactory.createWebSocketCallResponseMessageWithPayload(
+                response.getRecipientId(),
+                outPayload
+        );
+        TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+        if (targetChannel.isActive()) {
+            targetChannel.writeAndFlush(frame.copy());
         }
     }
 
-    public void sendCallCandidate(User fromUser, JsonNode receivedMessage) {
-        String offerMessage = receivedMessage.get("message").toString();
-        String toUserIdIdentifier = receivedMessage.get("toUserId").asText();
-        Channel targetChannel = getClientChannel(Long.valueOf(toUserIdIdentifier));
+    public void sendCallCandidate(WebSocketMessageIn<IncomingCallCandidatePayload> message) {
+        IncomingCallCandidatePayload payload = message.getPayload();
+        Channel targetChannel = getClientChannel(message.getRecipientId());
 
-        try {
-            String messageJson = messageFactory.createWebSocketCallMessage(
-                    fromUser,
-                    offerMessage,
-                    WebSocketMessageType.CALL_CANDIDATE);
-            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
-            if (targetChannel.isActive()) {
-                targetChannel.writeAndFlush(frame.copy());
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error sending message: {}", e.getMessage());
-            // TODO: Call back error to calling user
+        String messageJson = messageFactory.createWebSocketCallCandidateMessage(
+                message.getRecipientId(),
+                payload
+        );
+        TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+        if (targetChannel.isActive()) {
+            targetChannel.writeAndFlush(frame.copy());
         }
     }
 
-    public void sendCallEnd(User fromUser, JsonNode receivedMessage) {
-        String offerMessage = receivedMessage.get("message").toString();
-        String toUserIdIdentifier = receivedMessage.get("toUserId").asText();
-        Channel targetChannel = getClientChannel(Long.valueOf(toUserIdIdentifier));
+    public void sendCallEnd(WebSocketMessageIn<IncomingCallEndPayload> message) {
+        Channel targetChannel = getClientChannel(message.getRecipientId());
 
-        try {
-            String messageJson = messageFactory.createWebSocketCallMessage(
-                    fromUser,
-                    offerMessage,
-                    WebSocketMessageType.CALL_END);
-            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
-            if (targetChannel.isActive()) {
-                targetChannel.writeAndFlush(frame.copy());
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error sending message: {}", e.getMessage());
-            // TODO: Call back error to calling user
+        callService.endCall(message.getPayload().callId(), message.getPayload().callDuration());
+
+        String messageJson = messageFactory.createWebSocketCallEndMessage(message.getRecipientId());
+        TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+        if (targetChannel.isActive()) {
+            targetChannel.writeAndFlush(frame.copy());
         }
     }
 
@@ -263,21 +261,17 @@ public class WebSocketClientService {
             return;
         }
 
-        try {
-            String messageJson = messageFactory.createWebSocketChatMessage(directMessage);
-            TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
+        String messageJson = messageFactory.createWebSocketChatMessage(directMessage);
+        TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
 
-            if (targetChannel.isActive()) {
-                targetChannel.writeAndFlush(frame.copy());
-            } else {
-                log.debug("Channel inactive for user {}", directMessage.getToUserId());
-                // TODO: Send push notification for offline user
-            }
-
-            frame.release();
-        } catch (JsonProcessingException e) {
-            log.error("Error sending message: {}", e.getMessage());
+        if (targetChannel.isActive()) {
+            targetChannel.writeAndFlush(frame.copy());
+        } else {
+            log.debug("Channel inactive for user {}", directMessage.getToUserId());
+            // TODO: Send push notification for offline user
         }
+
+        frame.release();
     }
 
     private void deliverFederatedMessage(DirectMessage directMessage, String targetServer) {

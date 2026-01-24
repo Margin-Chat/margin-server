@@ -1,8 +1,8 @@
-package org.margin.server.social.repositories;
+package org.margin.server.social.communication.messages.repositories;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

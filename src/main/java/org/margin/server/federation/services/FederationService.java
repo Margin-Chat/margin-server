@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.config.FederationConfig;
 import org.margin.server.federation.models.FederatedMessageDTO;
 import org.margin.server.federation.models.FederationInfo;

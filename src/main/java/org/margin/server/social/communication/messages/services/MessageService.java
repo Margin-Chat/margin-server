@@ -1,9 +1,9 @@
-package org.margin.server.social.services;
+package org.margin.server.social.communication.messages.services;
 
-import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.models.SpaceChannelMessage;
-import org.margin.server.social.repositories.DirectChatMessageRepository;
-import org.margin.server.social.repositories.SpaceChannelMessageRepository;
+import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
+import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;

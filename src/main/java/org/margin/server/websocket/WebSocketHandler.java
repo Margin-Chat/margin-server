@@ -1,6 +1,5 @@
 package org.margin.server.websocket;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -9,11 +8,15 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.social.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.repositories.SpaceRepository;
 import org.margin.server.users.UserService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.models.WebSocketMessageIn;
+import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
+import org.margin.server.websocket.models.payloads.IncomingCallEndPayload;
+import org.margin.server.websocket.models.payloads.IncomingCallOfferPayload;
+import org.margin.server.websocket.models.payloads.IncomingCallResponsePayload;
 import org.margin.server.websocket.services.WebSocketClientService;
 
 import java.util.Optional;
@@ -21,7 +24,7 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
@@ -41,6 +44,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     protected void channelRead0(ChannelHandlerContext ctx, Object message) {
         switch (message) {
             case FullHttpRequest httpRequest -> handleHttpRequest(ctx, httpRequest);
+            case WebSocketMessageIn<?> webSocketMessage -> handleWebSocketMessage(ctx, webSocketMessage);
             case WebSocketFrame webSocketFrame -> handleWebSocketFrame(ctx, webSocketFrame);
             default -> throw new IllegalStateException("Unexpected value: " + message);
         }
@@ -95,64 +99,43 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         switch (frame) {
             case CloseWebSocketFrame closeFrame -> {
                 log.info("Client requested close: {}", user.getId());
-                handshaker.close(ctx.channel(), closeFrame);
+                handshaker.close(ctx.channel(), closeFrame.retain());
             }
-            case PingWebSocketFrame pingFrame -> {
-                ctx.writeAndFlush(new PongWebSocketFrame(pingFrame.content().retain()));
-            }
-            case TextWebSocketFrame textFrame -> {
-                handleTextWebSocketFrame(ctx, textFrame);
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + frame);
+            case PingWebSocketFrame pingFrame ->
+                    ctx.writeAndFlush(new PongWebSocketFrame(pingFrame.content().retain()));
+            case TextWebSocketFrame _ -> log.warn("Received unprocessed TextWebSocketFrame - decoder may have failed");
+            default -> log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
         }
     }
 
-    private void handleTextWebSocketFrame(ChannelHandlerContext ctx, TextWebSocketFrame frame) {
+    @SuppressWarnings("unchecked")
+    private void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-        String payload = frame.text();
-        log.debug("Received message from {}: {}", user, payload);
+        log.debug("Received message from {}: type={}", user, message.getType());
 
-        try {
-            JsonNode message = parseMessage(payload);
-            WebSocketMessageType type = getMessageType(message);
-
-            switch (type) {
-                case SEND_DIRECT_MESSAGE -> handleDirectMessage(user, message);
-                case SEND_CHANNEL_MESSAGE -> handleChannelMessage(user, message);
-                case CALL_OFFER -> clientService.sendCallOffer(user, message);
-                case CALL_RESPONSE -> clientService.sendCallResponse(user, message);
-                case CALL_CANDIDATE -> clientService.sendCallCandidate(user, message);
-                case CALL_END -> clientService.sendCallEnd(user, message);
-            }
-
-        } catch (IllegalArgumentException e) {
-            log.warn("Unknown message type from user {}: {}", user.getId(), e.getMessage());
-        } catch (Exception e) {
-            log.error("Error handling message from user {}: {}", user.getId(), e.getMessage());
+        switch (message.getType()) {
+            case SEND_DIRECT_MESSAGE -> handleDirectMessage(user,
+                    (WebSocketMessageIn<String>) message);
+            case SEND_CHANNEL_MESSAGE -> handleChannelMessage(user,
+                    (WebSocketMessageIn<String>) message);
+            case CALL_OFFER -> clientService.sendCallOffer(user,
+                    (WebSocketMessageIn<IncomingCallOfferPayload>) message);
+            case CALL_RESPONSE -> clientService.sendCallResponse(
+                    (WebSocketMessageIn<IncomingCallResponsePayload>) message);
+            case CALL_CANDIDATE -> clientService.sendCallCandidate(
+                    (WebSocketMessageIn<IncomingCallCandidatePayload>) message);
+            case CALL_END -> clientService.sendCallEnd(
+                    (WebSocketMessageIn<IncomingCallEndPayload>) message);
         }
     }
 
-    private JsonNode parseMessage(String payload) throws Exception {
-        return MAPPER.readTree(payload);
-    }
-
-    private WebSocketMessageType getMessageType(JsonNode message) {
-        return WebSocketMessageType.valueOf(message.get("type").asText());
-    }
-
-    private void handleDirectMessage(User user, JsonNode message) {
-        String toUserIdIdentifier = message.get("toUserId").asText();
-        String messageText = message.get("message").asText();
-
-        DirectMessage directMessage = getChatMessage(user, toUserIdIdentifier, messageText);
+    private void handleDirectMessage(User user, WebSocketMessageIn<String> message) {
+        DirectMessage directMessage = getChatMessage(user, message.getRecipientId().toString(), message.getPayload());
         clientService.sendMessageToUser(directMessage);
     }
 
-    private void handleChannelMessage(User user, JsonNode message) {
-        Long toChannelId = Long.valueOf(message.get("toChannelId").asText());
-        String messageText = message.get("message").asText();
-
-        clientService.sendMessageToChannel(user, toChannelId, messageText);
+    private void handleChannelMessage(User user, WebSocketMessageIn<String> message) {
+        clientService.sendMessageToChannel(user, message.getRecipientId(), message.getPayload());
     }
 
     private DirectMessage getChatMessage(User user, String toUserIdIdentifier, String messageText) {
