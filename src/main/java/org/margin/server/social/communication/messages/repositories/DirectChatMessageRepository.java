@@ -19,4 +19,16 @@ public interface DirectChatMessageRepository extends JpaRepository<DirectMessage
 			""")
 	List<DirectMessage> findByFromUserIdAndToUserId(@Param("fromUserId") Long fromUserId,
                                                     @Param("toUserId") Long toUserId);
+
+	@Query("""
+         SELECT CASE 
+                  WHEN dm.fromUserId = :userId THEN dm.toUserId 
+                  ELSE dm.fromUserId 
+                END as otherUserId
+         FROM DirectMessage dm
+         WHERE dm.fromUserId = :userId OR dm.toUserId = :userId
+         GROUP BY dm.fromUserId, dm.toUserId
+         ORDER BY MAX(dm.createdAt) DESC
+         """)
+	List<Long> findRecentChatUserIds(@Param("userId") Long userId);
 }

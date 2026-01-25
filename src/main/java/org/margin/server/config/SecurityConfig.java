@@ -67,6 +67,7 @@ public class SecurityConfig {
                                 .requestMatchers("/signaling/").permitAll()
                                 .requestMatchers("/spaces/**").permitAll()
                                 .requestMatchers("/channels/**").permitAll()
+                                .requestMatchers("/users/**").permitAll()
                                 .requestMatchers("/chat_messages/**").hasRole("USER")
                                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,5 +1,8 @@
 package org.margin.server.users.controllers;
 
+import org.margin.server.social.communication.messages.models.DirectMessage;
+import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
+import org.margin.server.users.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,19 +16,27 @@ import org.margin.server.users.models.keys.PrivateKeyResponse;
 import org.margin.server.users.models.keys.PublicKeyResponse;
 import org.margin.server.websocket.services.WebSocketClientService;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
+    private final UserRepository userRepository;
 	private final WebSocketClientService webSocketClientService;
 	private final UserService userService;
+    private final DirectChatMessageRepository directChatMessageRepository;
 
 	public UserController(WebSocketClientService webSocketClientService,
-                          UserService userService) {
+                          UserService userService,
+                          DirectChatMessageRepository directChatMessageRepository,
+                          UserRepository userRepository) {
 		this.webSocketClientService = webSocketClientService;
 		this.userService = userService;
+        this.directChatMessageRepository = directChatMessageRepository;
+        this.userRepository = userRepository;
 	}
 
 	@GetMapping("get_all_users")
@@ -75,5 +86,15 @@ public class UserController {
         }
 
         return ResponseEntity.ok(new PrivateKeyResponse(user.getEncryptedPrivateKey()));
+    }
+
+    @GetMapping("/{userId}/recent_chat_users")
+    public List<UserDTO> getRecentChatUsers(@PathVariable Long userId) {
+        List<Long> recentUserIds = directChatMessageRepository.findRecentChatUserIds(userId).stream()
+                .distinct()
+                .collect(Collectors.toList());
+        return userRepository.findAllByIdIn(recentUserIds).stream()
+                .map(UserDTO::new)
+                .collect(Collectors.toList());
     }
 }
