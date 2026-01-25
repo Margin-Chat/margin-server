@@ -1,5 +1,7 @@
 package org.margin.server.authentication.services;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -7,7 +9,7 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.margin.server.users.UserService;
+import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
 
 import javax.crypto.SecretKey;
@@ -17,7 +19,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -27,6 +29,11 @@ public class JwtService {
 	private String secret;
 	@Value("${jwt.expiration}") // 24 hours
 	private Long expiration;
+
+    private final Cache<Long, User> userCache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(15, TimeUnit.MINUTES)
+            .build();
 
     public JwtService(UserService userService) {
         this.userService = userService;
@@ -58,15 +65,6 @@ public class JwtService {
 	private boolean isTokenExpired(String token) {
 		return extractAllClaims(token).getExpiration().before(new Date());
 	}
-
-    public Long extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", Long.class));
-    }
-
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
 
     public Optional<User> extractAndValidateJwtTokenFromWebSocket(String uri) {
         try {
