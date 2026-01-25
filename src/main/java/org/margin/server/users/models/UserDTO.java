@@ -13,7 +13,6 @@ public class UserDTO {
 	private Long id;
 	private String username;
 	private String email;
-    private String serverDomain;
 	private LocalDateTime createdAt;
 
 	public UserDTO(User user) {

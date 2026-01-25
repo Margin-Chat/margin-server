@@ -10,7 +10,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.config.FederationConfig;
 import org.margin.server.users.models.Role;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
@@ -28,7 +27,6 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final FederationConfig federationConfig;
     private final SpaceMemberRepository spaceMemberRepository;
 
     public AuthenticationService(
@@ -36,13 +34,11 @@ public class AuthenticationService {
             UserRepository userRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            FederationConfig federationConfig,
             SpaceMemberRepository spaceMemberRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.federationConfig = federationConfig;
         this.spaceMemberRepository = spaceMemberRepository;
     }
 
@@ -93,7 +89,6 @@ public class AuthenticationService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setServerDomain(federationConfig.getServerDomain());
         user.setRole(Role.USER);
         user.setSalt(salt);
         user.setIv(iv);

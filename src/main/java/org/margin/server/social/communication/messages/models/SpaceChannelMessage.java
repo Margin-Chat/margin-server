@@ -1,4 +1,4 @@
-package org.margin.server.social.models;
+package org.margin.server.social.communication.messages.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;

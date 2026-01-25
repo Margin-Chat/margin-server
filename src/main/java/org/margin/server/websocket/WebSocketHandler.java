@@ -1,6 +1,5 @@
 package org.margin.server.websocket;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -9,8 +8,7 @@ import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.social.communication.messages.models.DirectMessage;
-import org.margin.server.social.repositories.SpaceRepository;
-import org.margin.server.users.UserService;
+import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
@@ -24,20 +22,16 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
-    private final SpaceRepository spaceRepository;
 
     public WebSocketHandler(JwtService jwtService,
                             WebSocketClientService clientService,
-                            UserService userService,
-                            SpaceRepository spaceRepository) {
+                            UserService userService) {
         this.jwtService = jwtService;
         this.clientService = clientService;
         this.userService = userService;
-        this.spaceRepository = spaceRepository;
     }
 
     @Override
@@ -103,7 +97,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             }
             case PingWebSocketFrame pingFrame ->
                     ctx.writeAndFlush(new PongWebSocketFrame(pingFrame.content().retain()));
-            case TextWebSocketFrame _ -> log.warn("Received unprocessed TextWebSocketFrame - decoder may have failed");
+            case TextWebSocketFrame ignored -> log.warn("Received unprocessed TextWebSocketFrame - decoder may have failed");
             default -> log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
         }
     }
@@ -141,13 +135,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private DirectMessage getChatMessage(User user, String toUserIdIdentifier, String messageText) {
         String[] parts = toUserIdIdentifier.split("@", 2);
         User toUser = userService.getById(Long.parseLong(parts[0]));
-        String toUserServer = parts.length > 1 ? parts[1] : null;
 
         return new DirectMessage(
                 user.getId(),
                 toUser.getId(),
-                user.getServerDomain(),
-                toUserServer,
                 messageText
         );
     }
@@ -165,7 +156,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-        log.error("WebSocket error for user {}: {}", user, cause.getMessage());
+        log.error("WebSocket error for user {}: {}", user.getId(), cause.getMessage());
         ctx.close();
     }
 }

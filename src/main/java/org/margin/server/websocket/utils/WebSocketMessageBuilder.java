@@ -3,7 +3,7 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
 import org.margin.server.users.models.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;

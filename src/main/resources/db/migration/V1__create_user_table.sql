@@ -5,7 +5,6 @@ CREATE TABLE users
     email                     VARCHAR(255)                            NOT NULL,
     password                  VARCHAR(255)                            NOT NULL,
     role                      SMALLINT                                NOT NULL,
-    server_domain             VARCHAR(255),
     created_at                TIMESTAMP WITHOUT TIME ZONE             NOT NULL,
     public_key                VARCHAR(2048),
     encrypted_private_key     VARCHAR(4096),

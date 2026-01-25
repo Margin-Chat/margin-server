@@ -38,9 +38,6 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.USER;
 
-    @Column(name = "server_domain")
-    private String serverDomain;
-
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 

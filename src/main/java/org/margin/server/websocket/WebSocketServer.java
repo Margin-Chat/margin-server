@@ -8,16 +8,14 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.repositories.SpaceRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.users.UserService;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.services.WebSocketClientService;
 
 @Slf4j
@@ -30,18 +28,16 @@ public class WebSocketServer {
     private final JwtService jwtService;
     private final WebSocketClientService clientService;
     private final UserService userService;
-    private final SpaceRepository spaceRepository;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
 
     public WebSocketServer(JwtService jwtService,
                            WebSocketClientService clientService,
-                           UserService userService, SpaceRepository spaceRepository) {
+                           UserService userService) {
         this.jwtService = jwtService;
         this.clientService = clientService;
         this.userService = userService;
-        this.spaceRepository = spaceRepository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -52,7 +48,7 @@ public class WebSocketServer {
 
     private void run() {
         bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup(16);
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
@@ -68,7 +64,7 @@ public class WebSocketServer {
                                     .addLast(createWebSocketHandler());
                         }
                     })
-                    .option(ChannelOption.SO_BACKLOG, 128)
+                    .option(ChannelOption.SO_BACKLOG, 1024)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             serverChannel = bootstrap.bind(port).sync().channel();
@@ -87,7 +83,7 @@ public class WebSocketServer {
     }
 
     private WebSocketHandler createWebSocketHandler() {
-        return new WebSocketHandler(jwtService, clientService, userService, spaceRepository);
+        return new WebSocketHandler(jwtService, clientService, userService);
     }
 
     @PreDestroy

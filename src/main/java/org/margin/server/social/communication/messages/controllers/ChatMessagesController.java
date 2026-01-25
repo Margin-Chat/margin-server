@@ -1,7 +1,7 @@
 package org.margin.server.social.communication.messages.controllers;
 
 import org.margin.server.social.communication.messages.models.DirectMessage;
-import org.margin.server.social.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
 import org.margin.server.social.services.SpaceChannelService;
 import org.springframework.web.bind.annotation.*;

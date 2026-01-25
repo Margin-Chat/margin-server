@@ -1,6 +1,5 @@
 package org.margin.server.users.controllers;
 
-import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -8,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.margin.server.users.UserService;
+import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserDTO;
 import org.margin.server.users.models.keys.KeyUploadRequest;
@@ -16,7 +15,6 @@ import org.margin.server.users.models.keys.PrivateKeyResponse;
 import org.margin.server.users.models.keys.PublicKeyResponse;
 import org.margin.server.websocket.services.WebSocketClientService;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 

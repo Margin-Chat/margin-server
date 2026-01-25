@@ -1,6 +1,6 @@
 CREATE TABLE spaces
 (
-    space_id          BIGINT       NOT NULL,
+    space_id    BIGSERIAL    NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
     visibility  SMALLINT     NOT NULL,

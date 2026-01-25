@@ -29,12 +29,6 @@ public class DirectMessage {
     @Column(name = "to_user_id", nullable = false)
     private Long toUserId;
 
-    @Column(name = "from_user_server")
-    private String fromUserServer;
-
-    @Column(name = "to_user_server")
-    private String toUserServer;
-
     @NotBlank
     @Size(min = 1, max = 5000)
     private String message;
@@ -45,13 +39,9 @@ public class DirectMessage {
 
     public DirectMessage(Long fromUserId,
                          Long toUserId,
-                         String fromUserServer,
-                         String toUserServer,
                          String message) {
         this.fromUserId = fromUserId;
-        this.fromUserServer = fromUserServer;
         this.toUserId = toUserId;
-        this.toUserServer = toUserServer;
         this.message = message;
         this.isRead = false;
         this.isEdited = false;

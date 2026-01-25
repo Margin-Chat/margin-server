@@ -1,6 +1,6 @@
 package org.margin.server.social.communication.messages.repositories;
 
-import org.margin.server.social.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

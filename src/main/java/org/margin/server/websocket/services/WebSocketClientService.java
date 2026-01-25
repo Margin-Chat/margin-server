@@ -5,22 +5,18 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.communication.calls.models.CallStatus;
 import org.margin.server.social.communication.calls.models.CallType;
-import org.margin.server.social.communication.calls.repositories.CallRepository;
 import org.margin.server.social.communication.calls.services.CallService;
-import org.margin.server.social.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
 import org.margin.server.social.models.SpaceChannel;
 import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
 import org.margin.server.social.repositories.SpaceChannelRepository;
 import org.margin.server.social.repositories.SpaceRepository;
-import org.margin.server.users.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.*;
 import org.springframework.stereotype.Service;
 import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.services.MessageService;
-import org.margin.server.config.FederationConfig;
-import org.margin.server.federation.services.FederationService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 
@@ -35,32 +31,22 @@ public class WebSocketClientService {
     private final Map<Long, Channel> clients = new ConcurrentHashMap<>();
     private final WebSocketMessageBuilder messageFactory;
     private final MessageService messageService;
-    private final FederationConfig federationConfig;
-    private final FederationService federationService;
     private final SpaceChannelRepository channelRepository;
     private final SpaceRepository spaceRepository;
     private final SpaceChannelMessageRepository spaceChannelMessageRepository;
-    private final CallRepository callRepository;
-    private final UserService userService;
     private final CallService callService;
 
     public WebSocketClientService(WebSocketMessageBuilder messageFactory,
                                   MessageService messageService,
-                                  FederationConfig federationConfig,
-                                  FederationService federationService,
                                   SpaceChannelRepository channelRepository,
                                   SpaceRepository spaceRepository,
                                   SpaceChannelMessageRepository spaceChannelMessageRepository,
-                                  CallRepository callRepository, UserService userService, CallService callService) {
+                                  CallService callService) {
         this.messageFactory = messageFactory;
         this.messageService = messageService;
-        this.federationConfig = federationConfig;
-        this.federationService = federationService;
         this.channelRepository = channelRepository;
         this.spaceRepository = spaceRepository;
         this.spaceChannelMessageRepository = spaceChannelMessageRepository;
-        this.callRepository = callRepository;
-        this.userService = userService;
         this.callService = callService;
     }
 
@@ -128,13 +114,7 @@ public class WebSocketClientService {
     }
 
     public void sendMessageToUser(DirectMessage directMessage) {
-        String recipientServer = parseServerFromUserId(directMessage.getToUserServer());
-
-        if (isLocalUser(recipientServer)) {
-            deliverLocalMessage(directMessage);
-        } else {
-            deliverFederatedMessage(directMessage, recipientServer);
-        }
+        deliverMessageToUser(directMessage);
     }
 
     public void sendMessageToChannel(User user, Long toChannelId, String messageText) {
@@ -251,7 +231,7 @@ public class WebSocketClientService {
         clients.clear();
     }
 
-    private void deliverLocalMessage(DirectMessage directMessage) {
+    private void deliverMessageToUser(DirectMessage directMessage) {
         Channel targetChannel = getClientChannel(directMessage.getToUserId());
         messageService.saveDirectMessage(directMessage);
 
@@ -272,36 +252,5 @@ public class WebSocketClientService {
         }
 
         frame.release();
-    }
-
-    private void deliverFederatedMessage(DirectMessage directMessage, String targetServer) {
-        log.info("Routing message to federated server: {}", targetServer);
-
-        if (directMessage.getFromUserServer() == null) {
-            directMessage.setFromUserServer(federationConfig.getServerDomain());
-        }
-        directMessage.setToUserServer(targetServer);
-
-        messageService.saveDirectMessage(directMessage);
-
-        boolean success = federationService.sendFederatedMessage(directMessage);
-        if (!success) {
-            log.error("Failed to deliver federated message to {}", targetServer);
-            // TODO: Mark message as failed, implement retry logic or callback the error to client
-        }
-    }
-
-    private boolean isLocalUser(String serverDomain) {
-        return serverDomain == null ||
-                serverDomain.isEmpty() ||
-                serverDomain.equals(federationConfig.getServerDomain());
-    }
-
-    private String parseServerFromUserId(String serverHint) {
-        if (serverHint != null && !serverHint.isEmpty()) {
-            return serverHint;
-        }
-
-        return federationConfig.getServerDomain();
     }
 }
