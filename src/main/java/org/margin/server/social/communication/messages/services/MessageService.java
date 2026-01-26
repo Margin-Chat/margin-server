@@ -1,5 +1,6 @@
 package org.margin.server.social.communication.messages.services;
 
+import jakarta.transaction.Transactional;
 import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
@@ -7,6 +8,7 @@ import org.margin.server.social.communication.messages.repositories.SpaceChannel
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class MessageService {
@@ -28,4 +30,9 @@ public class MessageService {
         message.setCreatedAt(new Date());
         spaceChannelMessageRepository.save(message);
     }
+
+	@Transactional
+	public void setMessagesToRead(Long fromUserId, Long toUserId, List<Long> messageIds) {
+		directChatMessageRepository.setMessagesToRead(fromUserId, toUserId, messageIds);
+	}
 }
