@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
 import org.margin.server.users.models.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
@@ -41,11 +42,11 @@ public class WebSocketMessageBuilder {
         return toJson(message);
     }
 
-    public String createWebSocketChannelMessage(SpaceChannelMessage channelMessage) {
+    public String createWebSocketChannelMessage(SpaceChannelMessageDTO channelMessage) {
         WebSocketMessage<String> message = new WebSocketMessage<>(
                 WebSocketMessageType.RECEIVE_CHANNEL_MESSAGE,
                 System.currentTimeMillis(),
-                channelMessage.getChannelId(),
+                channelMessage.channelId(),
                 toJson(channelMessage));
         return toJson(message);
     }

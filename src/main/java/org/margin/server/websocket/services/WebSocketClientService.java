@@ -7,10 +7,12 @@ import org.margin.server.social.communication.calls.models.CallStatus;
 import org.margin.server.social.communication.calls.models.CallType;
 import org.margin.server.social.communication.calls.services.CallService;
 import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
 import org.margin.server.social.models.SpaceChannel;
 import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
 import org.margin.server.social.repositories.SpaceChannelRepository;
 import org.margin.server.social.repositories.SpaceRepository;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.*;
@@ -35,19 +37,21 @@ public class WebSocketClientService {
     private final SpaceRepository spaceRepository;
     private final SpaceChannelMessageRepository spaceChannelMessageRepository;
     private final CallService callService;
+    private final UserService userService;
 
     public WebSocketClientService(WebSocketMessageBuilder messageFactory,
                                   MessageService messageService,
                                   SpaceChannelRepository channelRepository,
                                   SpaceRepository spaceRepository,
                                   SpaceChannelMessageRepository spaceChannelMessageRepository,
-                                  CallService callService) {
+                                  CallService callService, UserService userService) {
         this.messageFactory = messageFactory;
         this.messageService = messageService;
         this.channelRepository = channelRepository;
         this.spaceRepository = spaceRepository;
         this.spaceChannelMessageRepository = spaceChannelMessageRepository;
         this.callService = callService;
+        this.userService = userService;
     }
 
     public void addClient(Long id, Channel channel) {
@@ -143,7 +147,8 @@ public class WebSocketClientService {
             Channel targetChannel = getClientChannel(recipientUser.getId());
             log.info("Channel found: {}", targetChannel);
 
-            String messageJson = messageFactory.createWebSocketChannelMessage(channelMessage);
+            String messageJson = messageFactory.createWebSocketChannelMessage(
+                    SpaceChannelMessageDTO.fromEntity(channelMessage, user.getUsername()));
             TextWebSocketFrame frame = new TextWebSocketFrame(messageJson);
 
             if (targetChannel.isActive()) {

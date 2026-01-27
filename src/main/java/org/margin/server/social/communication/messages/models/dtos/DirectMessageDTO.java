@@ -1,4 +1,4 @@
-package org.margin.server.social.communication.messages.models;
+package org.margin.server.social.communication.messages.models.dtos;
 
 import org.margin.server.social.communication.messages.models.DirectMessage;
 
