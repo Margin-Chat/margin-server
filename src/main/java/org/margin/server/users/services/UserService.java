@@ -1,10 +1,14 @@
 package org.margin.server.users.services;
 
+import org.margin.server.users.models.UserDTO;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -28,6 +32,12 @@ public class UserService {
         user.setPublicKey(publicKey);
         user.setEncryptedPrivateKey(encryptedPrivateKey);
         userRepository.save(user);
+    }
+
+    public List<UserDTO> searchForUser(String query) {
+        return userRepository.findTop20ByUsernameContainingIgnoreCase(query).stream()
+                .map(UserDTO::new)
+                .collect(Collectors.toList());
     }
 
     @CacheEvict(value = "users", key = "#userId")

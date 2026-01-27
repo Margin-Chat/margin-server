@@ -95,4 +95,9 @@ public class UserController {
                 .map(UserDTO::new)
                 .collect(Collectors.toList());
     }
+
+    @GetMapping("/search")
+    public List<UserDTO> searchForUser(@RequestParam String query) {
+        return userService.searchForUser(query);
+    }
 }
