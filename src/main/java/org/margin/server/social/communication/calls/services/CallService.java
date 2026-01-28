@@ -1,13 +1,17 @@
 package org.margin.server.social.communication.calls.services;
 
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.communication.calls.models.Call;
 import org.margin.server.social.communication.calls.models.CallStatus;
 import org.margin.server.social.communication.calls.models.CallType;
 import org.margin.server.social.communication.calls.repositories.CallRepository;
+import org.margin.server.social.communication.exceptions.CallNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 public class CallService {
     private final CallRepository callRepository;
@@ -16,29 +20,38 @@ public class CallService {
         this.callRepository = callRepository;
     }
 
-    public Long createNewCall(Long fromUser, Long toUser, CallStatus callStatus, CallType callType, String sdp) {
-        Call call = new Call(
-                fromUser,
-                toUser,
-                callStatus,
-                callType,
-                sdp
-        );
-        callRepository.save(call);
-        return call.getId();
+    @Transactional
+    public Call createCall(Long fromUserId, Long toUserId, CallStatus status, CallType type, String sdp) {
+        Call call = new Call(fromUserId, toUserId, status, type, sdp);
+        Call saved = callRepository.save(call);
+
+        log.debug("Call created: {} -> {} (type: {}, id: {})",
+                fromUserId, toUserId, type, saved.getId());
+
+        return saved;
     }
 
-    public void updateCallStatus(Long callId, CallStatus callStatus) {
-        Call call = callRepository.getCallByById(callId);
-        call.setStatus(callStatus);
+    @Transactional
+    public void updateCallStatus(Long callId, CallStatus status) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
+
+        call.setStatus(status);
         callRepository.save(call);
+
+        log.debug("Call {} status updated to {}", callId, status);
     }
 
-    public void endCall(Long callId, Integer duration) {
-        Call call = callRepository.getCallByById(callId);
+    @Transactional
+    public void endCall(Long callId, Integer durationSeconds) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
+
         call.setStatus(CallStatus.ENDED);
         call.setEndedAt(LocalDateTime.now());
-        call.setDurationSeconds(duration);
+        call.setDurationSeconds(durationSeconds);
         callRepository.save(call);
+
+        log.debug("Call {} ended (duration: {}s)", callId, durationSeconds);
     }
 }

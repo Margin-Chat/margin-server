@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/margindb
+    username: sysuser
+    password: admin123
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  flyway:
+    clean-disabled: true
+
+jwt:
+  secret: dev-secret-key-not-for-production-use-only

@@ -1,7 +1,11 @@
 package org.margin.server.authentication.controllers;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.services.WebSocketClientService;
+import org.margin.server.authentication.models.LoginRequest;
+import org.margin.server.authentication.models.LogoutRequest;
+import org.margin.server.authentication.models.RegisterRequest;
+import org.margin.server.connection.ConnectionManager;
+import org.margin.server.users.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.authentication.models.AuthResponse;
@@ -15,13 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 @Slf4j
 public class AuthenticationController {
+
     private final AuthenticationService authService;
-    private final WebSocketClientService webSocketClientService;
+    private final ConnectionManager connectionManager;
+    private final UserService userService;
 
     public AuthenticationController(AuthenticationService authService,
-                                    WebSocketClientService webSocketClientService) {
+                                    ConnectionManager connectionManager, UserService userService) {
         this.authService = authService;
-        this.webSocketClientService = webSocketClientService;
+        this.connectionManager = connectionManager;
+        this.userService = userService;
     }
 
     @PostMapping("/login")
@@ -33,9 +40,13 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
-        log.info("Logout attempt for user: {}", logoutRequest.userId);
+        log.info("Logout attempt for user: {}", logoutRequest.userId());
 
-        webSocketClientService.logoutUser(logoutRequest.userId);
+        var connection = connectionManager.getConnection(logoutRequest.userId());
+        if (connection != null) {
+            connection.close();
+            connectionManager.removeConnection(userService.getById(logoutRequest.userId()));
+        }
 
         return ResponseEntity.ok().build();
     }
@@ -75,22 +86,5 @@ public class AuthenticationController {
                             null,
                             null));
         }
-    }
-
-    public record LoginRequest(String username, String password) {
-    }
-
-    public record LogoutRequest(Long userId) {
-    }
-
-    public record RegisterRequest(
-            String username,
-            String email,
-            String password,
-            String publicKey,
-            String encryptedPrivateKey,
-            String salt,
-            String iv
-    ) {
     }
 }

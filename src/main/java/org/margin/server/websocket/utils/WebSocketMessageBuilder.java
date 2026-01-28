@@ -3,104 +3,70 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.DirectMessage;
+import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
 import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
+import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserDTO;
+import org.margin.server.websocket.models.WebSocketMessage;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
 import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
 import org.springframework.stereotype.Component;
-import org.margin.server.social.communication.messages.models.DirectMessage;
-import org.margin.server.users.models.User;
-import org.margin.server.websocket.models.WebSocketMessage;
 
-@Component
 @Slf4j
+@Component
 public class WebSocketMessageBuilder {
+
     private final ObjectMapper mapper;
 
     public WebSocketMessageBuilder(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
-    public String createUserActivity(WebSocketMessageType type, User user) {
-        WebSocketMessage<UserDTO> message = new WebSocketMessage<>(
+    public String userActivity(WebSocketMessageType type, User user) {
+        return buildMessage(type, user.getId(), new UserDTO(user));
+    }
+
+    public String directMessage(DirectMessageDTO message) {
+        return buildMessage(
+                WebSocketMessageType.RECEIVE_DIRECT_MESSAGE,
+                message.toUserId(),
+                message
+        );
+    }
+    public String channelMessage(SpaceChannelMessageDTO message) {
+        return buildMessage(
+                WebSocketMessageType.RECEIVE_CHANNEL_MESSAGE,
+                message.channelId(),
+                message
+        );
+    }
+
+    public String callOffer(Long callId, Long recipientId, String sdp, String callType) {
+        CallOfferPayload payload = new CallOfferPayload(callId, recipientId, sdp, callType);
+        return buildMessage(WebSocketMessageType.CALL_OFFER, recipientId, payload);
+    }
+
+    public String callResponse(Long recipientId, CallResponsePayload payload) {
+        return buildMessage(WebSocketMessageType.CALL_RESPONSE, recipientId, payload);
+    }
+
+    public String callCandidate(Long recipientId, IncomingCallCandidatePayload payload) {
+        return buildMessage(WebSocketMessageType.CALL_CANDIDATE, recipientId, payload);
+    }
+
+    public String callEnd(Long recipientId) {
+        return buildMessage(WebSocketMessageType.CALL_END, recipientId, null);
+    }
+
+    private <T> String buildMessage(WebSocketMessageType type, Long recipientId, T payload) {
+        WebSocketMessage<T> message = new WebSocketMessage<>(
                 type,
                 System.currentTimeMillis(),
-                user.getId(),
-                new UserDTO(user));
-        return toJson(message);
-    }
-
-    public String createWebSocketChatMessage(DirectMessage directMessage) {
-        WebSocketMessage<String> message = new WebSocketMessage<>(
-                WebSocketMessageType.RECEIVE_DIRECT_MESSAGE,
-                System.currentTimeMillis(),
-                directMessage.getToUserId(),
-                toJson(directMessage));
-        return toJson(message);
-    }
-
-    public String createWebSocketChannelMessage(SpaceChannelMessageDTO channelMessage) {
-        WebSocketMessage<String> message = new WebSocketMessage<>(
-                WebSocketMessageType.RECEIVE_CHANNEL_MESSAGE,
-                System.currentTimeMillis(),
-                channelMessage.channelId(),
-                toJson(channelMessage));
-        return toJson(message);
-    }
-
-    public String createWebSocketCallResponseMessageWithPayload(
-            Long toUserId,
-            CallResponsePayload payload) {
-        WebSocketMessage<CallResponsePayload> message = new WebSocketMessage<>(
-                WebSocketMessageType.CALL_RESPONSE,
-                System.currentTimeMillis(),
-                toUserId,
+                recipientId,
                 payload
-        );
-        return toJson(message);
-    }
-
-    public String createWebSocketCallCandidateMessage(
-            Long toUserId,
-            IncomingCallCandidatePayload payload
-    ) {
-        WebSocketMessage<IncomingCallCandidatePayload> message = new WebSocketMessage<>(
-                WebSocketMessageType.CALL_CANDIDATE,
-                System.currentTimeMillis(),
-                toUserId,
-                payload
-        );
-        return toJson(message);
-    }
-
-    public String createWebSocketCallOfferMessage(Long callId,
-                                                  Long toUserId,
-                                                  String sdp,
-                                                  String callType) {
-        CallOfferPayload offerData = new CallOfferPayload(
-                callId,
-                toUserId,
-                sdp,
-                callType
-        );
-
-        WebSocketMessage<CallOfferPayload> message = new WebSocketMessage<>(
-                WebSocketMessageType.CALL_OFFER,
-                System.currentTimeMillis(),
-                toUserId,
-                offerData);
-        return toJson(message);
-    }
-
-    public String createWebSocketCallEndMessage(Long toUserId) {
-        WebSocketMessage<Void> message = new WebSocketMessage<>(
-                WebSocketMessageType.CALL_END,
-                System.currentTimeMillis(),
-                toUserId,
-                null
         );
         return toJson(message);
     }
@@ -109,7 +75,7 @@ public class WebSocketMessageBuilder {
         try {
             return mapper.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
-            log.error("Failed to serialize object to JSON: {}", obj.getClass().getName(), e);
+            log.error("Failed to serialize WebSocket message", e);
             throw new RuntimeException("Failed to serialize WebSocket message", e);
         }
     }

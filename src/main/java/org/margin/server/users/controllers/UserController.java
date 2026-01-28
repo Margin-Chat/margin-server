@@ -1,5 +1,6 @@
 package org.margin.server.users.controllers;
 
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -13,7 +14,6 @@ import org.margin.server.users.models.UserDTO;
 import org.margin.server.users.models.keys.KeyUploadRequest;
 import org.margin.server.users.models.keys.PrivateKeyResponse;
 import org.margin.server.users.models.keys.PublicKeyResponse;
-import org.margin.server.websocket.services.WebSocketClientService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,31 +23,31 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserRepository userRepository;
-	private final WebSocketClientService webSocketClientService;
-	private final UserService userService;
+    private final ConnectionManager connectionManager;
+    private final UserService userService;
     private final DirectChatMessageRepository directChatMessageRepository;
 
-	public UserController(WebSocketClientService webSocketClientService,
+    public UserController(ConnectionManager connectionManager,
                           UserService userService,
                           DirectChatMessageRepository directChatMessageRepository,
                           UserRepository userRepository) {
-		this.webSocketClientService = webSocketClientService;
-		this.userService = userService;
+        this.connectionManager = connectionManager;
+        this.userService = userService;
         this.directChatMessageRepository = directChatMessageRepository;
         this.userRepository = userRepository;
-	}
+    }
 
-	@GetMapping("get_all_users")
-	public List<UserDTO> getAllOnlineUsersOnServer(Authentication authentication) {
+    @GetMapping("get_all_users")
+    public List<UserDTO> getAllOnlineUsersOnServer(Authentication authentication) {
         String username = authentication.getName();
-		return webSocketClientService.getAllClients()
-                .keySet()
+
+        return connectionManager.getOnlineUserIds()
                 .stream()
                 .map(userService::getById)
                 .filter(user -> !user.getUsername().equals(username))
                 .map(UserDTO::new)
                 .toList();
-	}
+    }
 
     @GetMapping("/me")
     public UserDTO getCurrentUser(Authentication authentication) {

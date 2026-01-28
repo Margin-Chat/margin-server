@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: margin-server
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/margindb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  flyway:
+    clean-disabled: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000

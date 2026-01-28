@@ -1,65 +1,61 @@
 package org.margin.server.websocket;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.social.communication.messages.models.DirectMessage;
-import org.margin.server.users.services.UserService;
+import org.margin.server.connection.ClientConnection;
+import org.margin.server.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.handlers.CallHandler;
+import org.margin.server.websocket.handlers.MessageHandler;
 import org.margin.server.websocket.models.WebSocketMessageIn;
-import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
-import org.margin.server.websocket.models.payloads.IncomingCallEndPayload;
-import org.margin.server.websocket.models.payloads.IncomingCallOfferPayload;
-import org.margin.server.websocket.models.payloads.IncomingCallResponsePayload;
-import org.margin.server.websocket.services.WebSocketClientService;
+import org.margin.server.websocket.models.payloads.*;
 
 import java.util.Optional;
 
+
 @Slf4j
-@ChannelHandler.Sharable
 public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
+
     private final JwtService jwtService;
-    private final WebSocketClientService clientService;
-    private final UserService userService;
+    private final ConnectionManager connectionManager;
+    private final MessageHandler messageHandler;
+    private final CallHandler callHandler;
+    private final PresenceService presenceService;
 
     public WebSocketHandler(JwtService jwtService,
-                            WebSocketClientService clientService,
-                            UserService userService) {
+                            ConnectionManager connectionManager,
+                            MessageHandler messageHandler,
+                            CallHandler callHandler,
+                            PresenceService presenceService) {
         this.jwtService = jwtService;
-        this.clientService = clientService;
-        this.userService = userService;
+        this.connectionManager = connectionManager;
+        this.messageHandler = messageHandler;
+        this.callHandler = callHandler;
+        this.presenceService = presenceService;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object message) {
         switch (message) {
             case FullHttpRequest httpRequest -> handleHttpRequest(ctx, httpRequest);
-            case WebSocketMessageIn<?> webSocketMessage -> handleWebSocketMessage(ctx, webSocketMessage);
-            case WebSocketFrame webSocketFrame -> handleWebSocketFrame(ctx, webSocketFrame);
-            default -> throw new IllegalStateException("Unexpected value: " + message);
+            case WebSocketMessageIn<?> wsMessage -> handleWebSocketMessage(ctx, wsMessage);
+            case WebSocketFrame frame -> handleWebSocketFrame(ctx, frame);
+            default -> throw new IllegalStateException("Unexpected message type: " + message);
         }
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
-        if (!req.decoderResult().isSuccess()) {
-            log.warn("Bad HTTP request from {}", ctx.channel().remoteAddress());
+        if (!req.decoderResult().isSuccess() || !req.uri().startsWith("/ws")) {
             ctx.close();
             return;
         }
 
-        String uri = req.uri();
-        if (!uri.startsWith("/ws")) {
-            log.warn("Invalid WebSocket path: {}", uri);
-            ctx.close();
-            return;
-        }
-
-        Optional<User> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(uri);
-
+        Optional<User> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
         if (optionalUser.isEmpty()) {
             ctx.close();
             return;
@@ -68,95 +64,70 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         User user = optionalUser.get();
         ctx.channel().attr(WebSocketAttributes.USER).set(user);
 
-        WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+        WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
                 "ws://localhost:8081/ws", null, true, 65536);
-        WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
+        WebSocketServerHandshaker handshaker = factory.newHandshaker(req);
 
-        if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
-        } else {
+        if (handshaker != null) {
             ctx.channel().attr(WebSocketAttributes.HANDSHAKER).set(handshaker);
-
             handshaker.handshake(ctx.channel(), req).addListener(future -> {
                 if (future.isSuccess()) {
-                    clientService.addClient(user.getId(), ctx.channel());
-                    clientService.broadcastUserLogin(user);
+                    onConnectionEstablished(ctx, user);
                 }
             });
         }
     }
 
-    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-        WebSocketServerHandshaker handshaker = ctx.channel().attr(WebSocketAttributes.HANDSHAKER).get();
+    private void onConnectionEstablished(ChannelHandlerContext ctx, User user) {
+        ClientConnection connection = new WebSocketClientConnection(ctx.channel(), user);
+        connectionManager.addConnection(user, connection);
+        presenceService.userConnected(user);
+    }
 
+    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         switch (frame) {
-            case CloseWebSocketFrame closeFrame -> {
-                log.info("Client requested close: {}", user.getId());
-                handshaker.close(ctx.channel(), closeFrame.retain());
-            }
-            case PingWebSocketFrame pingFrame ->
-                    ctx.writeAndFlush(new PongWebSocketFrame(pingFrame.content().retain()));
-            case TextWebSocketFrame ignored -> log.warn("Received unprocessed TextWebSocketFrame - decoder may have failed");
-            default -> log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
+            case CloseWebSocketFrame close ->
+                    ctx.channel().attr(WebSocketAttributes.HANDSHAKER).get()
+                            .close(ctx.channel(), close.retain());
+            case PingWebSocketFrame ping ->
+                    ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
+            default ->
+                    log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
         }
     }
 
     @SuppressWarnings("unchecked")
     private void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-        log.debug("Received message from {}: type={}", user, message.getType());
 
         switch (message.getType()) {
-            case SEND_DIRECT_MESSAGE -> handleDirectMessage(user,
-                    (WebSocketMessageIn<String>) message);
-            case SEND_CHANNEL_MESSAGE -> handleChannelMessage(user,
-                    (WebSocketMessageIn<String>) message);
-            case CALL_OFFER -> clientService.sendCallOffer(user,
-                    (WebSocketMessageIn<IncomingCallOfferPayload>) message);
-            case CALL_RESPONSE -> clientService.sendCallResponse(
-                    (WebSocketMessageIn<IncomingCallResponsePayload>) message);
-            case CALL_CANDIDATE -> clientService.sendCallCandidate(
-                    (WebSocketMessageIn<IncomingCallCandidatePayload>) message);
-            case CALL_END -> clientService.sendCallEnd(
-                    (WebSocketMessageIn<IncomingCallEndPayload>) message);
+            case SEND_DIRECT_MESSAGE ->
+                    messageHandler.handleDirectMessage(user, (WebSocketMessageIn<String>) message);
+            case SEND_CHANNEL_MESSAGE ->
+                    messageHandler.handleChannelMessage(user, (WebSocketMessageIn<String>) message);
+            case CALL_OFFER ->
+                    callHandler.handleCallOffer(user, (WebSocketMessageIn<IncomingCallOfferPayload>) message);
+            case CALL_RESPONSE ->
+                    callHandler.handleCallResponse((WebSocketMessageIn<IncomingCallResponsePayload>) message);
+            case CALL_CANDIDATE ->
+                    callHandler.handleCallCandidate((WebSocketMessageIn<IncomingCallCandidatePayload>) message);
+            case CALL_END ->
+                    callHandler.handleCallEnd((WebSocketMessageIn<IncomingCallEndPayload>) message);
         }
-    }
-
-    private void handleDirectMessage(User user, WebSocketMessageIn<String> message) {
-        DirectMessage directMessage = getChatMessage(user, message.getRecipientId().toString(), message.getPayload());
-        clientService.sendMessageToUser(directMessage);
-    }
-
-    private void handleChannelMessage(User user, WebSocketMessageIn<String> message) {
-        clientService.sendMessageToChannel(user, message.getRecipientId(), message.getPayload());
-    }
-
-    private DirectMessage getChatMessage(User user, String toUserIdIdentifier, String messageText) {
-        String[] parts = toUserIdIdentifier.split("@", 2);
-        User toUser = userService.getById(Long.parseLong(parts[0]));
-
-        return new DirectMessage(
-                user.getId(),
-                toUser.getId(),
-                messageText
-        );
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user != null) {
-            clientService.removeClient(user.getId());
-            clientService.broadcastUserLogout(user);
-            log.info("User {} disconnected", user.getId());
+            connectionManager.removeConnection(user);
+            presenceService.userDisconnected(user);
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-        log.error("WebSocket error for user {}: {}", user.getId(), cause.getMessage());
+        log.error("WebSocket error", cause);
         ctx.close();
     }
 }

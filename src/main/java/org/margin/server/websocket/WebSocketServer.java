@@ -10,34 +10,41 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
+import org.margin.server.websocket.handlers.CallHandler;
+import org.margin.server.websocket.handlers.MessageHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.services.WebSocketClientService;
 
 @Slf4j
 @Component
 public class WebSocketServer {
 
+    private final ObjectMapper objectMapper;
+    private final JwtService jwtService;
+    private final ConnectionManager connectionManager;
+    private final MessageHandler messageHandler;
+    private final CallHandler callHandler;
+    private final PresenceService presenceService;
     @Value("${websocket.port:8081}")
     private int port;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private final JwtService jwtService;
-    private final WebSocketClientService clientService;
-    private final UserService userService;
+
+
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
 
-    public WebSocketServer(JwtService jwtService,
-                           WebSocketClientService clientService,
-                           UserService userService) {
+    public WebSocketServer(ObjectMapper objectMapper, JwtService jwtService, ConnectionManager connectionManager, MessageHandler messageHandler, CallHandler callHandler, PresenceService presenceService) {
+        this.objectMapper = objectMapper;
         this.jwtService = jwtService;
-        this.clientService = clientService;
-        this.userService = userService;
+        this.connectionManager = connectionManager;
+        this.messageHandler = messageHandler;
+        this.callHandler = callHandler;
+        this.presenceService = presenceService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -48,7 +55,7 @@ public class WebSocketServer {
 
     private void run() {
         bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup(16);
+        workerGroup = new NioEventLoopGroup();
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
@@ -61,7 +68,12 @@ public class WebSocketServer {
                                     .addLast(new HttpServerCodec())
                                     .addLast(new HttpObjectAggregator(65536))
                                     .addLast(new WebSocketMessageDecoder(objectMapper))
-                                    .addLast(createWebSocketHandler());
+                                    .addLast(new WebSocketHandler(
+                                            jwtService,
+                                            connectionManager,
+                                            messageHandler,
+                                            callHandler,
+                                            presenceService));
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 1024)
@@ -82,10 +94,6 @@ public class WebSocketServer {
         }
     }
 
-    private WebSocketHandler createWebSocketHandler() {
-        return new WebSocketHandler(jwtService, clientService, userService);
-    }
-
     @PreDestroy
     public void shutdown() {
         log.info("Shutting down WebSocket server...");
@@ -100,7 +108,7 @@ public class WebSocketServer {
             workerGroup.shutdownGracefully();
         }
 
-        clientService.clearAllClients();
+        connectionManager.clearAll();
         log.info("WebSocket server shut down");
     }
 }
