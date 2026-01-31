@@ -1,10 +1,9 @@
 CREATE TABLE channels
 (
-    channel_id          BIGINT       NOT NULL,
+    channel_id  BIGSERIAL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
-    space_id    BIGINT       NOT NULL,
-    CONSTRAINT pk_channels PRIMARY KEY (channel_id)
+    space_id    BIGINT       NOT NULL
 );
 
 ALTER TABLE channels

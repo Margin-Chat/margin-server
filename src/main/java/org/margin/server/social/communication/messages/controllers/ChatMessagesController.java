@@ -3,10 +3,10 @@ package org.margin.server.social.communication.messages.controllers;
 import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
 import org.margin.server.social.communication.messages.models.dtos.SetMessagesToReadRequest;
-import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
 import org.margin.server.social.communication.messages.services.MessageService;
-import org.margin.server.social.services.SpaceChannelService;
+import org.margin.server.social.services.ChannelService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -18,34 +18,25 @@ import java.util.stream.Collectors;
 @RequestMapping("/chat_messages")
 public class ChatMessagesController {
     private final DirectChatMessageRepository directChatMessageRepository;
-    private final SpaceChannelService spaceChannelService;
+    private final ChannelService channelService;
     private final MessageService messageService;
 
     public ChatMessagesController(DirectChatMessageRepository directChatMessageRepository,
-                                  SpaceChannelService spaceChannelService,
+                                  ChannelService channelService,
                                   MessageService messageService) {
         this.directChatMessageRepository = directChatMessageRepository;
-        this.spaceChannelService = spaceChannelService;
+        this.channelService = channelService;
         this.messageService = messageService;
     }
 
     @GetMapping("get_chat_history")
-    public List<DirectMessage> getChatHistory(@RequestParam Long userId, @RequestParam Long toUserId) {
-        List<DirectMessage> messagesFromUser = directChatMessageRepository.findByFromUserIdAndToUserId(userId, toUserId);
-        List<DirectMessage> messagesToUser = directChatMessageRepository.findByFromUserIdAndToUserId(toUserId, userId);
-
-        List<DirectMessage> allMessages = new ArrayList<>();
-        allMessages.addAll(messagesFromUser);
-        allMessages.addAll(messagesToUser);
-
-        allMessages.sort(Comparator.comparing(DirectMessage::getCreatedAt));
-
-        return allMessages;
+    public List<DirectMessageDTO> getChatHistory(@RequestParam Long userId, @RequestParam Long toUserId) {
+        return messageService.getChatHistory(userId, toUserId);
     }
 
     @GetMapping("{channelId}/get_messages_for_channel")
-    public List<SpaceChannelMessageDTO> getMessagesForChannel(@PathVariable Long channelId) {
-        return spaceChannelService.getMessagesForChannel(channelId);
+    public List<ChannelMessageDTO> getMessagesForChannel(@PathVariable Long channelId) {
+        return channelService.getMessagesForChannel(channelId);
     }
 
     @GetMapping("get_unread_messages_for_user")

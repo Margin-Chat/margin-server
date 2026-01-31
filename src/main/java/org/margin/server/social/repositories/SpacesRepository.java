@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SpaceRepository extends JpaRepository<Space, Long> {
+public interface SpacesRepository extends JpaRepository<Space, Long> {
     @Query("SELECT sp FROM Space sp")
     List<Space> getSpaces();
 
-    @Query("SELECT spm.user FROM SpaceMember spm WHERE spm.id.spaceId = :spaceId")
+    @Query("SELECT spm.user FROM SpaceMember spm WHERE spm.space.id = :spaceId")
     List<User> getUsersForSpace(Long spaceId);
 
     @Query("SELECT sp FROM Space sp WHERE sp.name = :spaceName")

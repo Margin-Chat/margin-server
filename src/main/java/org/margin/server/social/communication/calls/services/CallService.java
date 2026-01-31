@@ -7,6 +7,7 @@ import org.margin.server.social.communication.calls.models.CallStatus;
 import org.margin.server.social.communication.calls.models.CallType;
 import org.margin.server.social.communication.calls.repositories.CallRepository;
 import org.margin.server.social.communication.exceptions.CallNotFoundException;
+import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ public class CallService {
     }
 
     @Transactional
-    public Call createCall(Long fromUserId, Long toUserId, CallStatus status, CallType type, String sdp) {
+    public Call createCall(User fromUserId, User toUserId, CallStatus status, CallType type, String sdp) {
         Call call = new Call(fromUserId, toUserId, status, type, sdp);
         Call saved = callRepository.save(call);
 

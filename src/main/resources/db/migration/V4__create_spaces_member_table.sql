@@ -1,10 +1,11 @@
 CREATE TABLE space_members
 (
-    space_id  BIGINT NOT NULL,
-    user_id   BIGINT NOT NULL,
-    joined_at TIMESTAMP WITHOUT TIME ZONE,
-    role      VARCHAR(255),
-    CONSTRAINT pk_space_members PRIMARY KEY (space_id, user_id)
+    space_member_id BIGSERIAL PRIMARY KEY,
+    space_id        BIGINT NOT NULL,
+    user_id         BIGINT NOT NULL,
+    joined_at       TIMESTAMP WITHOUT TIME ZONE,
+    role            VARCHAR(255),
+    CONSTRAINT uq_space_members_space_user UNIQUE (space_id, user_id)
 );
 
 ALTER TABLE space_members

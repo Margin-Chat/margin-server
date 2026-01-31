@@ -14,8 +14,8 @@ public interface DirectChatMessageRepository extends JpaRepository<DirectMessage
     @Query("""
             SELECT dm
             FROM DirectMessage dm
-            WHERE dm.fromUserId = :fromUserId
-              AND dm.toUserId = :toUserId
+            WHERE dm.fromUser.id = :fromUserId
+              AND dm.toUser.id = :toUserId
             ORDER BY dm.createdAt ASC
             """)
     List<DirectMessage> findByFromUserIdAndToUserId(@Param("fromUserId") Long fromUserId,
@@ -23,12 +23,12 @@ public interface DirectChatMessageRepository extends JpaRepository<DirectMessage
 
     @Query("""
             SELECT CASE 
-                     WHEN dm.fromUserId = :userId THEN dm.toUserId 
-                     ELSE dm.fromUserId 
+                     WHEN dm.fromUser.id = :userId THEN dm.toUser.id 
+                     ELSE dm.fromUser.id 
                    END as otherUserId
             FROM DirectMessage dm
-            WHERE dm.fromUserId = :userId OR dm.toUserId = :userId
-            GROUP BY dm.fromUserId, dm.toUserId
+            WHERE dm.fromUser.id = :userId OR dm.toUser.id = :userId
+            GROUP BY dm.fromUser.id, dm.toUser.id
             ORDER BY MAX(dm.createdAt) DESC
             """)
     List<Long> findRecentChatUserIds(@Param("userId") Long userId);
@@ -36,7 +36,7 @@ public interface DirectChatMessageRepository extends JpaRepository<DirectMessage
     @Query("""
             SELECT dm
             FROM DirectMessage dm
-            WHERE dm.toUserId = :userId
+            WHERE dm.toUser.id = :userId
             	AND dm.isRead = false
             """)
     List<DirectMessage> findByToUserIdAndWhereIsReadIsFalse(@Param("userId") Long userId);
@@ -45,8 +45,8 @@ public interface DirectChatMessageRepository extends JpaRepository<DirectMessage
     @Query("""
             UPDATE DirectMessage dm
             SET dm.isRead = true
-            WHERE dm.fromUserId = :fromUserId
-                AND dm.toUserId = :toUserId
+            WHERE dm.fromUser.id = :fromUserId
+                AND dm.toUser.id = :toUserId
                 AND dm.id IN :messageIds
             """)
     void setMessagesToRead(@Param("fromUserId") Long fromUserId,

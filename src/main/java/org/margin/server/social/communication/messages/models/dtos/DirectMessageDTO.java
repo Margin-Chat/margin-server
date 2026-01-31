@@ -17,8 +17,8 @@ public record DirectMessageDTO(
         return new DirectMessageDTO(
                 entity.getId(),
                 entity.getMessage(),
-                entity.getFromUserId(),
-                entity.getToUserId(),
+                entity.getFromUser().getId(),
+                entity.getToUser().getId(),
                 entity.getIsRead(),
                 entity.getIsEdited(),
                 entity.getCreatedAt()

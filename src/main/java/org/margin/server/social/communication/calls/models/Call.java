@@ -1,9 +1,11 @@
 package org.margin.server.social.communication.calls.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;
 
@@ -17,11 +19,15 @@ public class Call {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "caller_id", nullable = false)
-    private Long callerId;
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "caller_id", nullable = false)
+    private User caller;
 
-    @Column(name = "receiver_id", nullable = false)
-    private Long receiverId;
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,9 +52,13 @@ public class Call {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
-    public Call(Long callerId, Long receiverId, CallStatus status, CallType type, String sdp) {
-        this.callerId = callerId;
-        this.receiverId = receiverId;
+    public Call(User caller,
+                User receiverId,
+                CallStatus status,
+                CallType type,
+                String sdp) {
+        this.caller = caller;
+        this.receiver = receiverId;
         this.status = status;
         this.type = type;
         this.sdp = sdp;

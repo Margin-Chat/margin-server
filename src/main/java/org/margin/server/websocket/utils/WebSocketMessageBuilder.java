@@ -3,9 +3,8 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessage;
@@ -36,7 +35,7 @@ public class WebSocketMessageBuilder {
                 message
         );
     }
-    public String channelMessage(SpaceChannelMessageDTO message) {
+    public String channelMessage(ChannelMessageDTO message) {
         return buildMessage(
                 WebSocketMessageType.RECEIVE_CHANNEL_MESSAGE,
                 message.channelId(),

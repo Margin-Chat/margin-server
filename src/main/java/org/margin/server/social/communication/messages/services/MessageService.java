@@ -2,23 +2,22 @@ package org.margin.server.social.communication.messages.services;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.communication.exceptions.ChannelNotFoundException;
-import org.margin.server.social.communication.messages.models.ChannelMessageResult;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageResult;
 import org.margin.server.social.communication.messages.models.DirectMessage;
-import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.ChannelMessage;
 import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
 import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
-import org.margin.server.social.communication.messages.repositories.SpaceChannelMessageRepository;
-import org.margin.server.social.models.SpaceChannel;
-import org.margin.server.social.repositories.SpaceChannelRepository;
-import org.margin.server.social.repositories.SpaceRepository;
+import org.margin.server.social.communication.messages.repositories.ChannelMessageRepository;
+import org.margin.server.social.models.channel.Channel;
+import org.margin.server.social.repositories.ChannelRepository;
+import org.margin.server.social.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -27,50 +26,46 @@ import java.util.List;
 public class MessageService {
 
 	private final DirectChatMessageRepository directChatMessageRepository;
-	private final SpaceChannelMessageRepository spaceChannelMessageRepository;
-	private final SpaceChannelRepository channelRepository;
-	private final SpaceRepository spaceRepository;
+	private final ChannelMessageRepository channelMessageRepository;
+	private final ChannelRepository channelRepository;
+	private final SpacesRepository spacesRepository;
 	private final UserService userService;
 
 	public MessageService(DirectChatMessageRepository directChatMessageRepository,
-						  SpaceChannelMessageRepository spaceChannelMessageRepository,
-						  SpaceChannelRepository channelRepository,
-						  SpaceRepository spaceRepository,
+						  ChannelMessageRepository channelMessageRepository,
+						  ChannelRepository channelRepository,
+						  SpacesRepository spacesRepository,
 						  UserService userService) {
 		this.directChatMessageRepository = directChatMessageRepository;
-		this.spaceChannelMessageRepository = spaceChannelMessageRepository;
+		this.channelMessageRepository = channelMessageRepository;
 		this.channelRepository = channelRepository;
-		this.spaceRepository = spaceRepository;
+		this.spacesRepository = spacesRepository;
 		this.userService = userService;
 	}
 
 	@Transactional
-	public DirectMessageDTO sendDirectMessage(Long fromUserId, Long toUserId, String content) {
-		DirectMessage message = new DirectMessage(fromUserId, toUserId, content);
+	public DirectMessageDTO sendDirectMessage(User fromUser, User toUser, String content) {
+		DirectMessage message = new DirectMessage(fromUser, toUser, content);
 		message.setCreatedAt(new Date());
 
 		DirectMessage saved = directChatMessageRepository.save(message);
-		log.info("Direct message saved: {} -> {}", fromUserId, toUserId);
+		log.info("Direct message saved: {} -> {}", fromUser.getId(), toUser.getId());
 
 		return DirectMessageDTO.fromEntity(saved);
 	}
 
 	@Transactional
-	public ChannelMessageResult sendChannelMessage(Long fromUserId, Long channelId, String content) {
-		SpaceChannel channel = channelRepository.findById(channelId)
-				.orElseThrow(() -> new ChannelNotFoundException(channelId));
-
-		SpaceChannelMessage message = new SpaceChannelMessage(
-				fromUserId,
-				channelId,
-				channel.getSpaceId(),
+	public ChannelMessageResult sendChannelMessage(User fromUser, Channel channel, String content) {
+		ChannelMessage message = new ChannelMessage(
+				fromUser,
+				channel,
 				content
 		);
 		message.setCreatedAt(new Date());
 
-		SpaceChannelMessage saved = spaceChannelMessageRepository.save(message);
-		SpaceChannelMessageDTO dto = SpaceChannelMessageDTO.fromEntity(saved, userService.getById(fromUserId).getUsername());
-		List<User> recipients = spaceRepository.getUsersForSpace(channel.getSpaceId());
+		ChannelMessage saved = channelMessageRepository.save(message);
+		ChannelMessageDTO dto = ChannelMessageDTO.fromEntity(saved, fromUser.getUsername());
+		List<User> recipients = spacesRepository.getUsersForSpace(channel.getSpace().getId());
 
 		return new ChannelMessageResult(dto, recipients);
 	}
@@ -80,4 +75,18 @@ public class MessageService {
 		directChatMessageRepository.setMessagesToRead(fromUserId, toUserId, messageIds);
 	}
 
+    public List<DirectMessageDTO> getChatHistory(Long fromUserID, Long toUserId) {
+		List<DirectMessage> messagesFromUser =
+				directChatMessageRepository.findByFromUserIdAndToUserId(fromUserID, toUserId);
+		List<DirectMessage> messagesToUser =
+				directChatMessageRepository.findByFromUserIdAndToUserId(toUserId, fromUserID);
+
+		List<DirectMessage> allMessages = new ArrayList<>();
+		allMessages.addAll(messagesFromUser);
+		allMessages.addAll(messagesToUser);
+
+		allMessages.sort(Comparator.comparing(DirectMessage::getCreatedAt));
+
+		return allMessages.stream().map(DirectMessageDTO::fromEntity).toList();
+    }
 }

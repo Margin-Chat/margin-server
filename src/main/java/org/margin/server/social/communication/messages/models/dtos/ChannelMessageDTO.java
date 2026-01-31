@@ -1,10 +1,10 @@
 package org.margin.server.social.communication.messages.models.dtos;
 
-import org.margin.server.social.communication.messages.models.SpaceChannelMessage;
+import org.margin.server.social.communication.messages.models.ChannelMessage;
 
 import java.util.Date;
 
-public record SpaceChannelMessageDTO(
+public record ChannelMessageDTO(
         Long id,
         String message,
         Long fromUserId,
@@ -13,14 +13,14 @@ public record SpaceChannelMessageDTO(
         Long channelId,
         Boolean isEdited
 ) {
-    public static SpaceChannelMessageDTO fromEntity(SpaceChannelMessage entity, String fromUsername) {
-        return new SpaceChannelMessageDTO(
+    public static ChannelMessageDTO fromEntity(ChannelMessage entity, String fromUsername) {
+        return new ChannelMessageDTO(
                 entity.getId(),
                 entity.getMessage(),
-                entity.getFromUserId(),
+                entity.getFromUser().getId(),
                 fromUsername,
                 entity.getCreatedAt(),
-                entity.getChannelId(),
+                entity.getChannel().getId(),
                 entity.getIsEdited()
         );
     }

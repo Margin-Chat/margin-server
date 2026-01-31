@@ -7,6 +7,7 @@ import org.margin.server.social.communication.calls.models.CallStatus;
 import org.margin.server.social.communication.calls.models.CallType;
 import org.margin.server.social.communication.calls.services.CallService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.payloads.*;
 import org.springframework.stereotype.Component;
@@ -17,18 +18,20 @@ public class CallHandler {
 
     private final CallService callService;
     private final NotificationService notificationService;
+    private final UserService userService;
 
-    public CallHandler(CallService callService, NotificationService notificationService) {
+    public CallHandler(CallService callService, NotificationService notificationService, UserService userService) {
         this.callService = callService;
         this.notificationService = notificationService;
+        this.userService = userService;
     }
 
     public void handleCallOffer(User fromUser, WebSocketMessageIn<IncomingCallOfferPayload> wsMessage) {
         IncomingCallOfferPayload payload = wsMessage.getPayload();
 
         Call call = callService.createCall(
-                fromUser.getId(),
-                wsMessage.getRecipientId(),
+                fromUser,
+                userService.getById(wsMessage.getRecipientId()),
                 CallStatus.OFFERED,
                 CallType.AUDIO,
                 payload.sdp()

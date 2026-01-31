@@ -15,12 +15,17 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Table(name = "space_members")
 public class SpaceMember {
-    @EmbeddedId
-    private SpaceMemberId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "space_member_id")
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("userId")
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "space_id", nullable = false)
+    private Space space;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(name = "joined_at")

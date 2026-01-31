@@ -2,9 +2,9 @@ package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.models.space.SpaceMember;
-import org.margin.server.social.models.space.SpaceMemberId;
 import org.margin.server.social.models.space.enums.SpaceMemberRole;
 import org.margin.server.social.repositories.SpaceMemberRepository;
+import org.margin.server.social.services.SpacesService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,18 +28,20 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final SpaceMemberRepository spaceMemberRepository;
+    private final SpacesService spacesService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            SpaceMemberRepository spaceMemberRepository) {
+            SpaceMemberRepository spaceMemberRepository, SpacesService spacesService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.spaceMemberRepository = spaceMemberRepository;
+        this.spacesService = spacesService;
     }
 
     public AuthResponse authenticateUser(String username, String password) {
@@ -99,7 +101,7 @@ public class AuthenticationService {
 
         // it's only temporarily I've added new users to general chat like this
         SpaceMember member = new SpaceMember();
-        member.setId(new SpaceMemberId(1L, user.getId()));
+        member.setSpace(spacesService.getById(1L));
         member.setUser(user);
         member.setJoinedAt(LocalDateTime.now());
         member.setRole(SpaceMemberRole.MEMBER);

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.margin.server.users.models.User;
 
 import java.util.Date;
 
@@ -22,12 +23,14 @@ public class DirectMessage {
     private Long id;
 
     @NotNull
-    @Column(name = "from_user_id", nullable = false)
-    private Long fromUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "from_user_id", nullable = false)
+    private User fromUser;
 
     @NotNull
-    @Column(name = "to_user_id", nullable = false)
-    private Long toUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "to_user_id", nullable = false)
+    private User toUser;
 
     @NotBlank
     @Size(min = 1, max = 5000)
@@ -37,11 +40,11 @@ public class DirectMessage {
     private Boolean isEdited = false;
     private Date createdAt;
 
-    public DirectMessage(Long fromUserId,
-                         Long toUserId,
+    public DirectMessage(User fromUser,
+                         User toUser,
                          String message) {
-        this.fromUserId = fromUserId;
-        this.toUserId = toUserId;
+        this.fromUser = fromUser;
+        this.toUser = toUser;
         this.message = message;
         this.isRead = false;
         this.isEdited = false;

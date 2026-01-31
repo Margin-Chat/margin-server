@@ -3,7 +3,7 @@ package org.margin.server.notifications;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.models.dtos.SpaceChannelMessageDTO;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
@@ -37,7 +37,7 @@ public class NotificationService {
         connectionManager.sendToUser(message.toUserId(), json);
     }
 
-    public void notifyChannelMessage(SpaceChannelMessageDTO message, List<User> recipients) {
+    public void notifyChannelMessage(ChannelMessageDTO message, List<User> recipients) {
         String json = messageBuilder.channelMessage(message);
 
         for (User recipient : recipients) {
