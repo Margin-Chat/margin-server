@@ -2,18 +2,16 @@ package org.margin.server.social.communication.messages.services;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.communication.messages.models.dtos.ChannelMessageResult;
-import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.models.ChannelMessage;
-import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
+import org.margin.server.social.communication.messages.models.DirectMessage;
 import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
-import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
+import org.margin.server.social.communication.messages.models.dtos.ChannelMessageResult;
+import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
 import org.margin.server.social.communication.messages.repositories.ChannelMessageRepository;
+import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
 import org.margin.server.social.models.channel.Channel;
-import org.margin.server.social.repositories.ChannelRepository;
 import org.margin.server.social.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,20 +25,14 @@ public class MessageService {
 
 	private final DirectChatMessageRepository directChatMessageRepository;
 	private final ChannelMessageRepository channelMessageRepository;
-	private final ChannelRepository channelRepository;
 	private final SpacesRepository spacesRepository;
-	private final UserService userService;
 
 	public MessageService(DirectChatMessageRepository directChatMessageRepository,
 						  ChannelMessageRepository channelMessageRepository,
-						  ChannelRepository channelRepository,
-						  SpacesRepository spacesRepository,
-						  UserService userService) {
+						  SpacesRepository spacesRepository) {
 		this.directChatMessageRepository = directChatMessageRepository;
 		this.channelMessageRepository = channelMessageRepository;
-		this.channelRepository = channelRepository;
 		this.spacesRepository = spacesRepository;
-		this.userService = userService;
 	}
 
 	@Transactional
