@@ -46,7 +46,7 @@ public class AuthenticationService {
 
     public AuthResponse authenticateUser(String username, String password) {
         try {
-            User user = userRepository.findByUsername(username)
+            User user = userRepository.findByUsername(username.toLowerCase())
                     .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
             if (isAccountLocked(user)) {
