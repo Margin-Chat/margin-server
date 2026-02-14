@@ -16,7 +16,7 @@ public class SfuController {
 
     @GetMapping("create_or_join")
     public ResponseEntity<String> getConnectionInfo(@RequestParam String roomId) {
-        sfuService.createOrJoinRoom(roomId);
-        return ResponseEntity.ok(sfuService.mediasoupUrl);
+        String mediasoupUrl = sfuService.createOrJoinRoom(roomId);
+        return ResponseEntity.ok(mediasoupUrl);
     }
 }

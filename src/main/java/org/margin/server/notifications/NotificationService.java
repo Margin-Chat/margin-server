@@ -2,8 +2,8 @@ package org.margin.server.notifications;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
+import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
@@ -26,23 +26,21 @@ public class NotificationService {
         this.messageBuilder = messageBuilder;
     }
 
-    public void notifyDirectMessage(DirectMessageDTO message) {
-        if (!connectionManager.isUserOnline(message.toUserId())) {
-            log.debug("User {} offline, message stored for later", message.toUserId());
-            // TODO: Push notification
-            return;
-        }
-
-        String json = messageBuilder.directMessage(message);
-        connectionManager.sendToUser(message.toUserId(), json);
-    }
-
-    public void notifyChannelMessage(ChannelMessageDTO message, List<User> recipients) {
-        String json = messageBuilder.channelMessage(message);
+    public void notifyMessage(MessageDTO message, List<User> recipients, ConversationType conversationType) {
+        String json = messageBuilder.message(message);
 
         for (User recipient : recipients) {
-            if (!recipient.getId().equals(message.fromUserId())) {
+            boolean isOnline = connectionManager.isUserOnline(recipient.getId());
+
+            if (isOnline) {
                 connectionManager.sendToUser(recipient.getId(), json);
+            } else {
+                // Only send push notifications for DMs and groups, not channels
+                if (conversationType == ConversationType.DIRECT ||
+                        conversationType == ConversationType.GROUP) {
+                    log.debug("User {} offline, message stored for later", recipient.getId());
+                    // TODO: Send push notification
+                }
             }
         }
     }

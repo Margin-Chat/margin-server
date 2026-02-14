@@ -1,10 +1,9 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.models.space.SpaceMember;
-import org.margin.server.social.models.space.enums.SpaceMemberRole;
-import org.margin.server.social.repositories.SpaceMemberRepository;
-import org.margin.server.social.services.SpacesService;
+import org.margin.server.storage.StorageService;
+import org.margin.server.users.models.UserEncryption;
+import org.margin.server.users.models.UserSecurity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +13,7 @@ import org.margin.server.users.models.Role;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -27,21 +27,19 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final SpaceMemberRepository spaceMemberRepository;
-    private final SpacesService spacesService;
+    private final StorageService storageService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            SpaceMemberRepository spaceMemberRepository, SpacesService spacesService) {
+            StorageService storageService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.spaceMemberRepository = spaceMemberRepository;
-        this.spacesService = spacesService;
+        this.storageService = storageService;
     }
 
     public AuthResponse authenticateUser(String username, String password) {
@@ -50,7 +48,7 @@ public class AuthenticationService {
                     .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
             if (isAccountLocked(user)) {
-                throw new BadCredentialsException("Account is locked until " + user.getAccountLockedUntil());
+                throw new BadCredentialsException("Account is locked until " + user.getSecurity().getAccountLockedUntil());
             }
 
             authenticationManager.authenticate(
@@ -65,10 +63,10 @@ public class AuthenticationService {
 
             return new AuthResponse(true,
                     "Login successful",
-                    token, user.getPublicKey(),
-                    user.getEncryptedPrivateKey(),
-                    user.getSalt(),
-                    user.getIv());
+                    token, user.getEncryption().getPublicKey(),
+                    user.getEncryption().getEncryptedPrivateKey(),
+                    user.getEncryption().getSalt(),
+                    user.getEncryption().getIv());
 
         } catch (BadCredentialsException e) {
             handleFailedLogin(username);
@@ -82,9 +80,15 @@ public class AuthenticationService {
                              String privateKey,
                              String publicKey,
                              String salt,
-                             String iv) {
+                             String iv,
+                             MultipartFile profilePicture) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
+        }
+
+        String profilePictureUrl = null;
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            profilePictureUrl = storageService.saveProfilePicture(profilePicture);
         }
 
         User user = new User();
@@ -92,40 +96,42 @@ public class AuthenticationService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(Role.USER);
-        user.setSalt(salt);
-        user.setIv(iv);
-        user.setPublicKey(publicKey);
-        user.setEncryptedPrivateKey(privateKey);
+        user.setProfilePictureUrl(profilePictureUrl);
+        user.setCreatedAt(LocalDateTime.now());
+
+        UserEncryption encryption = new UserEncryption();
+        encryption.setUser(user);
+        encryption.setSalt(salt);
+        encryption.setIv(iv);
+        encryption.setPublicKey(publicKey);
+        encryption.setEncryptedPrivateKey(privateKey);
+        user.setEncryption(encryption);
+
+        UserSecurity security = new UserSecurity();
+        security.setUser(user);
+        security.setFailedLoginAttempts(0);
+        user.setSecurity(security);
 
         userRepository.save(user);
-
-        // it's only temporarily I've added new users to general chat like this
-        SpaceMember member = new SpaceMember();
-        member.setSpace(spacesService.getById(1L));
-        member.setUser(user);
-        member.setJoinedAt(LocalDateTime.now());
-        member.setRole(SpaceMemberRole.MEMBER);
-
-        spaceMemberRepository.save(member);
     }
 
     private boolean isAccountLocked(User user) {
-        if (user.getAccountLockedUntil() == null) {
+        if (user.getSecurity().getAccountLockedUntil() == null) {
             return false;
         }
 
-        return user.getAccountLockedUntil().isAfter(LocalDateTime.now());
+        return user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now());
     }
 
     private void handleFailedLogin(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
-            user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
-            user.setLastFailedLoginAttempt(LocalDateTime.now());
+            user.getSecurity().setFailedLoginAttempts(user.getSecurity().getFailedLoginAttempts() + 1);
+            user.getSecurity().setLastFailedLoginAttempt(LocalDateTime.now());
 
-            if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
-                user.setAccountLockedUntil(LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
+            if (user.getSecurity().getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                user.getSecurity().setAccountLockedUntil(LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
                 log.warn("Account locked for user {} until {}",
-                        user.getUsername(), user.getAccountLockedUntil());
+                        user.getUsername(), user.getSecurity().getAccountLockedUntil());
             }
 
             userRepository.save(user);
@@ -133,10 +139,10 @@ public class AuthenticationService {
     }
 
     private void resetFailedAttempts(User user) {
-        if (user.getFailedLoginAttempts() > 0) {
-            user.setFailedLoginAttempts(0);
-            user.setLastFailedLoginAttempt(null);
-            user.setAccountLockedUntil(null);
+        if (user.getSecurity().getFailedLoginAttempts() > 0) {
+            user.getSecurity().setFailedLoginAttempts(0);
+            user.getSecurity().setLastFailedLoginAttempt(null);
+            user.getSecurity().setAccountLockedUntil(null);
             userRepository.save(user);
         }
     }

@@ -3,10 +3,9 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.models.dtos.ChannelMessageDTO;
+import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserDTO;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessage;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
@@ -28,17 +27,10 @@ public class WebSocketMessageBuilder {
         return buildMessage(type, user.getId(), new UserDTO(user));
     }
 
-    public String directMessage(DirectMessageDTO message) {
+    public String message(MessageDTO message) {
         return buildMessage(
-                WebSocketMessageType.RECEIVE_DIRECT_MESSAGE,
-                message.toUserId(),
-                message
-        );
-    }
-    public String channelMessage(ChannelMessageDTO message) {
-        return buildMessage(
-                WebSocketMessageType.RECEIVE_CHANNEL_MESSAGE,
-                message.channelId(),
+                WebSocketMessageType.RECEIVE_MESSAGE,
+                message.conversationId(),
                 message
         );
     }

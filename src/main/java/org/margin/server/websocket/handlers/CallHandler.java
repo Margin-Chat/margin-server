@@ -2,10 +2,10 @@ package org.margin.server.websocket.handlers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.communication.calls.models.Call;
-import org.margin.server.social.communication.calls.models.CallStatus;
-import org.margin.server.social.communication.calls.models.CallType;
-import org.margin.server.social.communication.calls.services.CallService;
+import org.margin.server.social.calls.models.Call;
+import org.margin.server.social.calls.models.CallStatus;
+import org.margin.server.social.calls.models.CallType;
+import org.margin.server.social.calls.services.CallService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;

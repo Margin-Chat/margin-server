@@ -35,7 +35,7 @@ public class WebSocketMessageDecoder extends MessageToMessageDecoder<TextWebSock
             );
 
             WebSocketMessageIn<?> message = switch (type) {
-                case SEND_DIRECT_MESSAGE, SEND_CHANNEL_MESSAGE -> parseMessage(payload, String.class);
+                case SEND_DIRECT_MESSAGE, SEND_MESSAGE -> parseMessage(payload, String.class);
                 case CALL_OFFER -> parseMessage(payload, IncomingCallOfferPayload.class);
                 case CALL_RESPONSE -> parseMessage(payload, IncomingCallResponsePayload.class);
                 case CALL_CANDIDATE -> parseMessage(payload, IncomingCallCandidatePayload.class);

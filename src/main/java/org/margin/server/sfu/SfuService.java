@@ -12,12 +12,14 @@ import java.util.Map;
 public class SfuService {
 
     @Value("${mediasoup.url:http://localhost:3000}")
-    public String mediasoupUrl;
+    private String mediasoupUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public void createOrJoinRoom(String roomId) {
-        String url = mediasoupUrl + "/rooms/" + roomId;
+    public String createOrJoinRoom(String roomId) {
+        String url = mediasoupUrl +
+                "/rooms/" +
+                roomId;
 
         restTemplate.exchange(
                 url,
@@ -25,5 +27,7 @@ public class SfuService {
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}
         );
+
+        return mediasoupUrl;
     }
 }
