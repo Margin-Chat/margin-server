@@ -155,8 +155,8 @@ public class ConversationService {
         });
     }
 
-    public List<UnreadCount> getUnreadCounts(Long userId) {
-        return conversationMemberRepository.getUnreadCounts(userId);
+    public List<UnreadCount> getUnreadMessagesCounts(Long userId) {
+        return conversationMemberRepository.getUnreadMessagesCounts(userId);
     }
 
     public List<UserDTO> getRecentChatUsers(Long userId) {

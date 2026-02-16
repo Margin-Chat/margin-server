@@ -39,7 +39,8 @@ public class MessageService {
 
 		List<User> recipients = conversationService.getConversationMembers(conversation.getId());
 
-		return new MessageResult(new MessageDTO(message), recipients);
+		// Pass the conversation type from the conversation entity
+		return new MessageResult(new MessageDTO(message, conversation.getType()), recipients);
 	}
 
 	@Transactional
@@ -51,7 +52,7 @@ public class MessageService {
 	public List<MessageDTO> getConversationMessages(Long conversationId, int limit) {
 		return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId, PageRequest.of(0, limit))
 				.stream()
-				.map(MessageDTO::new)
+				.map(msg -> new MessageDTO(msg, msg.getConversation().getType()))
 				.collect(Collectors.toList());
 	}
 }

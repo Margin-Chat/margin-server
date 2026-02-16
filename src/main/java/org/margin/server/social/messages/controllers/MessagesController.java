@@ -99,8 +99,8 @@ public class MessagesController {
     }
 
     @GetMapping("/conversations/unread")
-    public List<UnreadCount> getUnreadCounts(@AuthenticationPrincipal User user) {
-        return conversationService.getUnreadCounts(user.getId());
+    public List<UnreadCount> getUnreadMessagesCount(@AuthenticationPrincipal User user) {
+        return conversationService.getUnreadMessagesCounts(user.getId());
     }
 
     @PostMapping("/conversations/{conversationId}/members")

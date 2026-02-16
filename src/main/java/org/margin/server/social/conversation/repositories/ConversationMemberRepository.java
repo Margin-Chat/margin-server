@@ -33,17 +33,17 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     boolean isUserMemberOfConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 
     @Query("""
-        SELECT new org.margin.server.social.messages.models.dtos.UnreadCount(
-            cm.conversation.id,
-            COUNT(m)
-        )
-        FROM ConversationMember cm
-        LEFT JOIN Message m ON m.conversation.id = cm.conversation.id 
-            AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt)
-            AND m.fromUser.id != :userId
-        WHERE cm.user.id = :userId
-        GROUP BY cm.conversation.id
-        HAVING COUNT(m) > 0
-    """)
-    List<UnreadCount> getUnreadCounts(@Param("userId") Long userId);
+                SELECT new org.margin.server.social.messages.models.dtos.UnreadCount(
+                    cm.conversation.id,
+                    m.fromUser.id,
+                    SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END)
+                )
+                FROM ConversationMember cm
+                LEFT JOIN Message m ON m.conversation.id = cm.conversation.id
+                WHERE cm.user.id = :userId
+                GROUP BY cm.conversation.id, m.fromUser.id
+                HAVING SUM(CASE WHEN m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) > 0
+            """)
+    List<UnreadCount> getUnreadMessagesCounts(@Param("userId") Long userId);
 }
