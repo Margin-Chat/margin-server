@@ -2,12 +2,12 @@ package org.margin.server;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.communication.calls.models.Call;
-import org.margin.server.social.communication.calls.models.CallStatus;
-import org.margin.server.social.communication.calls.models.CallType;
-import org.margin.server.social.communication.calls.repositories.CallRepository;
-import org.margin.server.social.communication.calls.services.CallService;
-import org.margin.server.social.communication.exceptions.CallNotFoundException;
+import org.margin.server.social.calls.models.Call;
+import org.margin.server.social.calls.models.CallStatus;
+import org.margin.server.social.calls.models.CallType;
+import org.margin.server.social.calls.repositories.CallRepository;
+import org.margin.server.social.calls.services.CallService;
+import org.margin.server.social.exceptions.CallNotFoundException;
 import org.margin.server.users.models.User;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;

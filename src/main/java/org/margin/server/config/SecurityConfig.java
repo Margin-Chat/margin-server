@@ -61,14 +61,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers("/auth/**").permitAll()
-                                .requestMatchers("/federation/**").permitAll()
-                                .requestMatchers("/.well-known/**").permitAll()
-                                .requestMatchers("/api/rooms/**").permitAll()
-                                .requestMatchers("/signaling/").permitAll()
-                                .requestMatchers("/spaces/**").permitAll()
-                                .requestMatchers("/channels/**").permitAll()
-                                .requestMatchers("/users/**").permitAll()
-                                .requestMatchers("/chat_messages/**").hasRole("USER")
+                                .requestMatchers("/api/files/**").permitAll()
+
+                                .requestMatchers("/api/conversations/**").authenticated()
+                                .requestMatchers("/spaces/**").authenticated()
+                                .requestMatchers("/channels/**").authenticated()
+                                .requestMatchers("/api/users/**").authenticated()
+
                                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

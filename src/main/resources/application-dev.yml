@@ -9,9 +9,22 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   flyway:
     clean-disabled: true
 
+storage:
+  type: local
+  local:
+    upload-dir: ${user.home}/margin/uploads
+    base-url: ${APP_BASE_URL:http://localhost:8080}/api/files
+
 jwt:
   secret: dev-secret-key-not-for-production-use-only
+
+mediasoup:
+  url: http://localhost:3000
+

@@ -2,14 +2,16 @@ package org.margin.server.websocket.handlers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.communication.messages.models.dtos.ChannelMessageResult;
-import org.margin.server.social.communication.messages.models.dtos.DirectMessageDTO;
-import org.margin.server.social.communication.messages.services.MessageService;
-import org.margin.server.social.services.ChannelService;
+import org.margin.server.social.conversation.Conversation;
+import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.messages.models.dtos.MessageResult;
+import org.margin.server.social.messages.services.MessageService;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -17,37 +19,49 @@ public class MessageHandler {
 
     private final MessageService messageService;
     private final NotificationService notificationService;
+    private final ConversationService conversationService;
     private final UserService userService;
-    private final ChannelService channelService;
 
     public MessageHandler(MessageService messageService,
-                          NotificationService notificationService, UserService userService, ChannelService channelService) {
+                          NotificationService notificationService,
+                          ConversationService conversationService,
+                          UserService userService) {
         this.messageService = messageService;
         this.notificationService = notificationService;
+        this.conversationService = conversationService;
         this.userService = userService;
-        this.channelService = channelService;
     }
 
-    public void handleDirectMessage(User fromUser, WebSocketMessageIn<String> wsMessage) {
-        DirectMessageDTO message = messageService.sendDirectMessage(
+    @Transactional
+    public void handleMessage(User fromUser, WebSocketMessageIn<String> wsMessage) {
+        Conversation conversation = conversationService.getById(wsMessage.getRecipientId());
+
+        MessageResult result = messageService.sendMessage(
                 fromUser,
-                userService.getById(wsMessage.getRecipientId()),
+                conversation,
                 wsMessage.getPayload()
         );
 
-        notificationService.notifyDirectMessage(message);
+        notificationService.notifyMessage(
+                result.message(),
+                result.recipients(),
+                conversation.getType()
+        );
     }
 
-    public void handleChannelMessage(User fromUser, WebSocketMessageIn<String> wsMessage) {
-        ChannelMessageResult channelMessageResult = messageService.sendChannelMessage(
+    public void handleNewDirectMessage(User fromUser, WebSocketMessageIn<String> wsMessage) {
+        User toUser = userService.getById(wsMessage.getRecipientId());
+
+        MessageResult result = messageService.sendDirectMessage(
                 fromUser,
-                channelService.getById(wsMessage.getRecipientId()),
+                toUser,
                 wsMessage.getPayload()
         );
 
-        notificationService.notifyChannelMessage(
-                channelMessageResult.message(),
-                channelMessageResult.recipients()
+        notificationService.notifyMessage(
+                result.message(),
+                result.recipients(),
+                ConversationType.DIRECT
         );
     }
 }

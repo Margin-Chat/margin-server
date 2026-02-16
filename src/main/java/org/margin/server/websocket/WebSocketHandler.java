@@ -101,10 +101,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
 
         switch (message.getType()) {
+            case SEND_MESSAGE ->
+                    messageHandler.handleMessage(user, (WebSocketMessageIn<String>) message);
             case SEND_DIRECT_MESSAGE ->
-                    messageHandler.handleDirectMessage(user, (WebSocketMessageIn<String>) message);
-            case SEND_CHANNEL_MESSAGE ->
-                    messageHandler.handleChannelMessage(user, (WebSocketMessageIn<String>) message);
+                    messageHandler.handleNewDirectMessage(user, (WebSocketMessageIn<String>) message);
             case CALL_OFFER ->
                     callHandler.handleCallOffer(user, (WebSocketMessageIn<IncomingCallOfferPayload>) message);
             case CALL_RESPONSE ->

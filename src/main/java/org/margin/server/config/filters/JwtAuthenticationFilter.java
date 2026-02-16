@@ -4,12 +4,16 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.margin.server.users.models.User;
+import org.margin.server.users.repositories.UserRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,11 +27,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   UserDetailsService userDetailsService) {
+                                   UserDetailsService userDetailsService, UserRepository userRepository) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -51,10 +57,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+                    User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new RuntimeException("User not found"));
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails,
+                                    user,
                                     null,
                                     userDetails.getAuthorities()
                             );

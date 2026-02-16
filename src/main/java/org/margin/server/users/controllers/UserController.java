@@ -1,58 +1,49 @@
 package org.margin.server.users.controllers;
 
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.communication.messages.repositories.DirectChatMessageRepository;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserDTO;
-import org.margin.server.users.models.keys.KeyUploadRequest;
-import org.margin.server.users.models.keys.PrivateKeyResponse;
-import org.margin.server.users.models.keys.PublicKeyResponse;
+import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.models.dtos.KeyUploadRequest;
+import org.margin.server.users.models.dtos.PrivateKeyResponse;
+import org.margin.server.users.models.dtos.PublicKeyResponse;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api/users")
 public class UserController {
 
-    private final UserRepository userRepository;
     private final ConnectionManager connectionManager;
     private final UserService userService;
-    private final DirectChatMessageRepository directChatMessageRepository;
+    private final ConversationService conversationService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          DirectChatMessageRepository directChatMessageRepository,
-                          UserRepository userRepository) {
+                          ConversationService conversationService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
-        this.directChatMessageRepository = directChatMessageRepository;
-        this.userRepository = userRepository;
+        this.conversationService = conversationService;
     }
 
     @GetMapping("get_all_users")
-    public List<UserDTO> getAllOnlineUsersOnServer(Authentication authentication) {
-        String username = authentication.getName();
-
+    public List<UserDTO> getAllOnlineUsersOnServer(@AuthenticationPrincipal User user) {
         return connectionManager.getOnlineUserIds()
                 .stream()
                 .map(userService::getById)
-                .filter(user -> !user.getUsername().equals(username))
+                .filter(u -> !u.getId().equals(user.getId()))
                 .map(UserDTO::new)
                 .toList();
     }
 
     @GetMapping("/me")
-    public UserDTO getCurrentUser(Authentication authentication) {
-        String username = authentication.getName();
-        return new UserDTO(userService.getByUsername(username));
+    public UserDTO getCurrentUser(@AuthenticationPrincipal User user) {
+        return new UserDTO(user);
     }
 
     @PostMapping("/{userId}/keys")
@@ -72,28 +63,23 @@ public class UserController {
     @GetMapping("/{userId}/public-key")
     public PublicKeyResponse getPublicKey(@PathVariable Long userId) {
         User user = userService.getById(userId);
-        return new PublicKeyResponse(user.getId(), user.getPublicKey());
+        return new PublicKeyResponse(user.getId(), user.getEncryption().getPublicKey());
     }
 
     @GetMapping("/me/private-key")
     public ResponseEntity<PrivateKeyResponse> getEncryptedPrivateKey(
             @AuthenticationPrincipal User user) {
 
-        if (user.getEncryptedPrivateKey() == null) {
+        if (user.getEncryption().getEncryptedPrivateKey() == null) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(new PrivateKeyResponse(user.getEncryptedPrivateKey()));
+        return ResponseEntity.ok(new PrivateKeyResponse(user.getEncryption().getEncryptedPrivateKey()));
     }
 
     @GetMapping("/{userId}/recent_chat_users")
-    public List<UserDTO> getRecentChatUsers(@PathVariable Long userId) {
-        List<Long> recentUserIds = directChatMessageRepository.findRecentChatUserIds(userId).stream()
-                .distinct()
-                .collect(Collectors.toList());
-        return userRepository.findAllByIdIn(recentUserIds).stream()
-                .map(UserDTO::new)
-                .collect(Collectors.toList());
+    public List<UserDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
+        return conversationService.getRecentChatUsers(user.getId());
     }
 
     @GetMapping("/search")

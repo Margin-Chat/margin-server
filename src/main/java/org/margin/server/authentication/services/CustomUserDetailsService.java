@@ -23,8 +23,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        if (user.getAccountLockedUntil() != null &&
-                user.getAccountLockedUntil().isAfter(LocalDateTime.now())) {
+        if (user.getSecurity().getAccountLockedUntil() != null &&
+                user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now())) {
             throw new UsernameNotFoundException("Account is locked");
         }
 

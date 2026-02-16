@@ -7,13 +7,12 @@ import org.margin.server.authentication.models.RegisterRequest;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.users.services.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.services.AuthenticationService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/auth")
@@ -24,8 +23,7 @@ public class AuthenticationController {
     private final ConnectionManager connectionManager;
     private final UserService userService;
 
-    public AuthenticationController(AuthenticationService authService,
-                                    ConnectionManager connectionManager, UserService userService) {
+    public AuthenticationController(AuthenticationService authService, ConnectionManager connectionManager, UserService userService) {
         this.authService = authService;
         this.connectionManager = connectionManager;
         this.userService = userService;
@@ -51,8 +49,10 @@ public class AuthenticationController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AuthResponse> register(
+            @RequestPart("data") RegisterRequest request,
+            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) {
         log.info("Registration attempt for username: {}", request.username());
 
         try {
@@ -63,28 +63,17 @@ public class AuthenticationController {
                     request.encryptedPrivateKey(),
                     request.publicKey(),
                     request.salt(),
-                    request.iv()
-            );
+                    request.iv(),
+                    profilePicture);
 
-            AuthResponse authResponse = authService.authenticateUser(
-                    request.username(),
-                    request.password()
-            );
+            AuthResponse authResponse = authService.authenticateUser(request.username(), request.password());
 
             log.info("Successfully registered user {}", request.username());
             return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
 
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for username {}: {}", request.username(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthResponse(
-                            false,
-                            e.getMessage(),
-                            null,
-                            null,
-                            null,
-                            null,
-                            null));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
         }
     }
 }
