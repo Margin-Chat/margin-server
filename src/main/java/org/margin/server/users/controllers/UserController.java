@@ -2,6 +2,7 @@ package org.margin.server.users.controllers;
 
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.storage.StorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,13 +23,15 @@ public class UserController {
     private final ConnectionManager connectionManager;
     private final UserService userService;
     private final ConversationService conversationService;
+    private final StorageService storageService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          ConversationService conversationService) {
+                          ConversationService conversationService, StorageService storageService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
+        this.storageService = storageService;
     }
 
     @GetMapping("get_all_users")

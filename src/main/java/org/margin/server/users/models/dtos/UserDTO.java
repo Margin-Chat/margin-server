@@ -14,12 +14,14 @@ public class UserDTO {
 	private Long id;
 	private String username;
 	private String email;
+	private String profilePictureUrl;
 	private LocalDateTime createdAt;
 
 	public UserDTO(User user) {
 		this.id = user.getId();
 		this.username = user.getUsername();
 		this.email = user.getEmail();
+		this.profilePictureUrl = user.getProfilePictureUrl();
 		this.createdAt = user.getCreatedAt();
 	}
 }

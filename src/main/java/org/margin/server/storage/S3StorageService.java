@@ -10,6 +10,9 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 import java.net.URI;
 import java.util.UUID;
@@ -94,6 +97,23 @@ public class S3StorageService implements StorageService {
             s3Client.deleteObject(deleteObjectRequest);
         } catch (Exception e) {
             throw new RuntimeException("Failed to delete file from S3", e);
+        }
+    }
+
+    @Override
+    public Resource getProfilePicture(String url) {
+        try {
+            String key = extractKeyFromUrl(url);
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(storageProperties.getS3().getBucketName())
+                    .key(key)
+                    .build();
+
+            var s3Object = s3Client.getObject(getObjectRequest);
+            return new InputStreamResource(s3Object);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to retrieve profile picture from S3", e);
         }
     }
 

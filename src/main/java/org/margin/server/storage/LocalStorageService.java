@@ -1,14 +1,14 @@
 package org.margin.server.storage;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.UUID;
 
 @Service
@@ -68,5 +68,18 @@ public class LocalStorageService implements StorageService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete file", e);
         }
+    }
+
+    @Override
+    public Resource getProfilePicture(String url) throws IOException {
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+        Path filePath = Paths.get(storageProperties.getLocal().getUploadDir()).resolve(fileName);
+
+        Resource resource = new UrlResource(filePath.toUri());
+        if (!resource.exists() || !resource.isReadable()) {
+            throw new NoSuchFileException("File not found: " + fileName);
+        }
+
+        return resource;
     }
 }
