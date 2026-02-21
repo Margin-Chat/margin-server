@@ -8,7 +8,7 @@ import org.margin.server.social.conversation.repositories.ConversationMemberRepo
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.messages.models.dtos.*;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ConversationService {
@@ -155,14 +154,19 @@ public class ConversationService {
         });
     }
 
-    public List<UnreadCount> getUnreadMessagesCounts(Long userId) {
+    public List<UnreadCountDTO> getUnreadMessagesCounts(Long userId) {
         return conversationMemberRepository.getUnreadMessagesCounts(userId);
     }
 
-    public List<UserDTO> getRecentChatUsers(Long userId) {
-        return conversationMemberRepository.findRecentChatUsers(userId).stream()
-                .map(UserDTO::new)
-                .collect(Collectors.toList());
+    public List<RecentChatUsersDTO> getRecentChatUsers(Long userId) {
+        return conversationMemberRepository.findRecentChatUsers(userId)
+                .stream()
+                .map(p -> new RecentChatUsersDTO(
+                        p.user(),
+                        p.lastMessage(),
+                        p.lastMessageTime()
+                ))
+                .toList();
     }
 
     public Conversation getByChannelId(Long channelId) {

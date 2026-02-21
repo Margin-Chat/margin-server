@@ -3,16 +3,13 @@ package org.margin.server.users.controllers;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.storage.StorageService;
+import org.margin.server.users.models.dtos.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.users.models.dtos.KeyUploadRequest;
-import org.margin.server.users.models.dtos.PrivateKeyResponse;
-import org.margin.server.users.models.dtos.PublicKeyResponse;
 
 import java.util.List;
 
@@ -23,7 +20,6 @@ public class UserController {
     private final ConnectionManager connectionManager;
     private final UserService userService;
     private final ConversationService conversationService;
-    private final StorageService storageService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
@@ -31,7 +27,6 @@ public class UserController {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
-        this.storageService = storageService;
     }
 
     @GetMapping("get_all_users")
@@ -81,7 +76,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/recent_chat_users")
-    public List<UserDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
+    public List<RecentChatUsersDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
         return conversationService.getRecentChatUsers(user.getId());
     }
 
