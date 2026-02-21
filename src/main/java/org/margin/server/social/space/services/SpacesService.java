@@ -59,12 +59,6 @@ public class SpacesService {
     }
 
     private SpaceDTO toDto(Space space) {
-        return new SpaceDTO(
-                space.getId(),
-                space.getName(),
-                space.getDescription(),
-                space.getVisibility(),
-                space.getMargin().getId()
-        );
+        return new SpaceDTO(space);
     }
 }

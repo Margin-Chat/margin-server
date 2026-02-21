@@ -5,8 +5,17 @@ CREATE TABLE conversations
     name            VARCHAR(100),
     created_at      TIMESTAMP WITHOUT TIME ZONE             NOT NULL,
     channel_id      BIGINT,
-    CONSTRAINT pk_conversations PRIMARY KEY (conversation_id)
+    CONSTRAINT pk_conversations PRIMARY KEY (conversation_id),
+    CONSTRAINT fk_conversations_channel FOREIGN KEY (channel_id) REFERENCES channels (channel_id) ON DELETE SET NULL
 );
 
-ALTER TABLE conversations
-    ADD CONSTRAINT FK_CONVERSATIONS_ON_CHANNEL FOREIGN KEY (channel_id) REFERENCES channels (channel_id);
+CREATE TABLE conversation_members
+(
+    conversation_id BIGINT                      NOT NULL,
+    user_id         BIGINT                      NOT NULL,
+    joined_at       TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    last_read_at    TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT pk_conversation_members PRIMARY KEY (conversation_id, user_id),
+    CONSTRAINT fk_conversation_members_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (conversation_id) ON DELETE CASCADE,
+    CONSTRAINT fk_conversation_members_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);

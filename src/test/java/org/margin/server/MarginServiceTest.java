@@ -70,7 +70,7 @@ class MarginServiceTest {
         assertThat(capturedMargin.getName()).isEqualTo(TEST_MARGIN);
         assertThat(capturedMargin.getDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
-        assertThat(capturedMargin.getMarginIconUrl()).isEqualTo(expectedUrl);
+        assertThat(capturedMargin.getIconUrl()).isEqualTo(expectedUrl);
     }
 
     @Test
@@ -90,7 +90,7 @@ class MarginServiceTest {
         verify(marginRepository, times(1)).save(marginCaptor.capture());
 
         Margin capturedMargin = marginCaptor.getValue();
-        assertThat(capturedMargin.getMarginIconUrl()).isNull();
+        assertThat(capturedMargin.getIconUrl()).isNull();
     }
 
     @Test

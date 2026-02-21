@@ -46,7 +46,7 @@ public class MessagesController {
         );
 
         if (conversation == null) {
-            return null;
+            return new GetConversationMessagesResponse(List.of(), null);
         }
 
         if (!conversationService.isUserMember(conversation.getId(), user.getId())) {

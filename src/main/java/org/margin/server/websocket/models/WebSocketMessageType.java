@@ -11,5 +11,6 @@ public enum WebSocketMessageType {
     CALL_OFFER,
     CALL_RESPONSE,
     CALL_CANDIDATE,
+    CALL_CREATED,
     CALL_END
 }

@@ -13,6 +13,8 @@ import org.margin.server.websocket.models.payloads.CallResponsePayload;
 import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 public class WebSocketMessageBuilder {
@@ -69,5 +71,10 @@ public class WebSocketMessageBuilder {
             log.error("Failed to serialize WebSocket message", e);
             throw new RuntimeException("Failed to serialize WebSocket message", e);
         }
+    }
+
+    public String callCreated(Long callerId, Long callId) {
+        Map<String, Object> payload = Map.of("callId", callId);
+        return buildMessage(WebSocketMessageType.CALL_CREATED, callerId, payload);
     }
 }

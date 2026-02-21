@@ -42,26 +42,18 @@ class MessageServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "Hello!";
 
-        Message savedMessage = new Message();
-        savedMessage.setId(100L);
-        savedMessage.setConversation(conversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
-
-        List<User> recipients = List.of(createUser(2L, "recipient"));
+        Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
+        List<User> members = List.of(fromUser, createUser(2L, "recipient"));
 
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(
-                Arrays.asList(fromUser, recipients.get(0))
-        );
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
         MessageResult result = messageService.sendMessage(fromUser, conversation, content);
 
         assertNotNull(result);
-        assertNotNull(result.message());
-        assertEquals(1, result.recipients().size());
         assertEquals(content, result.message().content());
+        assertEquals(2, result.recipients().size());
+        assertTrue(result.recipients().contains(fromUser));
 
         verify(messageRepository).save(argThat(message ->
                 message.getMessage().equals(content) &&
@@ -72,18 +64,12 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendMessage_groupConversation_savesMessage() {
+    void sendMessage_groupConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Hello group!";
 
-        Message savedMessage = new Message();
-        savedMessage.setId(100L);
-        savedMessage.setConversation(conversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
-
+        Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
         List<User> allMembers = Arrays.asList(
                 fromUser,
                 createUser(2L, "user2"),
@@ -96,42 +82,29 @@ class MessageServiceTest {
         MessageResult result = messageService.sendMessage(fromUser, conversation, content);
 
         assertNotNull(result);
-        assertEquals(2, result.recipients().size()); // Excludes sender
+        assertEquals(3, result.recipients().size());
         assertEquals(content, result.message().content());
-
-        verify(messageRepository).save(argThat(message ->
-                message.getMessage().equals(content)
-        ));
+        assertTrue(result.recipients().contains(fromUser));
     }
 
     @Test
-    void sendMessage_channelConversation_savesMessage() {
+    void sendMessage_channelConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Channel channel = createChannel(5L);
         Conversation conversation = createConversation(10L, ConversationType.CHANNEL);
         conversation.setChannel(channel);
         String content = "Channel message";
 
-        Message savedMessage = new Message();
-        savedMessage.setId(200L);
-        savedMessage.setConversation(conversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
-
-        List<User> recipients = Arrays.asList(
-                fromUser,
-                createUser(2L, "user2")
-        );
+        Message savedMessage = createSavedMessage(200L, conversation, fromUser, content);
+        List<User> members = Arrays.asList(fromUser, createUser(2L, "user2"));
 
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(recipients);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
         MessageResult result = messageService.sendMessage(fromUser, conversation, content);
 
         assertNotNull(result);
-        assertNotNull(result.message());
-        assertEquals(1, result.recipients().size());
+        assertEquals(2, result.recipients().size());
         assertEquals(content, result.message().content());
         verify(messageRepository).save(any(Message.class));
         verify(conversationService).getConversationMembers(conversation.getId());
@@ -144,42 +117,30 @@ class MessageServiceTest {
         String content = "Direct message content";
 
         Conversation dmConversation = createConversation(10L, ConversationType.DIRECT);
+        Message savedMessage = createSavedMessage(100L, dmConversation, fromUser, content);
 
-        Message savedMessage = new Message();
-        savedMessage.setId(100L);
-        savedMessage.setConversation(dmConversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
-
-        when(conversationService.findOrCreateDirectConversation(fromUser, toUser))
-                .thenReturn(dmConversation);
+        when(conversationService.findOrCreateDirectConversation(fromUser, toUser)).thenReturn(dmConversation);
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(dmConversation.getId()))
-                .thenReturn(Arrays.asList(fromUser, toUser));
+        when(conversationService.getConversationMembers(dmConversation.getId())).thenReturn(Arrays.asList(fromUser, toUser));
 
         MessageResult result = messageService.sendDirectMessage(fromUser, toUser, content);
 
         assertNotNull(result);
         assertEquals(content, result.message().content());
-        assertEquals(1, result.recipients().size());
+        assertEquals(2, result.recipients().size());
+        assertTrue(result.recipients().contains(fromUser));
+        assertTrue(result.recipients().contains(toUser));
         verify(conversationService).findOrCreateDirectConversation(fromUser, toUser);
         verify(messageRepository).save(any(Message.class));
     }
 
     @Test
-    void sendMessage_excludesSenderFromRecipients() {
+    void sendMessage_returnsAllMembersAsRecipients() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Test message";
 
-        Message savedMessage = new Message();
-        savedMessage.setId(100L);
-        savedMessage.setConversation(conversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
-
+        Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
         User user2 = createUser(2L, "user2");
         User user3 = createUser(3L, "user3");
         List<User> allMembers = Arrays.asList(fromUser, user2, user3);
@@ -189,8 +150,8 @@ class MessageServiceTest {
 
         MessageResult result = messageService.sendMessage(fromUser, conversation, content);
 
-        assertEquals(2, result.recipients().size());
-        assertFalse(result.recipients().contains(fromUser));
+        assertEquals(3, result.recipients().size());
+        assertTrue(result.recipients().contains(fromUser));
         assertTrue(result.recipients().contains(user2));
         assertTrue(result.recipients().contains(user3));
     }
@@ -201,12 +162,7 @@ class MessageServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "";
 
-        Message savedMessage = new Message();
-        savedMessage.setId(100L);
-        savedMessage.setConversation(conversation);
-        savedMessage.setFromUser(fromUser);
-        savedMessage.setMessage(content);
-        savedMessage.setCreatedAt(LocalDateTime.now());
+        Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
 
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId()))
@@ -240,5 +196,15 @@ class MessageServiceTest {
         space.setId(1L);
         channel.setSpace(space);
         return channel;
+    }
+
+    private Message createSavedMessage(Long id, Conversation conversation, User fromUser, String content) {
+        Message message = new Message();
+        message.setId(id);
+        message.setConversation(conversation);
+        message.setFromUser(fromUser);
+        message.setMessage(content);
+        message.setCreatedAt(LocalDateTime.now());
+        return message;
     }
 }

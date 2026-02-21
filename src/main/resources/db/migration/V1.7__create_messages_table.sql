@@ -4,14 +4,10 @@ CREATE TABLE messages
     conversation_id BIGINT                                  NOT NULL,
     from_user_id    BIGINT                                  NOT NULL,
     message         VARCHAR(5000)                           NOT NULL,
-    is_edited       BOOLEAN                                 NOT NULL,
+    is_edited       BOOLEAN                                 NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMP WITHOUT TIME ZONE             NOT NULL,
     edited_at       TIMESTAMP WITHOUT TIME ZONE,
-    CONSTRAINT pk_messages PRIMARY KEY (message_id)
+    CONSTRAINT pk_messages PRIMARY KEY (message_id),
+    CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (conversation_id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_user FOREIGN KEY (from_user_id) REFERENCES users (id) ON DELETE SET NULL
 );
-
-ALTER TABLE messages
-    ADD CONSTRAINT FK_MESSAGES_ON_CONVERSATION FOREIGN KEY (conversation_id) REFERENCES conversations (conversation_id);
-
-ALTER TABLE messages
-    ADD CONSTRAINT FK_MESSAGES_ON_FROM_USER FOREIGN KEY (from_user_id) REFERENCES users (id);

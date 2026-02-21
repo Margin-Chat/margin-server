@@ -76,4 +76,9 @@ public class NotificationService {
         String json = messageBuilder.callEnd(recipientId);
         connectionManager.sendToUser(recipientId, json);
     }
+
+    public void notifyCallCreated(Long callerId, Long callId) {
+        String json = messageBuilder.callCreated(callerId, callId);
+        connectionManager.sendToUser(callerId, json);
+    }
 }

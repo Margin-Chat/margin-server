@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.space.models.Space;
 
 @Data
@@ -14,8 +15,8 @@ import org.margin.server.social.space.models.Space;
 @Table(name = "channels")
 public class Channel {
     @Id
-    @Column(name = "channel_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "channel_id")
     private Long id;
 
     @NotNull
@@ -26,8 +27,15 @@ public class Channel {
     @Column(nullable = false, name = "description")
     private String description;
 
+    @NotNull
+    @Column(nullable = false, name = "channel_type")
+    private ChannelType channelType;
+
     @ManyToOne
     @JoinColumn(nullable = false, name = "space_id")
     @NotNull
     private Space space;
+
+    @OneToOne(mappedBy = "channel", cascade = CascadeType.ALL)
+    private Conversation conversation;
 }

@@ -9,7 +9,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.users.models.Role;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.stereotype.Service;
@@ -95,7 +94,6 @@ public class AuthenticationService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole(Role.USER);
         user.setProfilePictureUrl(profilePictureUrl);
         user.setCreatedAt(LocalDateTime.now());
 

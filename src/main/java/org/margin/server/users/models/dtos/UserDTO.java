@@ -1,27 +1,23 @@
 package org.margin.server.users.models.dtos;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserDTO {
-	private Long id;
-	private String username;
-	private String email;
-	private String profilePictureUrl;
-	private LocalDateTime createdAt;
-
-	public UserDTO(User user) {
-		this.id = user.getId();
-		this.username = user.getUsername();
-		this.email = user.getEmail();
-		this.profilePictureUrl = user.getProfilePictureUrl();
-		this.createdAt = user.getCreatedAt();
-	}
+public record UserDTO(
+        Long id,
+        String username,
+        String email,
+        String profilePictureUrl,
+        LocalDateTime createdAt
+) {
+    public UserDTO(User user) {
+        this(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getProfilePictureUrl(),
+                user.getCreatedAt()
+        );
+    }
 }

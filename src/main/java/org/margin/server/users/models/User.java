@@ -33,8 +33,6 @@ public class User {
 	@NotBlank
 	private String password;
 
-	private Role role = Role.USER;
-
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 

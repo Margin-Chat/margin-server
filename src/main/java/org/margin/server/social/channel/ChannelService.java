@@ -43,11 +43,5 @@ public class ChannelService {
         conversation.setName(name);
         conversation.setCreatedAt(LocalDateTime.now());
         conversationRepository.save(conversation);
-
-    }
-
-    public Channel getById(Long id) {
-        return channelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Channel not found"));
     }
 }

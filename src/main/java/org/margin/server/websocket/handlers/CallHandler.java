@@ -44,8 +44,12 @@ public class CallHandler {
                 payload.sdp(),
                 CallType.AUDIO.toString()
         );
-    }
 
+        notificationService.notifyCallCreated(
+                fromUser.getId(),
+                call.getId()
+        );
+    }
     public void handleCallResponse(WebSocketMessageIn<IncomingCallResponsePayload> wsMessage) {
         IncomingCallResponsePayload payload = wsMessage.getPayload();
 

@@ -5,8 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.models.Visibility;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -28,11 +31,17 @@ public class Space {
     private String description;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "visibility")
     private Visibility visibility;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false, name = "margin_id")
+    @JoinColumn(name = "margin_id", nullable = false)
     private Margin margin;
+
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Channel> channels;
+
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SpaceMember> members;
 }

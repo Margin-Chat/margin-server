@@ -20,7 +20,7 @@ public class MarginService {
     }
 
     public Margin getMargin(Long marginId) {
-        return marginRepository.findById(marginId).orElseThrow();
+        return marginRepository.findById(marginId).orElseThrow(() -> new MarginNotFoundException(marginId));
     }
 
     public void createMargin(String name, String description, Visibility visibility, MultipartFile marginIcon) {
@@ -34,7 +34,7 @@ public class MarginService {
         margin.setName(name);
         margin.setDescription(description);
         margin.setVisibility(visibility);
-        margin.setMarginIconUrl(marginIconUrl);
+        margin.setIconUrl(marginIconUrl);
         marginRepository.save(margin);
 
       log.info("Created new Margin with id {}", margin.getId());

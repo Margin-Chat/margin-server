@@ -39,7 +39,6 @@ public class MessageService {
 
 		List<User> recipients = conversationService.getConversationMembers(conversation.getId());
 
-		// Pass the conversation type from the conversation entity
 		return new MessageResult(new MessageDTO(message, conversation.getType()), recipients);
 	}
 

@@ -1,6 +1,7 @@
 package org.margin.server.social.config;
 
 import org.margin.server.social.conversation.ConversationMemberId;
+import org.margin.server.social.space.models.SpaceRole;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.channel.ChannelService;
@@ -13,7 +14,6 @@ import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.SpaceMember;
-import org.margin.server.social.space.models.enums.SpaceMemberRole;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.channel.ChannelRepository;
 import org.margin.server.social.margin.MarginRepository;
@@ -94,7 +94,7 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
                 SpaceMember spaceMember = new SpaceMember();
                 spaceMember.setSpace(newSpace);
                 spaceMember.setUser(user);
-                spaceMember.setRole(SpaceMemberRole.MEMBER);
+                spaceMember.setRole(SpaceRole.MEMBER);
                 spaceMember.setJoinedAt(LocalDateTime.now());
 
                 members.add(spaceMember);

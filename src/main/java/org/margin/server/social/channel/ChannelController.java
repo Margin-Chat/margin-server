@@ -24,10 +24,7 @@ public class ChannelController {
     public List<ChannelDTO> getChannelsForSpace(@PathVariable Long spaceId) {
         return channelService.getChannelsForSpace(spaceId)
                 .stream()
-                .map(c -> {
-                    Conversation conversation = conversationService.getByChannelId(c.getId());
-                    return new ChannelDTO(c, conversation);
-                })
+                .map(ChannelDTO::new)
                 .toList();
     }
 }

@@ -1,7 +1,9 @@
 package org.margin.server.social.margin;
 
+import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.models.Visibility;
-import org.margin.server.social.margin.models.CreateNewMarginRequest;
+import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,4 +32,10 @@ public class MarginController {
 
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/get_margin/{marginId}")
+    public MarginDTO getMargin(@PathVariable Long marginId) {
+        return new MarginDTO(marginService.getMargin(marginId));
+    }
+
 }
