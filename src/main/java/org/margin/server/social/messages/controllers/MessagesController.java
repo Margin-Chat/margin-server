@@ -99,7 +99,7 @@ public class MessagesController {
     }
 
     @GetMapping("/conversations/unread")
-    public List<UnreadCountDTO> getUnreadMessagesCount(@AuthenticationPrincipal User user) {
+    public List<UnreadCount> getUnreadMessagesCount(@AuthenticationPrincipal User user) {
         return conversationService.getUnreadMessagesCounts(user.getId());
     }
 

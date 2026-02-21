@@ -1,6 +1,6 @@
 package org.margin.server.social.messages.models.dtos;
 
-public record UnreadCountDTO (
+public record UnreadCount(
         Long conversationId,
         Long fromUserId,
         Long unreadDmsCount,
