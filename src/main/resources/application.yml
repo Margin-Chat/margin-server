@@ -21,7 +21,7 @@ jwt:
   expiration: 86400000
 
 storage:
-  type: s3
+  type: ${STORAGE_TYPE:s3}
   s3:
     endpoint: ${HETZNER_S3_ENDPOINT}
     region: eu-central-1
@@ -33,4 +33,4 @@ storage:
     base-url: ${APP_BASE_URL}/api/files
 
 mediasoup:
-  url: ${MEDIASOUP_URL}
+  url: ${MEDIASOUP_URL:http://localhost:3000}
