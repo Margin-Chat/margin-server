@@ -1,6 +1,7 @@
 package org.margin.server.social.channel;
 
 import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.channel.ChannelType;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
@@ -35,6 +36,7 @@ public class ChannelService {
         channel.setSpace(spacesService.getById(spaceId));
         channel.setName(name);
         channel.setDescription(description);
+        channel.setChannelType(ChannelType.Communication);
         channel = channelRepository.save(channel);
 
         Conversation conversation = new Conversation();
