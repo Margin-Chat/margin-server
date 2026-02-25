@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "conversation_members")
+@Table(name = "conversation_members", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"conversation_id", "user_id"})
+})
 public class ConversationMember {
+
     @EmbeddedId
-    private ConversationMemberId id;
+    private ConversationMemberId id = new ConversationMemberId();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("conversationId")

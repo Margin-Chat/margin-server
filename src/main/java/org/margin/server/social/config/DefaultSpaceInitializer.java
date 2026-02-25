@@ -1,7 +1,8 @@
 package org.margin.server.social.config;
 
 import org.margin.server.social.conversation.ConversationMemberId;
-import org.margin.server.social.space.models.SpaceRole;
+import org.margin.server.social.margin.MarginService;
+import org.margin.server.users.models.User;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.channel.ChannelService;
@@ -13,14 +14,12 @@ import org.margin.server.social.conversation.repositories.ConversationRepository
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
-import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.channel.ChannelRepository;
 import org.margin.server.social.margin.MarginRepository;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -43,6 +42,7 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
     private final ChannelService channelService;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
+    private final MarginService marginService;
 
     public DefaultSpaceInitializer(SpacesRepository spacesRepository,
                                    ChannelRepository channelRepository,
@@ -52,7 +52,7 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
                                    MarginRepository marginRepository,
                                    ChannelService channelService,
                                    ConversationRepository conversationRepository,
-                                   ConversationMemberRepository conversationMemberRepository) {
+                                   ConversationMemberRepository conversationMemberRepository, MarginService marginService) {
         this.spacesRepository = spacesRepository;
         this.channelRepository = channelRepository;
         this.userRepository = userRepository;
@@ -62,12 +62,13 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
         this.channelService = channelService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
+        this.marginService = marginService;
     }
 
     @Override
     public void run(String... args) {
         initializeDefaultSpace();
-        initializeConversationMembers();
+        initializeMembers();
     }
 
     @Transactional
@@ -87,26 +88,12 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
                     defaultMargin.getId());
             Space newSpace = spacesService.createNewSpace(generalSpace);
 
-            List<User> allUsers = userRepository.findAll();
-
-            List<SpaceMember> members = new ArrayList<>();
-            for (User user : allUsers) {
-                SpaceMember spaceMember = new SpaceMember();
-                spaceMember.setSpace(newSpace);
-                spaceMember.setUser(user);
-                spaceMember.setRole(SpaceRole.MEMBER);
-                spaceMember.setJoinedAt(LocalDateTime.now());
-
-                members.add(spaceMember);
-            }
-            spaceMemberRepository.saveAll(members);
-
             channelService.createChannel(newSpace.getId(), "General Chat", "General text chat");
         }
     }
 
     @Transactional
-    public void initializeConversationMembers() {
+    public void initializeMembers() {
         List<Margin> margin = marginRepository.findByName("Margin");
         if (margin.isEmpty()) {
             return;
@@ -136,5 +123,10 @@ public class DefaultSpaceInitializer implements CommandLineRunner {
             members.add(member);
         });
         conversationMemberRepository.saveAll(members);
+
+        List<User> allUsers = userRepository.findAll();
+
+        marginService.addUsersToMargin(margin.getFirst().getId(), allUsers);
+        spacesService.addUsersToSpace(spaceByMargin.getFirst().getId(), allUsers);
     }
 }

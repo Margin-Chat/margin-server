@@ -1,12 +1,11 @@
 package org.margin.server.social.channel.channel;
 
-import org.margin.server.social.conversation.Conversation;
-
 public record ChannelDTO(
         Long id,
         String name,
         String description,
         Long conversationId,
+        ChannelType channelType,
         Long spaceId
 ) {
     public ChannelDTO(Channel channel) {
@@ -15,6 +14,7 @@ public record ChannelDTO(
                 channel.getName(),
                 channel.getDescription(),
                 channel.getConversation().getId(),
+                channel.getChannelType(),
                 channel.getSpace().getId()
         );
     }

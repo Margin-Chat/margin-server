@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.models.Visibility;
@@ -15,6 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@ToString(exclude = {"margin", "channels", "members"})
 @Table(name = "spaces")
 public class Space {
     @Id

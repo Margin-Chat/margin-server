@@ -6,5 +6,6 @@ import java.time.LocalDateTime;
 
 public record RecentChatUserProjection(User user,
                                        String lastMessage,
-                                       LocalDateTime lastMessageTime) {
+                                       LocalDateTime lastMessageTime,
+                                       boolean lastMessageIncoming) {
 }

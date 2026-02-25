@@ -64,8 +64,9 @@ public class SecurityConfig {
                                 .requestMatchers("/api/files/**").permitAll()
 
                                 .requestMatchers("/api/conversations/**").authenticated()
-                                .requestMatchers("/spaces/**").authenticated()
-                                .requestMatchers("/channels/**").authenticated()
+                                .requestMatchers("/api/spaces/**").authenticated()
+                                .requestMatchers("/api/margins/**").authenticated()
+                                .requestMatchers("/api/channels/**").authenticated()
                                 .requestMatchers("/api/users/**").authenticated()
 
                                 .anyRequest().authenticated())

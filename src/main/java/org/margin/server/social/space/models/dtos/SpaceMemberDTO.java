@@ -8,12 +8,13 @@ import java.time.LocalDateTime;
 
 public record SpaceMemberDTO(
         UserDTO user,
+        Long spaceId,
         SpaceRole role,
         LocalDateTime joinedAt
 ) {
     public SpaceMemberDTO(SpaceMember member) {
-        this(new UserDTO(
-                member.getUser()),
+        this(new UserDTO(member.getUser()),
+                member.getSpace().getId(),
                 member.getRole(),
                 member.getJoinedAt());
     }

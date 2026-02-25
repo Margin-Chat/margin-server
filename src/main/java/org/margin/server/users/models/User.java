@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @ToString(exclude = {"encryption", "security"})
+@EqualsAndHashCode(exclude = {"encryption", "security"})
 @Table(name = "users")
 public class User {
 	@Id

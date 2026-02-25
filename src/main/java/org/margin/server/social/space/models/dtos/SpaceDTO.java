@@ -1,6 +1,7 @@
 package org.margin.server.social.space.models.dtos;
 
 import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
 
@@ -20,8 +21,8 @@ public record SpaceDTO(
                 space.getName(),
                 space.getDescription(),
                 space.getVisibility(),
-                space.getChannels().stream().map(ChannelDTO::new).toList(),
-                space.getMembers().stream().map(SpaceMemberDTO::new).toList()
+                space.getChannels() != null ? space.getChannels().stream().map(ChannelDTO::new).toList() : List.of(),
+                space.getMembers() != null ? space.getMembers().stream().map(SpaceMemberDTO::new).toList() : List.of()
         );
     }
 }

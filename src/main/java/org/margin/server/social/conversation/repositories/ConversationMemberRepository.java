@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.repositories;
 
+import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationMember;
 import org.margin.server.social.conversation.ConversationMemberId;
 import org.margin.server.social.messages.models.dtos.UnreadCountDTO;
@@ -18,26 +19,27 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     List<User> findUsersByConversationId(@Param("conversationId") Long conversationId);
 
     @Query("""
-                SELECT new org.margin.server.users.repositories.projections.RecentChatUserProjection(
-                    u,
-                    m.message,
-                    m.createdAt
-                )
-                FROM ConversationMember cm
-                JOIN cm.user u
-                JOIN Message m ON m.conversation.id = cm.conversation.id
-                WHERE cm.conversation.id IN (
-                    SELECT cm2.conversation.id
-                    FROM ConversationMember cm2
-                    WHERE cm2.user.id = :userId
-                )
-                AND u.id != :userId
-                AND m.createdAt = (
-                    SELECT MAX(m2.createdAt)
-                    FROM Message m2
-                    WHERE m2.conversation.id = cm.conversation.id
-                )
-                ORDER BY m.createdAt DESC
+            SELECT
+                u,
+                m.message,
+                m.createdAt,
+                CASE WHEN m.fromUser.id != :userId THEN true ELSE false END
+                        FROM ConversationMember cm
+                        JOIN cm.user u
+                        JOIN Message m ON m.conversation.id = cm.conversation.id
+                        WHERE cm.conversation.id IN (
+                            SELECT cm2.conversation.id
+                            FROM ConversationMember cm2
+                            WHERE cm2.user.id = :userId
+                        )
+                        AND u.id != :userId
+                        AND cm.conversation.type IN ('DIRECT', 'GROUP')
+                        AND m.createdAt = (
+                            SELECT MAX(m2.createdAt)
+                            FROM Message m2
+                            WHERE m2.conversation.id = cm.conversation.id
+                        )
+                        ORDER BY m.createdAt DESC
             """)
     List<RecentChatUserProjection> findRecentChatUsers(@Param("userId") Long userId);
 
@@ -45,12 +47,11 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     boolean isUserMemberOfConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 
     @Query("""
-                SELECT new org.margin.server.social.messages.models.dtos.UnreadCountDTO(
+                SELECT 
                     cm.conversation.id,
                     m.fromUser.id,
                     SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
                     SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END)
-                )
                 FROM ConversationMember cm
                 LEFT JOIN Message m ON m.conversation.id = cm.conversation.id
                 WHERE cm.user.id = :userId
@@ -58,4 +59,6 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                 HAVING SUM(CASE WHEN m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) > 0
             """)
     List<UnreadCountDTO> getUnreadMessagesCounts(@Param("userId") Long userId);
+
+    List<ConversationMember> findByConversation(Conversation conversation);
 }

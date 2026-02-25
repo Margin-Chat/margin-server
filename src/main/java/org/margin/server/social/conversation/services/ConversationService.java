@@ -164,7 +164,8 @@ public class ConversationService {
                 .map(p -> new RecentChatUsersDTO(
                         p.user(),
                         p.lastMessage(),
-                        p.lastMessageTime()
+                        p.lastMessageTime(),
+                        p.lastMessageIncoming()
                 ))
                 .toList();
     }

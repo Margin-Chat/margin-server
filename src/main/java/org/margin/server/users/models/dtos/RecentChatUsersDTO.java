@@ -7,9 +7,10 @@ import java.time.LocalDateTime;
 public record RecentChatUsersDTO(
         UserDTO user,
         String lastMessage,
-        LocalDateTime lastMessageTime
+        LocalDateTime lastMessageTime,
+        boolean lastMessageIncoming
 ) {
-    public RecentChatUsersDTO(User user, String lastMessage, LocalDateTime lastMessageTime) {
-        this(new UserDTO(user), lastMessage, lastMessageTime);
+    public RecentChatUsersDTO(User user, String lastMessage, LocalDateTime lastMessageTime,  boolean lastMessageIncoming) {
+        this(new UserDTO(user), lastMessage, lastMessageTime, lastMessageIncoming);
     }
 }

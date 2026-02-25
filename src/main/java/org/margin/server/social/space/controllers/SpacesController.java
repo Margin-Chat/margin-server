@@ -1,29 +1,62 @@
 package org.margin.server.social.space.controllers;
 
+import org.margin.server.social.channel.ChannelService;
+import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.margin.MarginService;
+import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.users.models.User;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.margin.server.social.space.services.SpacesService;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/spaces")
+@RequestMapping("/api/spaces")
 public class SpacesController {
     private final SpacesService spacesService;
+    private final ChannelService channelService;
 
-    public SpacesController(SpacesService spacesService) {
+    public SpacesController(SpacesService spacesService, ChannelService channelService) {
         this.spacesService = spacesService;
+        this.channelService = channelService;
     }
 
     @GetMapping("get_all_spaces")
     public List<SpaceDTO> getAllSpaces() {
-        return spacesService.getSpaces();
+        return spacesService.getSpaces().stream()
+                .map(SpaceDTO::new)
+                .toList();
+    }
+
+    @GetMapping("get_all_spaces_for_user")
+    public List<SpaceDTO> getAllSpacesForUser(@AuthenticationPrincipal User user) {
+        return spacesService.getSpacesForUser(user).stream()
+                .map(SpaceDTO::new)
+                .toList();
     }
 
     @PostMapping("create_space")
-    public void createSpace(@RequestBody CreateSpaceDTO dto) {
-        spacesService.createNewSpace(dto);
+    public ResponseEntity<SpaceDTO> createSpace(@RequestBody CreateSpaceDTO dto) {
+        return ResponseEntity.ok(new SpaceDTO(spacesService.createNewSpace(dto)));
+    }
+
+    @PostMapping("add_space_member")
+    public ResponseEntity<SpaceMemberDTO> addSpaceMember(@RequestBody SpaceMemberDTO spaceMemberDTO) {
+        return ResponseEntity.ok(new SpaceMemberDTO(spacesService.addNewSpaceMemberToSpace(spaceMemberDTO)));
+    }
+
+    @PostMapping("update_space_info")
+    public ResponseEntity<SpaceDTO> updateSpaceInfo(@RequestBody SpaceDTO spaceDTO) {
+        return ResponseEntity.ok(new SpaceDTO(spacesService.updateSpace(spaceDTO)));
+    }
+
+    @PostMapping("delete_space")
+    public ResponseEntity<Void> deleteSpace(@RequestBody Long spaceId) {
+        spacesService.deleteSpace(spaceId);
+        return ResponseEntity.ok().build();
     }
 }

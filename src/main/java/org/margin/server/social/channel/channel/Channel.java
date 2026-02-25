@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.space.models.Space;
 
@@ -31,11 +32,12 @@ public class Channel {
     @Column(nullable = false, name = "channel_type")
     private ChannelType channelType;
 
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(nullable = false, name = "space_id")
-    @NotNull
     private Space space;
 
+    @ToString.Exclude
     @OneToOne(mappedBy = "channel", cascade = CascadeType.ALL)
     private Conversation conversation;
 }
