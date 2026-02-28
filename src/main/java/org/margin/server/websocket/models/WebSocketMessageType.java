@@ -1,16 +1,27 @@
 package org.margin.server.websocket.models;
 
+import org.margin.server.websocket.models.payloads.*;
+
 public enum WebSocketMessageType {
-    USER_LOGIN,
-    USER_LOGOUT,
+    // User activity
+    USER_LOGIN(null),
+    USER_LOGOUT(null),
 
-    SEND_MESSAGE,
-    RECEIVE_MESSAGE,
-    SEND_DIRECT_MESSAGE,
+    // Message
+    SEND_MESSAGE(String.class),
+    RECEIVE_MESSAGE(String.class),
+    SEND_DIRECT_MESSAGE(String.class),
 
-    CALL_OFFER,
-    CALL_RESPONSE,
-    CALL_CANDIDATE,
-    CALL_CREATED,
-    CALL_END
+    // Call
+    CALL_OFFER(IncomingCallOfferPayload.class),
+    CALL_RESPONSE(IncomingCallResponsePayload.class),
+    CALL_CANDIDATE(IncomingCallCandidatePayload.class),
+    CALL_CREATED(null),
+    CALL_END(IncomingCallEndPayload.class);
+
+    public final Class<?> payloadClass;
+
+    WebSocketMessageType(Class<?> payloadClass) {
+        this.payloadClass = payloadClass;
+    }
 }

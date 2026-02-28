@@ -10,12 +10,15 @@ import org.margin.server.connection.ClientConnection;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.handlers.CallHandler;
-import org.margin.server.websocket.handlers.MessageHandler;
 import org.margin.server.websocket.models.WebSocketMessageIn;
+import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.*;
+import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -23,20 +26,22 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
-    private final MessageHandler messageHandler;
-    private final CallHandler callHandler;
     private final PresenceService presenceService;
+    private final Map<WebSocketMessageType, WebSocketMessageProcessor<Object>> dispatch;
 
+    @SuppressWarnings("unchecked")
     public WebSocketHandler(JwtService jwtService,
                             ConnectionManager connectionManager,
-                            MessageHandler messageHandler,
-                            CallHandler callHandler,
-                            PresenceService presenceService) {
+                            PresenceService presenceService,
+                            List<WebSocketMessageProcessor<?>> processors) {
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
-        this.messageHandler = messageHandler;
-        this.callHandler = callHandler;
         this.presenceService = presenceService;
+        this.dispatch = processors.stream()
+                .collect(Collectors.toMap(
+                        WebSocketMessageProcessor::getType,
+                        p -> (WebSocketMessageProcessor<Object>) p
+                ));
     }
 
     @Override
@@ -65,7 +70,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         ctx.channel().attr(WebSocketAttributes.USER).set(user);
 
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
-                "ws://localhost:8081/ws", null, true, 65536);
+                buildWsUrl(req), null, true, 65536);
         WebSocketServerHandshaker handshaker = factory.newHandshaker(req);
 
         if (handshaker != null) {
@@ -86,34 +91,28 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         switch (frame) {
-            case CloseWebSocketFrame close ->
-                    ctx.channel().attr(WebSocketAttributes.HANDSHAKER).get()
-                            .close(ctx.channel(), close.retain());
-            case PingWebSocketFrame ping ->
-                    ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
-            default ->
-                    log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
+            case CloseWebSocketFrame close -> ctx.channel().attr(WebSocketAttributes.HANDSHAKER).get()
+                    .close(ctx.channel(), close.retain());
+            case PingWebSocketFrame ping -> ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
+            default -> log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
         }
     }
 
     @SuppressWarnings("unchecked")
     private void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
-
-        switch (message.getType()) {
-            case SEND_MESSAGE ->
-                    messageHandler.handleMessage(user, (WebSocketMessageIn<String>) message);
-            case SEND_DIRECT_MESSAGE ->
-                    messageHandler.handleNewDirectMessage(user, (WebSocketMessageIn<String>) message);
-            case CALL_OFFER ->
-                    callHandler.handleCallOffer(user, (WebSocketMessageIn<IncomingCallOfferPayload>) message);
-            case CALL_RESPONSE ->
-                    callHandler.handleCallResponse((WebSocketMessageIn<IncomingCallResponsePayload>) message);
-            case CALL_CANDIDATE ->
-                    callHandler.handleCallCandidate((WebSocketMessageIn<IncomingCallCandidatePayload>) message);
-            case CALL_END ->
-                    callHandler.handleCallEnd((WebSocketMessageIn<IncomingCallEndPayload>) message);
+        if (user == null) {
+            ctx.close();
+            return;
         }
+
+        WebSocketMessageProcessor<Object> processor = dispatch.get(message.getType());
+        if (processor == null) {
+            log.warn("No processor for type: {}", message.getType());
+            return;
+        }
+
+        processor.process(user, (WebSocketMessageIn<Object>) message);
     }
 
     @Override
@@ -129,5 +128,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("WebSocket error", cause);
         ctx.close();
+    }
+
+    private String buildWsUrl(FullHttpRequest req) {
+        String host = req.headers().get("Host", "localhost:8081");
+        return "ws://" + host + req.uri();
     }
 }

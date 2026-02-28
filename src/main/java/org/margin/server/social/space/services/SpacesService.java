@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.margin.server.social.channel.ChannelRepository;
 import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.conversation.ConversationMember;
+import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
@@ -38,13 +40,15 @@ public class SpacesService {
     private final SpaceMemberRepository spaceMemberRepository;
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
+    private final ConversationMemberRepository conversationMemberRepository;
 
-    public SpacesService(SpacesRepository spacesRepository, MarginService marginService, SpaceMemberRepository spaceMemberRepository, UserRepository userRepository, ChannelRepository channelRepository) {
+    public SpacesService(SpacesRepository spacesRepository, MarginService marginService, SpaceMemberRepository spaceMemberRepository, UserRepository userRepository, ChannelRepository channelRepository, ConversationMemberRepository conversationMemberRepository) {
         this.spacesRepository = spacesRepository;
         this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
         this.userRepository = userRepository;
         this.channelRepository = channelRepository;
+        this.conversationMemberRepository = conversationMemberRepository;
     }
 
     public List<Space> getSpaces() {
@@ -103,6 +107,7 @@ public class SpacesService {
         spaceMemberRepository.saveAll(spaceMembers);
     }
 
+    @Transactional
     public SpaceMember addNewSpaceMemberToSpace(SpaceMemberDTO spaceMemberDTO) {
         User user = userRepository.findById(spaceMemberDTO.user().id()).orElseThrow(() ->
                 new UserNotFoundException(spaceMemberDTO.user().id()));
@@ -115,6 +120,14 @@ public class SpacesService {
         }
 
         SpaceMember spaceMember = createSpaceMember(user, space);
+        List<Channel> channels = spaceMember.getSpace().getChannels();
+        for (Channel channel : channels) {
+            ConversationMember conversationMember = new ConversationMember();
+            conversationMember.setUser(user);
+            conversationMember.setConversation(channel.getConversation());
+            conversationMember.setJoinedAt(LocalDateTime.now());
+            conversationMemberRepository.save(conversationMember);
+        }
         return spaceMemberRepository.save(spaceMember);
     }
 

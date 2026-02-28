@@ -51,7 +51,7 @@ public class AuthenticationService {
             }
 
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), password)
+                    new UsernamePasswordAuthenticationToken(user.getUsername().toLowerCase(), password)
             );
 
             resetFailedAttempts(user);
@@ -69,7 +69,12 @@ public class AuthenticationService {
 
         } catch (BadCredentialsException e) {
             handleFailedLogin(username);
-            throw new BadCredentialsException("Invalid credentials");
+            log.info("User {} authentication failed", username);
+            return new AuthResponse(
+                    false,
+                    "Invalid credentials",
+                    null, null, null, null, null
+            );
         }
     }
 

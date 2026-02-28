@@ -12,24 +12,23 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.websocket.handlers.CallHandler;
-import org.margin.server.websocket.handlers.MessageHandler;
+import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.margin.server.authentication.services.JwtService;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class WebSocketServer {
-
     private final ObjectMapper objectMapper;
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
-    private final MessageHandler messageHandler;
-    private final CallHandler callHandler;
     private final PresenceService presenceService;
+    private final List<WebSocketMessageProcessor<?>> processors;
     @Value("${websocket.port:8081}")
     private int port;
 
@@ -38,13 +37,16 @@ public class WebSocketServer {
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
 
-    public WebSocketServer(ObjectMapper objectMapper, JwtService jwtService, ConnectionManager connectionManager, MessageHandler messageHandler, CallHandler callHandler, PresenceService presenceService) {
+    public WebSocketServer(ObjectMapper objectMapper,
+                           JwtService jwtService,
+                           ConnectionManager connectionManager,
+                           PresenceService presenceService,
+                           List<WebSocketMessageProcessor<?>> processors) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
-        this.messageHandler = messageHandler;
-        this.callHandler = callHandler;
         this.presenceService = presenceService;
+        this.processors = processors;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -71,9 +73,8 @@ public class WebSocketServer {
                                     .addLast(new WebSocketHandler(
                                             jwtService,
                                             connectionManager,
-                                            messageHandler,
-                                            callHandler,
-                                            presenceService));
+                                            presenceService,
+                                            processors));
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 1024)

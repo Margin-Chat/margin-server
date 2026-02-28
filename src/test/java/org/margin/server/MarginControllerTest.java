@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class MarginControllerTest {
 
+    public static final String API_MARGINS = "/api/margins/";
     @Mock
     private MarginService marginService;
 
@@ -50,7 +51,7 @@ class MarginControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        mockMvc().perform(multipart("/margin/create_new_margin")
+        mockMvc().perform(multipart(API_MARGINS + "create_new_margin")
                         .file(data))
                 .andExpect(status().isOk());
 
@@ -74,7 +75,7 @@ class MarginControllerTest {
                 "image content".getBytes()
         );
 
-        mockMvc().perform(multipart("/margin/create_new_margin")
+        mockMvc().perform(multipart(API_MARGINS + "create_new_margin")
                         .file(data)
                         .file(icon))
                 .andExpect(status().isOk());
@@ -100,7 +101,7 @@ class MarginControllerTest {
 
         when(marginService.getMargin(1L)).thenReturn(margin);
 
-        mockMvc().perform(get("/margin/get_margin/1"))
+        mockMvc().perform(get(API_MARGINS + "get_margin/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.marginId").value(1L))
                 .andExpect(jsonPath("$.marginName").value("Test Margin"))
@@ -114,7 +115,7 @@ class MarginControllerTest {
     void shouldReturnNotFoundWhenMarginDoesNotExist() throws Exception {
         when(marginService.getMargin(99L)).thenThrow(new MarginNotFoundException(99L));
 
-        mockMvc().perform(get("/margin/get_margin/99"))
+        mockMvc().perform(get(API_MARGINS + "get_margin/99"))
                 .andExpect(status().isNotFound());
     }
 }

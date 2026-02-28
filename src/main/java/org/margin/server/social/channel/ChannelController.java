@@ -1,10 +1,9 @@
 package org.margin.server.social.channel;
 
 import org.margin.server.social.channel.channel.ChannelDTO;
-import org.margin.server.social.conversation.Conversation;
-import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
-import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +18,8 @@ public class ChannelController {
     }
 
     @GetMapping("/{spaceId}/get_channels_for_space")
-    public List<ChannelDTO> getChannelsForSpace(@PathVariable Long spaceId) {
+    public List<ChannelDTO> getChannelsForSpace(@AuthenticationPrincipal User user,
+                                                @PathVariable Long spaceId) {
         return channelService.getChannelsForSpace(spaceId)
                 .stream()
                 .map(ChannelDTO::new)
@@ -27,7 +27,7 @@ public class ChannelController {
     }
 
     @PostMapping("/create_channel")
-    public ChannelDTO createChannel(@RequestBody ChannelDTO channelDTO) {
+    public ChannelDTO createChannel(@AuthenticationPrincipal User user, @RequestBody ChannelDTO channelDTO) {
         return new ChannelDTO(channelService.createChannel(
                 channelDTO.spaceId(),
                 channelDTO.name(),
@@ -35,12 +35,14 @@ public class ChannelController {
     }
 
     @PostMapping("/update_channel")
-    public ResponseEntity<ChannelDTO> updateChannel(@RequestBody ChannelDTO channelDTO) {
+    public ResponseEntity<ChannelDTO> updateChannel(@AuthenticationPrincipal User user,
+                                                    @RequestBody ChannelDTO channelDTO) {
         return ResponseEntity.ok(new ChannelDTO(channelService.updateChannel(channelDTO)));
     }
 
     @PostMapping("/delete_channel")
-    public ResponseEntity<Void> deleteChannel(@RequestBody Long channelId) {
+    public ResponseEntity<Void> deleteChannel(@AuthenticationPrincipal User user,
+                                              @RequestBody Long channelId) {
         channelService.deleteChannel(channelId);
         return ResponseEntity.ok().build();
     }

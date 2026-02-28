@@ -26,7 +26,7 @@ public class SpacesController {
     }
 
     @GetMapping("get_all_spaces")
-    public List<SpaceDTO> getAllSpaces() {
+    public List<SpaceDTO> getAllSpaces(@AuthenticationPrincipal User user) {
         return spacesService.getSpaces().stream()
                 .map(SpaceDTO::new)
                 .toList();
@@ -40,22 +40,26 @@ public class SpacesController {
     }
 
     @PostMapping("create_space")
-    public ResponseEntity<SpaceDTO> createSpace(@RequestBody CreateSpaceDTO dto) {
+    public ResponseEntity<SpaceDTO> createSpace(@AuthenticationPrincipal User user,
+                                                @RequestBody CreateSpaceDTO dto) {
         return ResponseEntity.ok(new SpaceDTO(spacesService.createNewSpace(dto)));
     }
 
     @PostMapping("add_space_member")
-    public ResponseEntity<SpaceMemberDTO> addSpaceMember(@RequestBody SpaceMemberDTO spaceMemberDTO) {
+    public ResponseEntity<SpaceMemberDTO> addSpaceMember(@AuthenticationPrincipal User user,
+                                                         @RequestBody SpaceMemberDTO spaceMemberDTO) {
         return ResponseEntity.ok(new SpaceMemberDTO(spacesService.addNewSpaceMemberToSpace(spaceMemberDTO)));
     }
 
     @PostMapping("update_space_info")
-    public ResponseEntity<SpaceDTO> updateSpaceInfo(@RequestBody SpaceDTO spaceDTO) {
+    public ResponseEntity<SpaceDTO> updateSpaceInfo(@AuthenticationPrincipal User user,
+                                                    @RequestBody SpaceDTO spaceDTO) {
         return ResponseEntity.ok(new SpaceDTO(spacesService.updateSpace(spaceDTO)));
     }
 
     @PostMapping("delete_space")
-    public ResponseEntity<Void> deleteSpace(@RequestBody Long spaceId) {
+    public ResponseEntity<Void> deleteSpace(@AuthenticationPrincipal User user,
+                                            @RequestBody Long spaceId) {
         spacesService.deleteSpace(spaceId);
         return ResponseEntity.ok().build();
     }

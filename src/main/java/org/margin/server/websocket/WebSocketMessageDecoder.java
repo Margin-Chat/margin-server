@@ -28,22 +28,15 @@ public class WebSocketMessageDecoder extends MessageToMessageDecoder<TextWebSock
     protected void decode(ChannelHandlerContext ctx, TextWebSocketFrame frame, List<Object> out) {
         try {
             String payload = frame.text();
-
             JsonNode node = objectMapper.readTree(payload);
-            WebSocketMessageType type = WebSocketMessageType.valueOf(
-                    node.get("type").asText()
-            );
+            WebSocketMessageType type = WebSocketMessageType.valueOf(node.get("type").asText());
 
-            WebSocketMessageIn<?> message = switch (type) {
-                case SEND_DIRECT_MESSAGE, SEND_MESSAGE -> parseMessage(payload, String.class);
-                case CALL_OFFER -> parseMessage(payload, IncomingCallOfferPayload.class);
-                case CALL_RESPONSE -> parseMessage(payload, IncomingCallResponsePayload.class);
-                case CALL_CANDIDATE -> parseMessage(payload, IncomingCallCandidatePayload.class);
-                case CALL_END -> parseMessage(payload, IncomingCallEndPayload.class);
-                default -> throw new IllegalStateException("Unexpected value: " + type);
-            };
+            if (type.payloadClass == null) {
+                out.add(new WebSocketMessageIn<>(type, null, null));
+                return;
+            }
 
-            out.add(message);
+            out.add(parseMessage(payload, type.payloadClass));
 
         } catch (IllegalArgumentException e) {
             ctx.fireExceptionCaught(new IllegalArgumentException("Unknown message type: " + e.getMessage()));

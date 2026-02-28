@@ -54,7 +54,7 @@ public class MarginService {
     public Set<MarginDTO> getMarginsForUser(User user) {
         List<MarginMember> marginMembersByUser = marginMemberRepository.findMarginMembersByUser(user.getId());
         if (marginMembersByUser.isEmpty()) {
-            throw new UserNotFoundException(user.getId());
+            return Collections.emptySet();
         }
 
         return marginMembersByUser.stream()
