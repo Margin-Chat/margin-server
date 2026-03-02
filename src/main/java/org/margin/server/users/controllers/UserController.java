@@ -84,4 +84,11 @@ public class UserController {
     public List<UserDTO> searchForUser(@RequestParam String query) {
         return userService.searchForUser(query);
     }
+
+    @GetMapping("/online-status")
+    public List<UserOnlineStatusDTO> getOnlineStatus(@RequestParam List<Long> ids) {
+        return ids.stream()
+                .map(id -> new UserOnlineStatusDTO(id, connectionManager.isUserOnline(id)))
+                .toList();
+    }
 }

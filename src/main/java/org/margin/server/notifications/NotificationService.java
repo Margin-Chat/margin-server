@@ -81,4 +81,24 @@ public class NotificationService {
         String json = messageBuilder.callCreated(callerId, callId);
         connectionManager.sendToUser(callerId, json);
     }
+
+    public void notifyScreenShareOffer(Long recipientId, String sdp, String type) {
+        String json = messageBuilder.screenShareOffer(recipientId, sdp, type);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifyScreenShareAnswer(Long recipientId, String sdp, String type) {
+        String json = messageBuilder.screenShareAnswer(recipientId, sdp, type);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifyScreenShareStarted(Long recipientId) {
+        String json = messageBuilder.screenShareStarted(recipientId);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifyScreenShareStopped(Long recipientId) {
+        String json = messageBuilder.screenShareStopped(recipientId);
+        connectionManager.sendToUser(recipientId, json);
+    }
 }

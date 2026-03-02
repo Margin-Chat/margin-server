@@ -32,7 +32,8 @@ public class WebSocketMessageDecoder extends MessageToMessageDecoder<TextWebSock
             WebSocketMessageType type = WebSocketMessageType.valueOf(node.get("type").asText());
 
             if (type.payloadClass == null) {
-                out.add(new WebSocketMessageIn<>(type, null, null));
+                Long recipientId = node.has("recipientId") ? node.get("recipientId").asLong() : null;
+                out.add(new WebSocketMessageIn<>(type, recipientId, null));
                 return;
             }
 

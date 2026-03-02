@@ -17,7 +17,13 @@ public enum WebSocketMessageType {
     CALL_RESPONSE(IncomingCallResponsePayload.class),
     CALL_CANDIDATE(IncomingCallCandidatePayload.class),
     CALL_CREATED(null),
-    CALL_END(IncomingCallEndPayload.class);
+    CALL_END(IncomingCallEndPayload.class),
+
+    // Screen share
+    SCREEN_SHARE_OFFER(IncomingCallOfferPayload.class),
+    SCREEN_SHARE_ANSWER(IncomingCallOfferPayload.class),
+    SCREEN_SHARE_STARTED(null),
+    SCREEN_SHARE_STOPPED(null);
 
     public final Class<?> payloadClass;
 

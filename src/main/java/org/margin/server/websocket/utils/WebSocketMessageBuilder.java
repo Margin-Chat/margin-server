@@ -50,6 +50,24 @@ public class WebSocketMessageBuilder {
         return buildMessage(WebSocketMessageType.CALL_CANDIDATE, recipientId, payload);
     }
 
+    public String screenShareOffer(Long recipientId, String sdp, String type) {
+        Map<String, String> payload = Map.of("sdp", sdp, "type", type);
+        return buildMessage(WebSocketMessageType.SCREEN_SHARE_OFFER, recipientId, payload);
+    }
+
+    public String screenShareAnswer(Long recipientId, String sdp, String type) {
+        Map<String, String> payload = Map.of("sdp", sdp, "type", type);
+        return buildMessage(WebSocketMessageType.SCREEN_SHARE_ANSWER, recipientId, payload);
+    }
+
+    public String screenShareStarted(Long recipientId) {
+        return buildMessage(WebSocketMessageType.SCREEN_SHARE_STARTED, recipientId, null);
+    }
+
+    public String screenShareStopped(Long recipientId) {
+        return buildMessage(WebSocketMessageType.SCREEN_SHARE_STOPPED, recipientId, null);
+    }
+
     public String callEnd(Long recipientId) {
         return buildMessage(WebSocketMessageType.CALL_END, recipientId, null);
     }
