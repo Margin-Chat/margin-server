@@ -18,22 +18,25 @@ import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 
 @Slf4j
 public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
-
+    private final Executor dbExecutor;
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
     private final Map<WebSocketMessageType, WebSocketMessageProcessor<Object>> dispatch;
 
     @SuppressWarnings("unchecked")
-    public WebSocketHandler(JwtService jwtService,
+    public WebSocketHandler(Executor dbExecutor,
+                            JwtService jwtService,
                             ConnectionManager connectionManager,
                             PresenceService presenceService,
                             List<WebSocketMessageProcessor<?>> processors) {
+        this.dbExecutor = dbExecutor;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
@@ -99,7 +102,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @SuppressWarnings("unchecked")
-    private void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
+    public void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user == null) {
             ctx.close();
@@ -112,7 +115,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        processor.process(user, (WebSocketMessageIn<Object>) message);
+        dbExecutor.execute(() -> {
+            processor.process(user, (WebSocketMessageIn<Object>) message);
+        });
     }
 
     @Override

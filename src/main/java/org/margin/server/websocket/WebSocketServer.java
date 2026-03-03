@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.margin.server.authentication.services.JwtService;
 
 import java.util.List;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Component
@@ -29,10 +30,9 @@ public class WebSocketServer {
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
     private final List<WebSocketMessageProcessor<?>> processors;
+    private final Executor dbExecutor;
     @Value("${websocket.port:8081}")
     private int port;
-
-
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
@@ -41,12 +41,14 @@ public class WebSocketServer {
                            JwtService jwtService,
                            ConnectionManager connectionManager,
                            PresenceService presenceService,
-                           List<WebSocketMessageProcessor<?>> processors) {
+                           List<WebSocketMessageProcessor<?>> processors,
+                           Executor dbExecutor) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
         this.processors = processors;
+        this.dbExecutor = dbExecutor;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -71,6 +73,7 @@ public class WebSocketServer {
                                     .addLast(new HttpObjectAggregator(65536))
                                     .addLast(new WebSocketMessageDecoder(objectMapper))
                                     .addLast(new WebSocketHandler(
+                                            dbExecutor,
                                             jwtService,
                                             connectionManager,
                                             presenceService,
