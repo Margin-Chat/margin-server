@@ -151,6 +151,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>org.margin.server.MarginApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
@@ -165,7 +166,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>11.7.2</version>
                 <configuration>
-                    <url>jdbc:postgresql://localhost:5432/margindb</url>
+                    <url>jdbc:postgresql://localhost:5433/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
                     <user>${env.DB_USERNAME}</user>
                     <!--suppress UnresolvedMavenProperty -->
