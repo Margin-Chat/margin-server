@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record UserDTO(
         Long id,
         String username,
+        String displayName,
         String email,
         String profilePictureUrl,
         LocalDateTime createdAt,
@@ -16,6 +17,7 @@ public record UserDTO(
         this(
                 user.getId(),
                 user.getUsername(),
+                user.getDisplayName(),
                 user.getEmail(),
                 user.getProfilePictureUrl(),
                 user.getCreatedAt(),

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MarginMemberRepository extends JpaRepository<MarginMember, Long> {
     @Query("""
@@ -13,4 +14,6 @@ public interface MarginMemberRepository extends JpaRepository<MarginMember, Long
     WHERE mm.user.id = :userId
     """)
     List<MarginMember> findMarginMembersByUser(Long userId);
+
+    Optional<MarginMember> findByUser_IdAndMargin_Id(Long userId, Long marginId);
 }

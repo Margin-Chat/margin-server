@@ -9,9 +9,7 @@ import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.conversation.ConversationMember;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
-import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.models.MarginMember;
-import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
@@ -46,17 +44,21 @@ public class SpacesService {
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
     private final ConversationMemberRepository conversationMemberRepository;
-    private final MarginRepository marginRepository;
     private final ConnectionManager connectionManager;
 
-    public SpacesService(SpacesRepository spacesRepository, MarginService marginService, SpaceMemberRepository spaceMemberRepository, UserRepository userRepository, ChannelRepository channelRepository, ConversationMemberRepository conversationMemberRepository, MarginMemberRepository marginMemberRepository, MarginRepository marginRepository, ConnectionManager connectionManager) {
+    public SpacesService(SpacesRepository spacesRepository,
+                         MarginService marginService,
+                         SpaceMemberRepository spaceMemberRepository,
+                         UserRepository userRepository,
+                         ChannelRepository channelRepository,
+                         ConversationMemberRepository conversationMemberRepository,
+                         ConnectionManager connectionManager) {
         this.spacesRepository = spacesRepository;
         this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
         this.userRepository = userRepository;
         this.channelRepository = channelRepository;
         this.conversationMemberRepository = conversationMemberRepository;
-        this.marginRepository = marginRepository;
         this.connectionManager = connectionManager;
     }
 
@@ -196,6 +198,7 @@ public class SpacesService {
                 space.getId(),
                 space.getName(),
                 space.getDescription(),
+                marginService.toDTO(space.getMargin()),
                 space.getVisibility(),
                 channels,
                 members);

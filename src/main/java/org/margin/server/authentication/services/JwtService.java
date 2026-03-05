@@ -25,46 +25,45 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class JwtService {
     private final UserService userService;
-	@Value("${jwt.secret}")
-	private String secret;
-	@Value("${jwt.expiration}") // 24 hours
-	private Long expiration;
-
-    private final Cache<Long, User> userCache = Caffeine.newBuilder()
-            .maximumSize(10_000)
-            .expireAfterWrite(15, TimeUnit.MINUTES)
-            .build();
+    @Value("${jwt.secret}")
+    private String secret;
+    @Value("${jwt.expiration}") // 24 hours
+    private Long expiration;
 
     public JwtService(UserService userService) {
         this.userService = userService;
     }
 
-	private SecretKey getSigningKey() {
-		return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-	}
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
-    public String generateToken(String username, Long userId) {
+    public String generateToken(String email, Long userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
-        return createToken(claims, username);
+        return createToken(claims, email);
     }
 
-	public Claims extractAllClaims(String token) {
-		return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
-	}
-
-	public String extractUsername(String token) {
-		return extractAllClaims(token).getSubject();
-	}
-
-    public boolean isTokenValid(String token, String username) {
-        final String tokenUsername = extractUsername(token);
-        return (tokenUsername.equals(username)) && !isTokenExpired(token);
+    public Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
     }
 
-	private boolean isTokenExpired(String token) {
-		return extractAllClaims(token).getExpiration().before(new Date());
-	}
+    public String extractEmail(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    public boolean isTokenValid(String token, String email) {
+        final String tokenEmail = extractEmail(token);
+        return (tokenEmail.equals(email)) && !isTokenExpired(token);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractAllClaims(token).getExpiration().before(new Date());
+    }
 
     public Optional<User> extractAndValidateJwtTokenFromWebSocket(String uri) {
         try {
@@ -77,21 +76,17 @@ public class JwtService {
                 return Optional.empty();
             }
 
-            String extractedUsername = extractUsername(token);
+            String email = extractEmail(token);
 
-            if (!isTokenValid(token, extractedUsername)) {
+            if (!isTokenValid(token, email)) {
                 log.warn("Invalid or expired JWT token");
                 return Optional.empty();
             }
 
-            String username = extractUsername(token);
             User user = userService.getById(
                     extractAllClaims(token).get("userId", Long.class)
             );
-
-            log.info("WebSocket authenticated user: {} (id: {})", username, user.getId());
             return Optional.of(user);
-
         } catch (Exception e) {
             log.error("JWT validation failed: {}", e.getMessage());
             return Optional.empty();

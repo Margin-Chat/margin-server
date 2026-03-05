@@ -19,9 +19,9 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email.toLowerCase())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
         if (user.getSecurity().getAccountLockedUntil() != null &&
                 user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now())) {
@@ -29,7 +29,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
+                .withUsername(user.getEmail())
                 .password(user.getPassword())
                 .roles("USER")
                 .build();

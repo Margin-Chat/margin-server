@@ -29,4 +29,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	List<User> findByUsernameLike(@Param("username") String query, Pageable pageable);
 
 	List<User> findTop20ByUsernameContainingIgnoreCase(String username);
+
+	Optional<User> findByEmail(String email);
 }

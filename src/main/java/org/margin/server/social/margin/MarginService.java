@@ -152,6 +152,11 @@ public class MarginService {
                 ))
                 .toList();
 
+        MarginDTO marginStub = new MarginDTO(
+                margin.getId(), margin.getName(), margin.getDescription(),
+                margin.getVisibility(), margin.getIconUrl(), members, List.of()
+        );
+
         List<SpaceDTO> spaces = margin.getSpaces().stream()
                 .map(space -> {
                     List<SpaceMemberDTO> spaceMembers = space.getMembers() != null
@@ -169,10 +174,17 @@ public class MarginService {
                             ? space.getChannels().stream().map(ChannelDTO::new).toList()
                             : List.of();
 
-                    return new SpaceDTO(space.getId(), space.getName(), space.getDescription(), space.getVisibility(), channels, spaceMembers);
+                    return new SpaceDTO(space.getId(), space.getName(), space.getDescription(),
+                            marginStub,
+                            space.getVisibility(), channels, spaceMembers);
                 })
                 .toList();
 
-        return new MarginDTO(margin.getId(), margin.getName(), margin.getDescription(), margin.getVisibility(), margin.getIconUrl(), members, spaces);
+        return new MarginDTO(margin.getId(), margin.getName(), margin.getDescription(),
+                margin.getVisibility(), margin.getIconUrl(), members, spaces);
+    }
+
+    public Optional<MarginMember> findMember(Long userId, Long marginId) {
+        return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
     }
 }

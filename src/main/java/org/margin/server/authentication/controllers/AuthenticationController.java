@@ -2,15 +2,14 @@ package org.margin.server.authentication.controllers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.models.LoginRequest;
-import org.margin.server.authentication.models.LogoutRequest;
 import org.margin.server.authentication.models.RegisterRequest;
-import org.margin.server.connection.ConnectionManager;
-import org.margin.server.users.services.UserService;
+import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.services.AuthenticationService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,33 +17,26 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/auth")
 @Slf4j
 public class AuthenticationController {
+    private final AuthenticationService authenticationService;
 
-    private final AuthenticationService authService;
-    private final ConnectionManager connectionManager;
-    private final UserService userService;
-
-    public AuthenticationController(AuthenticationService authService, ConnectionManager connectionManager, UserService userService) {
-        this.authService = authService;
-        this.connectionManager = connectionManager;
-        this.userService = userService;
+    public AuthenticationController(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
     }
 
     @PostMapping("/login")
     public AuthResponse login(@RequestBody LoginRequest request) {
-        log.info("Login attempt for username: {}", request.username());
+        log.info("Login attempt for email: {}", request.email());
 
-        return authService.authenticateUser(request.username(), request.password());
+        return authenticationService.authenticateUser(
+                request.email(),
+                request.password());
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
-        log.info("Logout attempt for user: {}", logoutRequest.userId());
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal User user) {
+        log.info("Logout attempt for user: {}", user.getId());
 
-        var connection = connectionManager.getConnection(logoutRequest.userId());
-        if (connection != null) {
-            connection.close();
-            connectionManager.removeConnection(userService.getById(logoutRequest.userId()));
-        }
+        authenticationService.logoutUser(user);
 
         return ResponseEntity.ok().build();
     }
@@ -56,7 +48,7 @@ public class AuthenticationController {
         log.info("Registration attempt for username: {}", request.username());
 
         try {
-            authService.registerUser(
+            authenticationService.registerUser(
                     request.username(),
                     request.email(),
                     request.password(),
@@ -66,14 +58,17 @@ public class AuthenticationController {
                     request.iv(),
                     profilePicture);
 
-            AuthResponse authResponse = authService.authenticateUser(request.username(), request.password());
+            AuthResponse authResponse = authenticationService.authenticateUser(
+                    request.email(),
+                    request.password());
 
             log.info("Successfully registered user {}", request.username());
             return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
 
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for username {}: {}", request.username(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
         }
     }
 }

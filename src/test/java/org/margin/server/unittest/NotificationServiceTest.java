@@ -33,6 +33,7 @@ class NotificationServiceTest {
         return new UserDTO(
                 1L,
                 "jdoe",
+                "jdoe",
                 "jdoe@example.com",
                 "https://cdn.margin.org/pfp/1.png",
                 LocalDateTime.now(),

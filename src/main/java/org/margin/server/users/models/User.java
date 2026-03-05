@@ -23,11 +23,17 @@ public class User {
 	private Long id;
 
 	@NotBlank
+	@Size(max = 50)
 	@Column(unique = true, nullable = false)
 	private String username;
 
 	@NotBlank
+	@Size(max = 50)
+	private String displayName;
+
+	@NotBlank
 	@Email
+	@Column(unique = true, nullable = false)
 	private String email;
 
 	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)

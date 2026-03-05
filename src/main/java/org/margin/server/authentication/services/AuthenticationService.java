@@ -1,6 +1,7 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -27,23 +30,26 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final StorageService storageService;
+    private final ConnectionManager connectionManager;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            StorageService storageService) {
+            StorageService storageService,
+            ConnectionManager connectionManager) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.storageService = storageService;
+        this.connectionManager = connectionManager;
     }
 
-    public AuthResponse authenticateUser(String username, String password) {
+    public AuthResponse authenticateUser(String email, String password) {
         try {
-            User user = userRepository.findByUsername(username.toLowerCase())
+            User user = userRepository.findByEmail(email.toLowerCase())
                     .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
             if (isAccountLocked(user)) {
@@ -51,30 +57,31 @@ public class AuthenticationService {
             }
 
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername().toLowerCase(), password)
+                    new UsernamePasswordAuthenticationToken(email.toLowerCase(), password)
             );
 
             resetFailedAttempts(user);
 
-            String token = jwtService.generateToken(user.getUsername(), user.getId());
+            String token = jwtService.generateToken(email, user.getId());
 
-            log.info("User {} authenticated successfully", user.getUsername());
+            log.info("User {} authenticated successfully", user.getDisplayName());
 
-            return new AuthResponse(true,
+            return new AuthResponse(
+                    true,
                     "Login successful",
-                    token, user.getEncryption().getPublicKey(),
+                    token,
+                    user.getEncryption().getPublicKey(),
                     user.getEncryption().getEncryptedPrivateKey(),
                     user.getEncryption().getSalt(),
                     user.getEncryption().getIv());
 
         } catch (BadCredentialsException e) {
-            handleFailedLogin(username);
-            log.info("User {} authentication failed", username);
+            handleFailedLogin(email);
+            log.info("Authentication failed for email: {}", email);
             return new AuthResponse(
                     false,
                     "Invalid credentials",
-                    null, null, null, null, null
-            );
+                    null, null, null, null, null);
         }
     }
 
@@ -86,7 +93,11 @@ public class AuthenticationService {
                              String salt,
                              String iv,
                              MultipartFile profilePicture) {
-        if (userRepository.findByUsername(username).isPresent()) {
+        if (userRepository.findByEmail(email.toLowerCase()).isPresent()) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+
+        if (userRepository.findByUsername(username.toLowerCase()).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
 
@@ -96,8 +107,9 @@ public class AuthenticationService {
         }
 
         User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
+        user.setUsername(username.toLowerCase());
+        user.setDisplayName(toTitleCase(username));
+        user.setEmail(email.toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
         user.setProfilePictureUrl(profilePictureUrl);
         user.setCreatedAt(LocalDateTime.now());
@@ -122,19 +134,18 @@ public class AuthenticationService {
         if (user.getSecurity().getAccountLockedUntil() == null) {
             return false;
         }
-
         return user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now());
     }
 
-    private void handleFailedLogin(String username) {
-        userRepository.findByUsername(username).ifPresent(user -> {
+    private void handleFailedLogin(String email) {
+        userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
             user.getSecurity().setFailedLoginAttempts(user.getSecurity().getFailedLoginAttempts() + 1);
             user.getSecurity().setLastFailedLoginAttempt(LocalDateTime.now());
 
             if (user.getSecurity().getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
                 user.getSecurity().setAccountLockedUntil(LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
                 log.warn("Account locked for user {} until {}",
-                        user.getUsername(), user.getSecurity().getAccountLockedUntil());
+                        user.getDisplayName(), user.getSecurity().getAccountLockedUntil());
             }
 
             userRepository.save(user);
@@ -148,5 +159,19 @@ public class AuthenticationService {
             user.getSecurity().setAccountLockedUntil(null);
             userRepository.save(user);
         }
+    }
+
+    public void logoutUser(User user) {
+        var connection = connectionManager.getConnection(user.getId());
+        if (connection != null) {
+            connection.close();
+            connectionManager.removeConnection(user);
+        }
+    }
+
+    private String toTitleCase(String input) {
+        return Arrays.stream(input.trim().split("\\s+"))
+                .map(word -> Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
     }
 }
