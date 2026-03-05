@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -42,7 +43,7 @@ public class WebSocketServer {
                            ConnectionManager connectionManager,
                            PresenceService presenceService,
                            List<WebSocketMessageProcessor<?>> processors,
-                           Executor dbExecutor) {
+                           @Qualifier("wsDbExecutor") Executor dbExecutor) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;

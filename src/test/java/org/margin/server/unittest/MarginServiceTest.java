@@ -1,17 +1,23 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.margin.models.Margin;
-import org.margin.server.social.margin.MarginRepository;
+import org.margin.server.social.margin.repositories.MarginMemberRepository;
+import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.storage.StorageService;
+import org.margin.server.users.models.User;
+import org.margin.server.users.services.UserService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+
+import java.util.ArrayList;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,16 +31,43 @@ class MarginServiceTest {
 
     @Mock
     private MarginRepository marginRepository;
-
+    @Mock
+    private MarginMemberRepository marginMemberRepository;
     @Mock
     private StorageService storageService;
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private MarginService marginService;
 
+    private User testUser() {
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        return user;
+    }
+
+    private void stubMarginSave() {
+        when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> {
+            Margin m = invocation.getArgument(0);
+            m.setId(1L);
+            m.setMembers(new ArrayList<>());
+            return m;
+        });
+        when(marginRepository.findById(1L)).thenAnswer(_ -> {
+            Margin m = new Margin();
+            m.setId(1L);
+            m.setMembers(new ArrayList<>());
+            return Optional.of(m);
+        });
+    }
+
     @Test
     void shouldCreateMargin() {
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null);
+        stubMarginSave();
+
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, testUser());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -49,6 +82,8 @@ class MarginServiceTest {
 
     @Test
     void shouldCreateMarginWithProfilePicture() {
+        stubMarginSave();
+
         MockMultipartFile profilePicture = new MockMultipartFile(
                 "profilePicture",
                 "test-image.jpg",
@@ -59,7 +94,7 @@ class MarginServiceTest {
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
         when(storageService.saveMarginIcon(profilePicture)).thenReturn(expectedUrl);
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture);
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser());
 
         verify(storageService, times(1)).saveMarginIcon(profilePicture);
 
@@ -75,6 +110,8 @@ class MarginServiceTest {
 
     @Test
     void shouldNotSaveProfilePictureWhenFileIsEmpty() {
+        stubMarginSave();
+
         MockMultipartFile emptyFile = new MockMultipartFile(
                 "profilePicture",
                 "test-image.jpg",
@@ -82,7 +119,7 @@ class MarginServiceTest {
                 new byte[0]
         );
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile);
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, testUser());
 
         verify(storageService, never()).saveMarginIcon(any());
 
@@ -106,7 +143,7 @@ class MarginServiceTest {
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->
-                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture)
+                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser())
         );
 
         verify(marginRepository, never()).save(any());

@@ -1,14 +1,12 @@
-package org.margin.server.social.margin;
+package org.margin.server.social.margin.repositories;
 
 import org.margin.server.social.margin.models.MarginMember;
-import org.margin.server.users.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
-import java.util.Optional;
 
-interface MarginMemberRepository extends JpaRepository<MarginMember, Long> {
+public interface MarginMemberRepository extends JpaRepository<MarginMember, Long> {
     @Query("""
     SELECT mm
     FROM MarginMember mm

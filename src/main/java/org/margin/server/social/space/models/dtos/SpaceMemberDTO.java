@@ -12,8 +12,8 @@ public record SpaceMemberDTO(
         SpaceRole role,
         LocalDateTime joinedAt
 ) {
-    public SpaceMemberDTO(SpaceMember member) {
-        this(new UserDTO(member.getUser()),
+    public SpaceMemberDTO(SpaceMember member, boolean isOnline) {
+        this(new UserDTO(member.getUser(), isOnline),
                 member.getSpace().getId(),
                 member.getRole(),
                 member.getJoinedAt());

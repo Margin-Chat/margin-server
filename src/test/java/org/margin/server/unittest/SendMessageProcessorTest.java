@@ -1,4 +1,4 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

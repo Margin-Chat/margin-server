@@ -1,11 +1,10 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.ChannelRepository;
 import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.models.Visibility;
@@ -16,7 +15,6 @@ import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -28,7 +26,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +57,7 @@ class SpacesServiceTest {
 
         // FIX: Match the name in the DTO or use anyString() to avoid PotentialStubbingProblem
         when(spacesRepository.getSpaceByName("General")).thenReturn(Optional.empty());
-        when(marginService.getMargin(1L)).thenReturn(margin);
+        when(marginService.getById(1L)).thenReturn(margin);
 
         // Mock save to act as if ID was generated
         when(spacesRepository.save(any(Space.class))).thenAnswer(i -> {

@@ -3,14 +3,19 @@ package org.margin.server.social.space.services;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.channel.ChannelRepository;
 import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.conversation.ConversationMember;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
+import org.margin.server.social.margin.repositories.MarginMemberRepository;
+import org.margin.server.social.margin.models.MarginMember;
+import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
+import org.margin.server.social.space.exceptions.UserNotInMargin;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
@@ -19,6 +24,7 @@ import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -26,7 +32,6 @@ import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.repositories.SpacesRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,14 +46,18 @@ public class SpacesService {
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
     private final ConversationMemberRepository conversationMemberRepository;
+    private final MarginRepository marginRepository;
+    private final ConnectionManager connectionManager;
 
-    public SpacesService(SpacesRepository spacesRepository, MarginService marginService, SpaceMemberRepository spaceMemberRepository, UserRepository userRepository, ChannelRepository channelRepository, ConversationMemberRepository conversationMemberRepository) {
+    public SpacesService(SpacesRepository spacesRepository, MarginService marginService, SpaceMemberRepository spaceMemberRepository, UserRepository userRepository, ChannelRepository channelRepository, ConversationMemberRepository conversationMemberRepository, MarginMemberRepository marginMemberRepository, MarginRepository marginRepository, ConnectionManager connectionManager) {
         this.spacesRepository = spacesRepository;
         this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
         this.userRepository = userRepository;
         this.channelRepository = channelRepository;
         this.conversationMemberRepository = conversationMemberRepository;
+        this.marginRepository = marginRepository;
+        this.connectionManager = connectionManager;
     }
 
     public List<Space> getSpaces() {
@@ -69,7 +78,7 @@ public class SpacesService {
             throw new DuplicateKeyException("Space name already exists");
         }
 
-        Margin margin = marginService.getMargin(dto.marginId());
+        Margin margin = marginService.getById(dto.marginId());
 
         Space newSpace = new Space();
         newSpace.setName(dto.name());
@@ -85,10 +94,6 @@ public class SpacesService {
 
     public @NotNull Space getById(Long id) {
         return spacesRepository.findById(id).orElseThrow(() -> new RuntimeException("Space not found"));
-    }
-
-    private SpaceDTO toDto(Space space) {
-        return new SpaceDTO(space);
     }
 
     @Transactional
@@ -115,6 +120,11 @@ public class SpacesService {
         Space space = spacesRepository.findById(spaceMemberDTO.spaceId()).orElseThrow(() ->
                 new SpaceNotFoundException(spaceMemberDTO.spaceId()));
 
+        space.getMargin().getMembers().stream()
+                .map(MarginMember::getUser)
+                .findAny()
+                .orElseThrow(() -> new UserNotInMargin(spaceMemberDTO.user().id()));
+
         if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user, space)) {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
@@ -132,7 +142,7 @@ public class SpacesService {
     }
 
     @Transactional
-    private @NonNull SpaceMember createSpaceMember(User u, Space space) {
+    protected SpaceMember createSpaceMember(User u, Space space) {
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setSpace(space);
         spaceMember.setUser(u);
@@ -162,5 +172,32 @@ public class SpacesService {
         channelRepository.deleteAll(channelBySpace);
 
         spacesRepository.deleteById(spaceId);
+    }
+
+    public SpaceDTO toDTO(Space space) {
+        List<SpaceMemberDTO> members = space.getMembers() != null
+                ? space.getMembers().stream()
+                .map(m -> new SpaceMemberDTO(
+                        new UserDTO(
+                                m.getUser(),
+                                connectionManager.isUserOnline(m.getUser().getId())),
+                        m.getSpace().getId(),
+                        m.getRole(),
+                        m.getJoinedAt()
+                ))
+                .toList()
+                : List.of();
+
+        List<ChannelDTO> channels = space.getChannels() != null
+                ? space.getChannels().stream().map(ChannelDTO::new).toList()
+                : List.of();
+
+        return new SpaceDTO(
+                space.getId(),
+                space.getName(),
+                space.getDescription(),
+                space.getVisibility(),
+                channels,
+                members);
     }
 }

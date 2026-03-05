@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.users.models.User;
 
@@ -17,7 +18,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Getter
 @Table(name = "messages")
 public class Message {
     @Id
@@ -44,6 +44,7 @@ public class Message {
     private Boolean isEdited = false;
 
     @NotNull
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -55,6 +56,5 @@ public class Message {
         this.fromUser = fromUser;
         this.message = message;
         this.isEdited = false;
-        this.createdAt = LocalDateTime.now();
     }
 }

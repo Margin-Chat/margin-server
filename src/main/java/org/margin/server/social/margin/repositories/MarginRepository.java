@@ -1,4 +1,4 @@
-package org.margin.server.social.margin;
+package org.margin.server.social.margin.repositories;
 
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.MarginMember;

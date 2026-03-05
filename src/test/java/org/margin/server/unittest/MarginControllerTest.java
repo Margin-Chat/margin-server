@@ -1,4 +1,4 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,9 @@ import org.margin.server.social.margin.MarginNotFoundException;
 import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.models.Visibility;
+import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MarginControllerTest {
 
     public static final String API_MARGINS = "/api/margins/";
+
     @Mock
     private MarginService marginService;
 
@@ -59,8 +62,8 @@ class MarginControllerTest {
                 eq("Test Margin"),
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
-                eq(null)
-        );
+                eq(null),
+                any(User.class));
     }
 
     @Test
@@ -84,8 +87,8 @@ class MarginControllerTest {
                 eq("Test Margin"),
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
-                any()
-        );
+                any(),
+                any(User.class));
     }
 
     @Test
@@ -99,7 +102,18 @@ class MarginControllerTest {
         margin.setMembers(List.of());
         margin.setSpaces(List.of());
 
-        when(marginService.getMargin(1L)).thenReturn(margin);
+        MarginDTO marginDTO = new MarginDTO(
+                1L,
+                "Test Margin",
+                "Test Description",
+                Visibility.PUBLIC,
+                null,
+                List.of(),
+                List.of()
+        );
+
+        when(marginService.getById(1L)).thenReturn(margin);
+        when(marginService.toDTO(margin)).thenReturn(marginDTO);
 
         mockMvc().perform(get(API_MARGINS + "get_margin/1"))
                 .andExpect(status().isOk())
@@ -113,7 +127,7 @@ class MarginControllerTest {
 
     @Test
     void shouldReturnNotFoundWhenMarginDoesNotExist() throws Exception {
-        when(marginService.getMargin(99L)).thenThrow(new MarginNotFoundException(99L));
+        when(marginService.getById(99L)).thenThrow(new MarginNotFoundException(99L));
 
         mockMvc().perform(get(API_MARGINS + "get_margin/99"))
                 .andExpect(status().isNotFound());

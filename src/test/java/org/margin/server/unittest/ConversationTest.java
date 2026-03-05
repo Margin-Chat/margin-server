@@ -1,14 +1,15 @@
-package org.margin.server.social.conversation.services;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.social.messages.models.dtos.ChannelConversationDTO;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.dtos.ConversationDTO;
 import org.margin.server.social.messages.models.dtos.DirectConversationDTO;
 import org.margin.server.social.messages.models.dtos.GroupConversationDTO;
@@ -31,6 +32,7 @@ class ConversationServiceTest {
     @Mock private ConversationRepository conversationRepository;
     @Mock private ConversationMemberRepository conversationMemberRepository;
     @Mock private UserRepository userRepository;
+    @Mock private ConnectionManager connectionManager;
 
     private ConversationService conversationService;
 
@@ -41,7 +43,8 @@ class ConversationServiceTest {
                 conversationRepository,
                 conversationMemberRepository,
                 userRepository,
-                null // self placeholder
+                null, // self placeholder
+                connectionManager
         );
 
         // 2. Wrap it in a spy so we can mock self-calls

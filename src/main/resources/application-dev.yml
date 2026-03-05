@@ -1,4 +1,7 @@
 spring:
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5433/margindb
     username: sysuser
@@ -28,3 +31,19 @@ jwt:
 mediasoup:
   url: http://localhost:3000
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  # This is the new 3.4 replacement for .enabled properties
+  endpoint:
+    health:
+      access: unrestricted
+    metrics:
+      access: unrestricted
+    prometheus:
+      access: unrestricted
+  # Separate port so it doesn't mess with your Netty chat server
+  server:
+    port: 9090

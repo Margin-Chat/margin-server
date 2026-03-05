@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.services;
 
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationMember;
 import org.margin.server.social.conversation.ConversationMemberId;
@@ -9,6 +10,7 @@ import org.margin.server.social.conversation.repositories.ConversationRepository
 import org.margin.server.social.messages.models.dtos.*;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,16 +29,18 @@ public class ConversationService {
     private final ConversationMemberRepository conversationMemberRepository;
     private final UserRepository userRepository;
     private final ConversationService self;
+    private final ConnectionManager connectionManager;
 
     @Autowired
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
                                UserRepository userRepository,
-                               @Lazy ConversationService self) {
+                               @Lazy ConversationService self, ConnectionManager connectionManager) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.userRepository = userRepository;
         this.self = self;
+        this.connectionManager = connectionManager;
     }
 
     @Cacheable(value = "conversations", key = "#id")
@@ -162,7 +166,7 @@ public class ConversationService {
         return conversationMemberRepository.findRecentChatUsers(userId)
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
-                        p.user(),
+                        new UserDTO(p.user(), connectionManager.isUserOnline(p.user().getId())),
                         p.lastMessage(),
                         p.lastMessageTime(),
                         p.lastMessageIncoming()

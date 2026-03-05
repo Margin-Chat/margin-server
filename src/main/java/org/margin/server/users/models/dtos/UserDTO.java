@@ -9,15 +9,17 @@ public record UserDTO(
         String username,
         String email,
         String profilePictureUrl,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean isOnline
 ) {
-    public UserDTO(User user) {
+    public UserDTO(User user, boolean online) {
         this(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getProfilePictureUrl(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                online
         );
     }
 }

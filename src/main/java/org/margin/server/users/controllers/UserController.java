@@ -35,13 +35,13 @@ public class UserController {
                 .stream()
                 .map(userService::getById)
                 .filter(u -> !u.getId().equals(user.getId()))
-                .map(UserDTO::new)
+                .map(u -> new UserDTO(u, true))
                 .toList();
     }
 
     @GetMapping("/me")
     public UserDTO getCurrentUser(@AuthenticationPrincipal User user) {
-        return new UserDTO(user);
+        return new UserDTO(user, connectionManager.isUserOnline(user.getId()));
     }
 
     @PostMapping("/{userId}/keys")
@@ -83,12 +83,5 @@ public class UserController {
     @GetMapping("/search")
     public List<UserDTO> searchForUser(@RequestParam String query) {
         return userService.searchForUser(query);
-    }
-
-    @GetMapping("/online-status")
-    public List<UserOnlineStatusDTO> getOnlineStatus(@RequestParam List<Long> ids) {
-        return ids.stream()
-                .map(id -> new UserOnlineStatusDTO(id, connectionManager.isUserOnline(id)))
-                .toList();
     }
 }

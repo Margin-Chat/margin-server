@@ -1,4 +1,4 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

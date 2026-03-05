@@ -1,4 +1,4 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,8 @@ class NotificationServiceTest {
                 "jdoe",
                 "jdoe@example.com",
                 "https://cdn.margin.org/pfp/1.png",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                true
         );
     }
 

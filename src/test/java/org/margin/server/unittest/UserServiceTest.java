@@ -1,8 +1,9 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption; // Assuming this name
 import org.margin.server.users.models.dtos.UserDTO;
@@ -25,6 +26,7 @@ class UserServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private UserCacheService userCacheService;
+    @Mock private ConnectionManager connectionManager;
 
     @InjectMocks
     private UserService userService;

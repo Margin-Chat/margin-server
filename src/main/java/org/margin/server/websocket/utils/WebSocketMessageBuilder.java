@@ -3,6 +3,7 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -20,13 +21,18 @@ import java.util.Map;
 public class WebSocketMessageBuilder {
 
     private final ObjectMapper mapper;
+    private final ConnectionManager connectionManager;
 
-    public WebSocketMessageBuilder(ObjectMapper mapper) {
+    public WebSocketMessageBuilder(ObjectMapper mapper, ConnectionManager connectionManager) {
         this.mapper = mapper;
+        this.connectionManager = connectionManager;
     }
 
     public String userActivity(WebSocketMessageType type, User user) {
-        return buildMessage(type, user.getId(), new UserDTO(user));
+        return buildMessage(type, user.getId(), new UserDTO(
+                user,
+                connectionManager.isUserOnline(user.getId()))
+        );
     }
 
     public String message(MessageDTO message) {

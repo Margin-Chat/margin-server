@@ -1,7 +1,8 @@
-package org.margin.server;
+package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -29,10 +30,10 @@ class MessageServiceTest {
 
     @Mock
     private MessageRepository messageRepository;
-
     @Mock
     private ConversationService conversationService;
-
+    @Mock
+    private ConnectionManager connectionManager;
     @InjectMocks
     private MessageService messageService;
 

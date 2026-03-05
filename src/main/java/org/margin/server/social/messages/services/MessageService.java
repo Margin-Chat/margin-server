@@ -1,5 +1,6 @@
 package org.margin.server.social.messages.services;
 
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,11 +22,13 @@ public class MessageService {
 
 	private final MessageRepository messageRepository;
 	private final ConversationService conversationService;
+	private final ConnectionManager connectionManager;
 
 	public MessageService(MessageRepository messageRepository,
-						  ConversationService conversationService) {
+						  ConversationService conversationService, ConnectionManager connectionManager) {
 		this.messageRepository = messageRepository;
 		this.conversationService = conversationService;
+		this.connectionManager = connectionManager;
 	}
 
 	@Transactional
@@ -39,7 +43,11 @@ public class MessageService {
 
 		List<User> recipients = conversationService.getConversationMembers(conversation.getId());
 
-		return new MessageResult(new MessageDTO(message, conversation.getType()), recipients);
+		return new MessageResult(new MessageDTO(
+				message,
+				conversation.getType(),
+				connectionManager.isUserOnline(message.getFromUser().getId())),
+				recipients);
 	}
 
 	@Transactional
@@ -49,9 +57,15 @@ public class MessageService {
 	}
 
 	public List<MessageDTO> getConversationMessages(Long conversationId, int limit) {
-		return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId, PageRequest.of(0, limit))
+		List<MessageDTO> messages = messageRepository.findRecentMessages(conversationId, PageRequest.of(0, limit))
 				.stream()
-				.map(msg -> new MessageDTO(msg, msg.getConversation().getType()))
-				.collect(Collectors.toList());
+				.map(msg -> new MessageDTO(
+						msg, 
+						msg.getConversation().getType(),
+						connectionManager.isUserOnline(msg.getFromUser().getId())))
+				.collect(Collectors.toList())
+				.reversed();
+
+		return messages;
 	}
 }

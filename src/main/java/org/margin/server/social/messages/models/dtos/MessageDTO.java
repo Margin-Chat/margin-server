@@ -16,12 +16,12 @@ public record MessageDTO(
         boolean isEdited,
         Instant createdAt
 ) {
-    public MessageDTO(Message message, ConversationType conversationType) {
+    public MessageDTO(Message message, ConversationType conversationType, boolean isUserOnline) {
         this(
                 message.getId(),
                 message.getConversation().getId(),
                 conversationType,
-                new UserDTO(message.getFromUser()),
+                new UserDTO(message.getFromUser(), isUserOnline),
                 message.getMessage(),
                 message.getIsEdited(),
                 message.getCreatedAt().toInstant(java.time.ZoneOffset.UTC)

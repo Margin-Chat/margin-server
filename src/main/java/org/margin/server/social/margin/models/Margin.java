@@ -9,6 +9,7 @@ import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.Role;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -42,5 +43,5 @@ public class Margin {
     private List<Space> spaces;
 
     @OneToMany(mappedBy = "margin", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MarginMember> members;
+    private List<MarginMember> members = new ArrayList<>();
 }

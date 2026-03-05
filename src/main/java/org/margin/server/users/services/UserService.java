@@ -1,8 +1,7 @@
 package org.margin.server.users.services;
 
+import org.margin.server.connection.ConnectionManager;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
@@ -14,10 +13,12 @@ import java.util.stream.Collectors;
 public class UserService {
 	private final UserRepository userRepository;
     private final UserCacheService userCacheService;
+    private final ConnectionManager connectionManager;
 
-    public UserService(UserRepository userRepository, UserCacheService userCacheService) {
+    public UserService(UserRepository userRepository, UserCacheService userCacheService, ConnectionManager connectionManager) {
 		this.userRepository = userRepository;
         this.userCacheService = userCacheService;
+        this.connectionManager = connectionManager;
     }
 
     public User getById(Long id) {
@@ -37,7 +38,7 @@ public class UserService {
 
     public List<UserDTO> searchForUser(String query) {
         return userRepository.findTop20ByUsernameContainingIgnoreCase(query).stream()
-                .map(UserDTO::new)
+                .map(user -> new UserDTO(user, connectionManager.isUserOnline(user.getId())))
                 .collect(Collectors.toList());
     }
 
