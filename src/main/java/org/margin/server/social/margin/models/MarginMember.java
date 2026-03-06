@@ -2,10 +2,7 @@ package org.margin.server.social.margin.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.margin.server.users.models.Role;
+import lombok.*;
 import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;
@@ -15,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "margin_members")
+@ToString(exclude = {"margin"})
+@EqualsAndHashCode(exclude = {"margin"})
 public class MarginMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,6 +5,7 @@ import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.conversation.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
 import org.margin.server.websocket.models.payloads.CallSessionDescription;
@@ -55,8 +56,8 @@ public class NotificationService {
         connectionManager.broadcast(json, user.getId());
     }
 
-    public void notifyCallOffer(Long recipientId, Long callId, Long callerId, String sdp, String callType) {
-        String json = messageBuilder.callOffer(callId, callerId, sdp, callType);
+    public void notifyCallOffer(Long recipientId, Long callId, UserDTO caller, String sdp, String callType) {
+        String json = messageBuilder.callOffer(callId, caller, sdp, callType);
         connectionManager.sendToUser(recipientId, json);
     }
 

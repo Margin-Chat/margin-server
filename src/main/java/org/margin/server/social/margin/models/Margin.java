@@ -2,12 +2,9 @@ package org.margin.server.social.margin.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
-import org.margin.server.users.models.Role;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +14,8 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 @Table(name = "margins")
+@ToString(exclude = {"spaces", "members"})
+@EqualsAndHashCode(exclude = {"spaces", "members"})
 public class Margin {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.exceptions.GlobalExceptionHandler;
 import org.margin.server.social.margin.MarginController;
 import org.margin.server.social.margin.MarginNotFoundException;
@@ -10,6 +11,7 @@ import org.margin.server.social.margin.MarginService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
+import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
@@ -34,7 +36,8 @@ class MarginControllerTest {
 
     @Mock
     private MarginService marginService;
-
+    @Mock
+    private MarginAuthorizationService authenticationService;
     @InjectMocks
     private MarginController marginController;
 

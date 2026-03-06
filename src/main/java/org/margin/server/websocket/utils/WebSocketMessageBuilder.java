@@ -43,9 +43,9 @@ public class WebSocketMessageBuilder {
         );
     }
 
-    public String callOffer(Long callId, Long recipientId, String sdp, String callType) {
-        CallOfferPayload payload = new CallOfferPayload(callId, recipientId, sdp, callType);
-        return buildMessage(WebSocketMessageType.CALL_OFFER, recipientId, payload);
+    public String callOffer(Long callId, UserDTO caller, String sdp, String callType) {
+        CallOfferPayload payload = new CallOfferPayload(callId, caller, sdp, callType);
+        return buildMessage(WebSocketMessageType.CALL_OFFER, caller.id(), payload);
     }
 
     public String callResponse(Long recipientId, CallResponsePayload payload) {
