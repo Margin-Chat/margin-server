@@ -47,7 +47,7 @@ public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCal
         notificationService.notifyCallOffer(
                 message.getRecipientId(),
                 call.getId(),
-                user.getId(),
+                userService.toDTO(user),
                 payload.sdp(),
                 CallType.AUDIO.toString()
         );

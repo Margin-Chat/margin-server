@@ -45,4 +45,8 @@ public class UserService {
     public void evictUserCache(Long userId) {
         userCacheService.evictUserCache(userId);
     }
+
+    public UserDTO toDTO(User user) {
+        return new UserDTO(user, connectionManager.isUserOnline(user.getId()));
+    }
 }
