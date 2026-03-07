@@ -1,17 +1,18 @@
 package org.margin.server.social.space.services;
 
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
 import org.margin.server.social.channel.ChannelRepository;
+import org.margin.server.social.channel.ChannelService;
 import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.conversation.Conversation;
 import org.margin.server.social.conversation.ConversationMember;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
-import org.margin.server.social.margin.models.MarginMember;
-import org.margin.server.social.margin.MarginService;
+import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
 import org.margin.server.social.space.exceptions.UserNotInMargin;
 import org.margin.server.social.space.models.SpaceMember;
@@ -30,6 +31,7 @@ import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.repositories.SpacesRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,27 +41,33 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SpacesService {
     private final SpacesRepository spacesRepository;
-    private final MarginService marginService;
     private final SpaceMemberRepository spaceMemberRepository;
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
+    private final ChannelService channelService;
+    private final MarginMemberRepository marginMemberRepository;
+    private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
-    private final ConnectionManager connectionManager;
+    private final EntityManager entityManager;
 
     public SpacesService(SpacesRepository spacesRepository,
-                         MarginService marginService,
                          SpaceMemberRepository spaceMemberRepository,
                          UserRepository userRepository,
                          ChannelRepository channelRepository,
+                         ChannelService channelService,
+                         MarginMemberRepository marginMemberRepository,
+                         ConversationRepository conversationRepository,
                          ConversationMemberRepository conversationMemberRepository,
-                         ConnectionManager connectionManager) {
+                         EntityManager entityManager) {
         this.spacesRepository = spacesRepository;
-        this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
         this.userRepository = userRepository;
         this.channelRepository = channelRepository;
+        this.channelService = channelService;
+        this.marginMemberRepository = marginMemberRepository;
+        this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
-        this.connectionManager = connectionManager;
+        this.entityManager = entityManager;
     }
 
     public List<Space> getSpaces() {
@@ -72,26 +80,38 @@ public class SpacesService {
         return spacesRepository.findByUser(user.getId());
     }
 
+    public List<Space> getSpacesForMargin(Long marginId) {
+        return spacesRepository.findByMargin_Id(marginId);
+    }
+
     @Transactional
-    public Space createNewSpace(CreateSpaceDTO dto) {
-        Optional<Space> spaceByName = spacesRepository.getSpaceByName(dto.name());
+    public Space createNewSpace(CreateSpaceDTO dto, UserDTO user, Margin margin) {
+        Optional<Space> spaceByName = spacesRepository.getSpaceByName(dto.name(), margin.getId());
 
         if (spaceByName.isPresent()) {
             throw new DuplicateKeyException("Space name already exists");
         }
-
-        Margin margin = marginService.getById(dto.marginId());
 
         Space newSpace = new Space();
         newSpace.setName(dto.name());
         newSpace.setDescription(dto.description());
         newSpace.setVisibility(dto.visibility());
         newSpace.setMargin(margin);
-        spacesRepository.save(newSpace);
+        Space space = spacesRepository.save(newSpace);
 
-        log.info("Created space {}",  newSpace);
+        log.info("Created space {}", space.getId());
+        space = spacesRepository.findById(space.getId()).orElseThrow();
+        channelService.createChannel(space, "General Chat", "A channel for general conversation");
+        entityManager.flush();
+        entityManager.refresh(space);
 
-        return spacesRepository.findById(newSpace.getId()).orElseThrow();
+        addNewSpaceMemberToSpace(new SpaceMemberDTO(
+                user,
+                space.getId(),
+                SpaceRole.ADMIN,
+                LocalDateTime.now()
+        ));
+        return space;
     }
 
     public @NotNull Space getById(Long id) {
@@ -122,21 +142,23 @@ public class SpacesService {
         Space space = spacesRepository.findById(spaceMemberDTO.spaceId()).orElseThrow(() ->
                 new SpaceNotFoundException(spaceMemberDTO.spaceId()));
 
-        space.getMargin().getMembers().stream()
-                .map(MarginMember::getUser)
-                .findAny()
-                .orElseThrow(() -> new UserNotInMargin(spaceMemberDTO.user().id()));
+        boolean isInMargin = marginMemberRepository
+                .existsByUser_IdAndMargin_Id(spaceMemberDTO.user().id(), space.getMargin().getId());
+        if (!isInMargin) {
+            throw new UserNotInMargin(spaceMemberDTO.user().id());
+        }
 
         if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user, space)) {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
 
         SpaceMember spaceMember = createSpaceMember(user, space);
-        List<Channel> channels = spaceMember.getSpace().getChannels();
-        for (Channel channel : channels) {
+        for (Channel channel : space.getChannels()) {
+            Conversation conversation = conversationRepository.findByChannel(channel)
+                    .orElseThrow(() -> new RuntimeException("No conversation for channel " + channel.getId()));
             ConversationMember conversationMember = new ConversationMember();
             conversationMember.setUser(user);
-            conversationMember.setConversation(channel.getConversation());
+            conversationMember.setConversation(conversation);
             conversationMember.setJoinedAt(LocalDateTime.now());
             conversationMemberRepository.save(conversationMember);
         }
@@ -174,33 +196,5 @@ public class SpacesService {
         channelRepository.deleteAll(channelBySpace);
 
         spacesRepository.deleteById(spaceId);
-    }
-
-    public SpaceDTO toDTO(Space space) {
-        List<SpaceMemberDTO> members = space.getMembers() != null
-                ? space.getMembers().stream()
-                .map(m -> new SpaceMemberDTO(
-                        new UserDTO(
-                                m.getUser(),
-                                connectionManager.isUserOnline(m.getUser().getId())),
-                        m.getSpace().getId(),
-                        m.getRole(),
-                        m.getJoinedAt()
-                ))
-                .toList()
-                : List.of();
-
-        List<ChannelDTO> channels = space.getChannels() != null
-                ? space.getChannels().stream().map(ChannelDTO::new).toList()
-                : List.of();
-
-        return new SpaceDTO(
-                space.getId(),
-                space.getName(),
-                space.getDescription(),
-                marginService.toDTO(space.getMargin()),
-                space.getVisibility(),
-                channels,
-                members);
     }
 }

@@ -4,23 +4,29 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.ChannelRepository;
+import org.margin.server.social.channel.ChannelService;
 import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.margin.MarginService;
+import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
+import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.repositories.UserRepository;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,97 +38,137 @@ import static org.mockito.Mockito.*;
 class SpacesServiceTest {
 
     @Mock private SpacesRepository spacesRepository;
-    @Mock private MarginService marginService;
     @Mock private SpaceMemberRepository spaceMemberRepository;
+    @Mock private UserRepository userRepository;
     @Mock private ChannelRepository channelRepository;
+    @Mock private ConversationMemberRepository conversationMemberRepository;
+    @Mock private ChannelService channelService;
 
     @InjectMocks
     private SpacesService spacesService;
 
+    // --- Helpers ---
+
+    private User testUser(long id) {
+        User user = new User();
+        user.setId(id);
+        return user;
+    }
+
+    private UserDTO testUserDTO(long id) {
+        return new UserDTO(testUser(id), false);
+    }
+
+    private Margin testMargin(User... members) {
+        Margin margin = new Margin();
+        List<MarginMember> marginMembers = new ArrayList<>();
+        for (User u : members) {
+            MarginMember mm = new MarginMember();
+            mm.setUser(u);
+            marginMembers.add(mm);
+        }
+        margin.setMembers(marginMembers);
+        return margin;
+    }
+
+
     @Test
     @DisplayName("createNewSpace should throw exception if name exists")
     void createNewSpace_DuplicateName_ThrowsException() {
-        CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC ,1L);
-        when(spacesRepository.getSpaceByName("General")).thenReturn(Optional.of(new Space()));
+        CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
+        Margin margin = testMargin();
 
-        assertThrows(DuplicateKeyException.class, () -> spacesService.createNewSpace(dto));
+        when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.of(new Space()));
+
+        assertThrows(DuplicateKeyException.class,
+                () -> spacesService.createNewSpace(dto, testUserDTO(1L), margin));
     }
 
     @Test
-    @DisplayName("createNewSpace should create and return new space")
+    @DisplayName("createNewSpace should create space, add creator as ADMIN, and create General Chat channel")
+
     void createNewSpace_Success() {
-        // Arrange
-        CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC ,1L);
-        Margin margin = new Margin();
+        CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
+        UserDTO userDTO = testUserDTO(1L);
+        User user = testUser(1L);
+        Margin margin = testMargin(user);
 
-        // FIX: Match the name in the DTO or use anyString() to avoid PotentialStubbingProblem
-        when(spacesRepository.getSpaceByName("General")).thenReturn(Optional.empty());
-        when(marginService.getById(1L)).thenReturn(margin);
 
-        // Mock save to act as if ID was generated
+        when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.empty());
         when(spacesRepository.save(any(Space.class))).thenAnswer(i -> {
             Space s = i.getArgument(0);
             s.setId(10L);
+            s.setChannels(new ArrayList<>());
             return s;
         });
-        when(spacesRepository.findById(10L)).thenReturn(Optional.of(new Space()));
 
-        // Act
-        Space result = spacesService.createNewSpace(dto);
+        // addNewSpaceMemberToSpace does a findById on user and space
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(spacesRepository.findById(10L)).thenAnswer(i -> {
+            Space s = new Space();
+            s.setId(10L);
+            s.setMargin(margin);
+            s.setChannels(new ArrayList<>());
+            return Optional.of(s);
+        });
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any())).thenReturn(false);
+        when(spaceMemberRepository.save(any(SpaceMember.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Assert
+        when(channelService.createChannel(any(Space.class), eq("General Chat"), anyString()))
+                .thenReturn(new Channel());
+
+        Space result = spacesService.createNewSpace(dto, userDTO, margin);
+
         assertNotNull(result);
+        assertEquals(10L, result.getId());
         verify(spacesRepository).save(any(Space.class));
+        verify(spaceMemberRepository).save(any(SpaceMember.class));
+        verify(channelService).createChannel(any(Space.class), eq("General Chat"), anyString());
     }
 
     @Test
     @DisplayName("addUsersToSpace should not add existing users")
     void addUsersToSpace_AvoidsDuplicates() {
-        // Arrange
         Long spaceId = 1L;
         Space space = new Space();
-        User existingUser = new User(); existingUser.setId(1L);
-        User newUser = new User(); newUser.setId(2L);
+        User existingUser = testUser(1L);
+        User newUser = testUser(2L);
 
-        SpaceMember sm = new SpaceMember(); sm.setUser(existingUser);
+        SpaceMember sm = new SpaceMember();
+        sm.setUser(existingUser);
         space.setMembers(List.of(sm));
 
         when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
 
-        // Act
         spacesService.addUsersToSpace(spaceId, List.of(existingUser, newUser));
 
-        // Assert
         ArgumentCaptor<List<SpaceMember>> captor = ArgumentCaptor.forClass(List.class);
         verify(spaceMemberRepository).saveAll(captor.capture());
 
-        List<SpaceMember> savedMembers = captor.getValue();
-        assertEquals(1, savedMembers.size());
-        // FIX: Assert type matches User.getId() type (Long)
-        assertEquals(2L, savedMembers.get(0).getUser().getId());
+        List<SpaceMember> saved = captor.getValue();
+        assertEquals(1, saved.size());
+        assertEquals(2L, saved.get(0).getUser().getId());
     }
 
     @Test
     @DisplayName("deleteSpace should delete members, channels, and the space itself")
     void deleteSpace_Success() {
-        // Arrange
         Long spaceId = 1L;
         Space space = new Space();
+
         when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
         when(spaceMemberRepository.findSpaceMemberBySpace(space)).thenReturn(List.of(new SpaceMember()));
         when(channelRepository.findChannelBySpace(space)).thenReturn(List.of(new Channel()));
 
-        // Act
         spacesService.deleteSpace(spaceId);
 
-        // Assert
         verify(spaceMemberRepository).deleteAll(anyList());
         verify(channelRepository).deleteAll(anyList());
         verify(spacesRepository).deleteById(spaceId);
     }
 
     @Test
-    @DisplayName("getById should throw exception when space not found")
+    @DisplayName("getById should throw when space not found")
     void getById_NotFound() {
         when(spacesRepository.findById(99L)).thenReturn(Optional.empty());
 

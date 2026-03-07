@@ -10,7 +10,7 @@ public record SpaceDTO(
         Long spaceId,
         String spaceName,
         String spaceDescription,
-        MarginDTO margin,
+        Long marginId,
         Visibility visibility,
         List<ChannelDTO> channels,
         List<SpaceMemberDTO> members

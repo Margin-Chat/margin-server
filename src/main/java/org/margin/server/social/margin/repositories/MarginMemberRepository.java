@@ -16,4 +16,6 @@ public interface MarginMemberRepository extends JpaRepository<MarginMember, Long
     List<MarginMember> findMarginMembersByUser(Long userId);
 
     Optional<MarginMember> findByUser_IdAndMargin_Id(Long userId, Long marginId);
+
+    boolean existsByUser_IdAndMargin_Id(Long userId, Long marginId);
 }

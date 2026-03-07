@@ -1,6 +1,8 @@
 package org.margin.server.social.margin;
 
 import org.margin.server.social.margin.models.dtos.*;
+import org.margin.server.social.margin.service.MarginMapper;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.users.models.User;
@@ -18,11 +20,13 @@ public class MarginController {
 
     private final MarginService marginService;
     private final MarginAuthorizationService authorizationService;
+    private final MarginMapper marginMapper;
 
     public MarginController(MarginService marginService,
-                            MarginAuthorizationService authorizationService) {
+                            MarginAuthorizationService authorizationService, MarginMapper marginMapper) {
         this.marginService = marginService;
         this.authorizationService = authorizationService;
+        this.marginMapper = marginMapper;
     }
 
     @PostMapping(value = "/create_new_margin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -45,7 +49,7 @@ public class MarginController {
     public MarginDTO getMargin(@PathVariable Long marginId,
                                @AuthenticationPrincipal User user) {
         authorizationService.requireMarginMember(user.getId(), marginId);
-        return marginService.toDTO(marginService.getById(marginId));
+        return marginMapper.marginToDto(marginService.getById(marginId));
     }
 
     @GetMapping("/get_margins")
@@ -57,7 +61,7 @@ public class MarginController {
     public ResponseEntity<MarginDTO> updateMargin(@RequestBody UpdateMarginDTO updateMarginDTO,
                                                   @AuthenticationPrincipal User user) {
         authorizationService.requireMarginAdmin(user.getId(), updateMarginDTO.marginId());
-        return ResponseEntity.ok(marginService.toDTO(marginService.updateMargin(updateMarginDTO)));
+        return ResponseEntity.ok(marginMapper.marginToDto(marginService.updateMargin(updateMarginDTO)));
     }
 
     @PostMapping("/delete_margin")

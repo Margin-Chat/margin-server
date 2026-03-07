@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.repositories;
 
+import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.Conversation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -43,4 +44,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("SELECT c FROM Conversation c " +
             "LEFT JOIN FETCH c.channel " +
             "WHERE c.id = :id")
-    Optional<Conversation> findByIdWithAssociations(@Param("id") Long id);}
+    Optional<Conversation> findByIdWithAssociations(@Param("id") Long id);
+
+    Optional<Conversation> findByChannel(Channel channel);
+}

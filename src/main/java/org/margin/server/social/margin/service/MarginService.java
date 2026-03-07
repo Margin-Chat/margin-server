@@ -1,9 +1,9 @@
-package org.margin.server.social.margin;
+package org.margin.server.social.margin.service;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.margin.MarginNotFoundException;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
@@ -13,8 +13,8 @@ import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.margin.models.Margin;
-import org.margin.server.social.space.models.dtos.SpaceDTO;
-import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
+import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -29,22 +29,28 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MarginService {
-
     private final MarginRepository marginRepository;
     private final StorageService storageService;
     private final MarginMemberRepository marginMemberRepository;
     private final ConnectionManager connectionManager;
     private final UserService userService;
+    private final SpacesService spacesService;
+    private final MarginMapper marginMapper;
 
     public MarginService(MarginRepository marginRepository,
                          StorageService storageService,
                          MarginMemberRepository marginMemberRepository,
-                         ConnectionManager connectionManager, UserService userService) {
+                         ConnectionManager connectionManager,
+                         UserService userService,
+                         SpacesService spacesService,
+                         MarginMapper marginMapper) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
         this.connectionManager = connectionManager;
         this.userService = userService;
+        this.spacesService = spacesService;
+        this.marginMapper = marginMapper;
     }
 
     public Margin getById(Long marginId) {
@@ -64,13 +70,22 @@ public class MarginService {
         margin.setDescription(description);
         margin.setVisibility(visibility);
         margin.setIconUrl(marginIconUrl);
-        marginRepository.save(margin);
+        margin = marginRepository.save(margin);
 
         log.info("Created new Margin with id {}", margin.getId());
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN);
 
         log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
+
+        UserDTO userDTO = userService.toDTO(user);
+
+        spacesService.createNewSpace(new CreateSpaceDTO(
+                "General Space",
+                "A space for general organization",
+                Visibility.PUBLIC,
+                margin.getId()
+        ), userDTO, margin);
     }
 
     public Set<MarginDTO> getMarginsForUser(User user) {
@@ -81,7 +96,7 @@ public class MarginService {
 
         return marginMembersByUser.stream()
                 .map(MarginMember::getMargin)
-                .map(this::toDTO)
+                .map(marginMapper::marginToDto)
                 .collect(Collectors.toSet());
     }
 
@@ -141,47 +156,6 @@ public class MarginService {
         Margin margin = getById(marginId);
         margin.getMembers().removeIf(m -> m.getUser().getId().equals(userId));
         marginRepository.save(margin);
-    }
-
-    public MarginDTO toDTO(Margin margin) {
-        List<MarginMemberDTO> members = margin.getMembers().stream()
-                .map(m -> new MarginMemberDTO(
-                        new UserDTO(m.getUser(), connectionManager.isUserOnline(m.getUser().getId())),
-                        m.getRole(),
-                        m.getJoinedAt()
-                ))
-                .toList();
-
-        MarginDTO marginStub = new MarginDTO(
-                margin.getId(), margin.getName(), margin.getDescription(),
-                margin.getVisibility(), margin.getIconUrl(), members, List.of()
-        );
-
-        List<SpaceDTO> spaces = margin.getSpaces().stream()
-                .map(space -> {
-                    List<SpaceMemberDTO> spaceMembers = space.getMembers() != null
-                            ? space.getMembers().stream()
-                            .map(m -> new SpaceMemberDTO(
-                                    new UserDTO(m.getUser(), connectionManager.isUserOnline(m.getUser().getId())),
-                                    m.getSpace().getId(),
-                                    m.getRole(),
-                                    m.getJoinedAt()
-                            ))
-                            .toList()
-                            : List.of();
-
-                    List<ChannelDTO> channels = space.getChannels() != null
-                            ? space.getChannels().stream().map(ChannelDTO::new).toList()
-                            : List.of();
-
-                    return new SpaceDTO(space.getId(), space.getName(), space.getDescription(),
-                            marginStub,
-                            space.getVisibility(), channels, spaceMembers);
-                })
-                .toList();
-
-        return new MarginDTO(margin.getId(), margin.getName(), margin.getDescription(),
-                margin.getVisibility(), margin.getIconUrl(), members, spaces);
     }
 
     public Optional<MarginMember> findMember(Long userId, Long marginId) {

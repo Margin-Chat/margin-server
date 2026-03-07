@@ -1,6 +1,7 @@
 package org.margin.server.social.channel;
 
 import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,9 +13,11 @@ import java.util.List;
 @RequestMapping("/api/channels")
 public class ChannelController {
     private final ChannelService channelService;
+    private final SpacesService spacesService;
 
-    public ChannelController(ChannelService channelService) {
+    public ChannelController(ChannelService channelService, SpacesService spacesService) {
         this.channelService = channelService;
+        this.spacesService = spacesService;
     }
 
     @GetMapping("/{spaceId}/get_channels_for_space")
@@ -29,7 +32,7 @@ public class ChannelController {
     @PostMapping("/create_channel")
     public ChannelDTO createChannel(@AuthenticationPrincipal User user, @RequestBody ChannelDTO channelDTO) {
         return new ChannelDTO(channelService.createChannel(
-                channelDTO.spaceId(),
+                spacesService.getById(channelDTO.spaceId()),
                 channelDTO.name(),
                 channelDTO.description()));
     }

@@ -56,25 +56,18 @@ class ChannelServiceTest {
     @Test
     @DisplayName("Should create channel, conversation, and map all space members")
     void createChannel_Success() {
-        // Arrange
-        Long spaceId = 100L;
         String name = "General";
         String desc = "Main Chat";
 
-        when(spacesService.getById(spaceId)).thenReturn(testSpace);
-        // Mock save to return the object passed in (simulating DB ID generation if needed)
-        when(channelRepository.save(any(Channel.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(channelRepository.save(any(Channel.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Act
-        Channel result = channelService.createChannel(spaceId, name, desc);
+        Channel result = channelService.createChannel(testSpace, name, desc);
 
-        // Assert: Channel Properties
         assertNotNull(result);
         assertEquals(name, result.getName());
         assertEquals(ChannelType.Communication, result.getChannelType());
         assertEquals(testSpace, result.getSpace());
 
-        // Assert: Conversation Creation
         ArgumentCaptor<Conversation> convCaptor = ArgumentCaptor.forClass(Conversation.class);
         verify(conversationRepository).save(convCaptor.capture());
         Conversation savedConv = convCaptor.getValue();
@@ -83,10 +76,9 @@ class ChannelServiceTest {
         assertEquals(ConversationType.CHANNEL, savedConv.getType());
         assertEquals(result, savedConv.getChannel());
 
-        // Assert: Member Mapping (The loop logic)
         verify(conversationMemberRepository).saveAll(argThat(members -> {
             var list = (List<?>) members;
-            return list.size() == 1; // Based on testSpace setup
+            return list.size() == 1;
         }));
     }
 

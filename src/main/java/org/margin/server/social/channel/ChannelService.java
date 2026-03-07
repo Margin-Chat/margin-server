@@ -10,10 +10,8 @@ import org.margin.server.social.conversation.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.exceptions.ChannelNotFoundException;
-import org.margin.server.social.exceptions.ConversationNotFoundException;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
-import org.margin.server.social.space.services.SpacesService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,15 +23,13 @@ import java.util.List;
 public class ChannelService {
     private final ChannelRepository channelRepository;
     private final ConversationRepository conversationRepository;
-    private final SpacesService spacesService;
     private final ConversationMemberRepository conversationMemberRepository;
 
     public ChannelService(ChannelRepository channelRepository,
                           ConversationRepository conversationRepository,
-                          SpacesService spacesService, ConversationMemberRepository conversationMemberRepository) {
+                          ConversationMemberRepository conversationMemberRepository) {
         this.channelRepository = channelRepository;
         this.conversationRepository = conversationRepository;
-        this.spacesService = spacesService;
         this.conversationMemberRepository = conversationMemberRepository;
     }
 
@@ -42,9 +38,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public Channel createChannel(Long spaceId, String name, String description) {
-        Space space = spacesService.getById(spaceId);
-
+    public Channel createChannel(Space space, String name, String description) {
         Channel channel = new Channel();
         channel.setSpace(space);
         channel.setName(name);

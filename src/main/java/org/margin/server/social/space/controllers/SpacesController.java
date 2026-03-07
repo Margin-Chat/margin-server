@@ -1,6 +1,8 @@
 package org.margin.server.social.space.controllers;
 
 import org.margin.server.connection.ConnectionManager;
+import org.margin.server.social.margin.service.MarginMapper;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
@@ -8,6 +10,7 @@ import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,27 +25,33 @@ public class SpacesController {
     private final SpacesService spacesService;
     private final ConnectionManager connectionManager;
     private final MarginAuthorizationService marginAuthorizationService;
+    private final UserService userService;
+    private final MarginService marginService;
+    private final MarginMapper marginMapper;
 
     public SpacesController(SpacesService spacesService,
                             ConnectionManager connectionManager,
-                            MarginAuthorizationService marginAuthorizationService) {
+                            MarginAuthorizationService marginAuthorizationService, UserService userService, MarginService marginService, MarginMapper marginMapper) {
         this.spacesService = spacesService;
         this.connectionManager = connectionManager;
         this.marginAuthorizationService = marginAuthorizationService;
+        this.userService = userService;
+        this.marginService = marginService;
+        this.marginMapper = marginMapper;
     }
 
     @GetMapping("get_all_spaces_for_margin/{marginId}")
     public List<SpaceDTO> getAllSpaces(@PathVariable Long marginId, @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
-        return spacesService.getSpaces().stream()
-                .map(spacesService::toDTO)
+        return spacesService.getSpacesForMargin(marginId).stream()
+                .map(marginMapper::spaceToDto)
                 .toList();
     }
 
     @GetMapping("get_all_spaces_for_user")
     public List<SpaceDTO> getAllSpacesForUser(@AuthenticationPrincipal User user) {
         return spacesService.getSpacesForUser(user).stream()
-                .map(spacesService::toDTO)
+                .map(marginMapper::spaceToDto)
                 .toList();
     }
 
@@ -50,7 +59,10 @@ public class SpacesController {
     public ResponseEntity<SpaceDTO> createSpace(@AuthenticationPrincipal User user,
                                                 @RequestBody CreateSpaceDTO dto) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), dto.marginId());
-        return ResponseEntity.ok(spacesService.toDTO(spacesService.createNewSpace(dto)));
+        return ResponseEntity.ok(marginMapper.spaceToDto(spacesService.createNewSpace(
+                dto,
+                userService.toDTO(user),
+                marginService.getById(dto.marginId()))));
     }
 
     @PostMapping("add_space_member")
@@ -70,14 +82,14 @@ public class SpacesController {
     @PostMapping("update_space_info")
     public ResponseEntity<SpaceDTO> updateSpaceInfo(@AuthenticationPrincipal User user,
                                                     @RequestBody SpaceDTO spaceDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.margin().marginId());
-        return ResponseEntity.ok(spacesService.toDTO(spacesService.updateSpace(spaceDTO)));
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.marginId());
+        return ResponseEntity.ok(marginMapper.spaceToDto(spacesService.updateSpace(spaceDTO)));
     }
 
     @PostMapping("delete_space")
     public ResponseEntity<Void> deleteSpace(@AuthenticationPrincipal User user,
                                             @RequestBody SpaceDTO spaceDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.margin().marginId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.marginId());
         spacesService.deleteSpace(spaceDTO.spaceId());
         return ResponseEntity.ok().build();
     }

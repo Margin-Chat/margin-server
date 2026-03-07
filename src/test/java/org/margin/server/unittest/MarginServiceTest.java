@@ -6,7 +6,8 @@ import org.margin.server.social.models.Visibility;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
-import org.margin.server.social.margin.MarginService;
+import org.margin.server.social.margin.service.MarginService;
+import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -35,6 +36,8 @@ class MarginServiceTest {
     private MarginMemberRepository marginMemberRepository;
     @Mock
     private StorageService storageService;
+    @Mock
+    private SpacesService spacesService;
     @Mock
     private UserService userService;
 

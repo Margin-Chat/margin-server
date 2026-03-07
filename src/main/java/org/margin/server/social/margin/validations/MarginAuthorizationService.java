@@ -1,6 +1,6 @@
 package org.margin.server.social.margin.validations;
 
-import org.margin.server.social.margin.MarginService;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.space.models.SpaceMember;
