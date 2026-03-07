@@ -120,10 +120,11 @@ public class MarginService {
                 });
     }
 
-    public Margin updateMargin(UpdateMarginDTO updateMarginDTO) {
+    public Margin updateMargin(UpdateMarginDTO updateMarginDTO, MultipartFile icon) {
         Margin margin = getById(updateMarginDTO.marginId());
         margin.setName(updateMarginDTO.marginName());
         margin.setDescription(updateMarginDTO.description());
+        storageService.saveMarginIcon(icon);
         return marginRepository.save(margin);
     }
 

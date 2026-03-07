@@ -58,10 +58,11 @@ public class MarginController {
     }
 
     @PostMapping("/update_margin")
-    public ResponseEntity<MarginDTO> updateMargin(@RequestBody UpdateMarginDTO updateMarginDTO,
+    public ResponseEntity<MarginDTO> updateMargin(@RequestPart("data") UpdateMarginDTO updateMarginDTO,
+                                                  @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
                                                   @AuthenticationPrincipal User user) {
         authorizationService.requireMarginAdmin(user.getId(), updateMarginDTO.marginId());
-        return ResponseEntity.ok(marginMapper.marginToDto(marginService.updateMargin(updateMarginDTO)));
+        return ResponseEntity.ok(marginMapper.marginToDto(marginService.updateMargin(updateMarginDTO, marginIcon)));
     }
 
     @PostMapping("/delete_margin")
