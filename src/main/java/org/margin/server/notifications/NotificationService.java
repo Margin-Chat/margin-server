@@ -2,8 +2,10 @@ package org.margin.server.notifications;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
+import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
+import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.models.WebSocketMessageType;
@@ -20,11 +22,13 @@ public class NotificationService {
 
     private final ConnectionManager connectionManager;
     private final WebSocketMessageBuilder messageBuilder;
+    private final SpaceMemberRepository spaceMemberRepository;
 
     public NotificationService(ConnectionManager connectionManager,
-                               WebSocketMessageBuilder messageBuilder) {
+                               WebSocketMessageBuilder messageBuilder, SpaceMemberRepository spaceMemberRepository) {
         this.connectionManager = connectionManager;
         this.messageBuilder = messageBuilder;
+        this.spaceMemberRepository = spaceMemberRepository;
     }
 
     public void notifyMessage(MessageDTO message, List<User> recipients, ConversationType conversationType) {
@@ -101,5 +105,17 @@ public class NotificationService {
     public void notifyScreenShareStopped(Long recipientId) {
         String json = messageBuilder.screenShareStopped(recipientId);
         connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifySpaceMembersByChannelId(Long channelId, WebSocketMessageType type, ChannelVoiceParticipantPayload payload) {
+        String json = messageBuilder.voiceParticipant(type, payload);
+
+        List<User> members = spaceMemberRepository.findSpaceMemberByChannel_Id(channelId);
+
+        for (User member : members) {
+            if (connectionManager.isUserOnline(member.getId())) {
+                connectionManager.sendToUser(member.getId(), json);
+            }
+        }
     }
 }

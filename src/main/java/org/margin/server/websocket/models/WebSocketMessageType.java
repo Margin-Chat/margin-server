@@ -1,5 +1,6 @@
 package org.margin.server.websocket.models;
 
+import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.websocket.models.payloads.*;
 
 public enum WebSocketMessageType {
@@ -18,6 +19,8 @@ public enum WebSocketMessageType {
     CALL_CANDIDATE(IncomingCallCandidatePayload.class),
     CALL_CREATED(null),
     CALL_END(IncomingCallEndPayload.class),
+    USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
+    USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
 
     // Screen share
     SCREEN_SHARE_OFFER(IncomingCallOfferPayload.class),

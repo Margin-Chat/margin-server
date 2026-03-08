@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
+import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -100,5 +101,9 @@ public class WebSocketMessageBuilder {
     public String callCreated(Long callerId, Long callId) {
         Map<String, Object> payload = Map.of("callId", callId);
         return buildMessage(WebSocketMessageType.CALL_CREATED, callerId, payload);
+    }
+
+    public String voiceParticipant(WebSocketMessageType type, ChannelVoiceParticipantPayload payload) {
+        return buildMessage(type, payload.channelId(), payload);
     }
 }
