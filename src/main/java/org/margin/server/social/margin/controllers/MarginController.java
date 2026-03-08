@@ -1,5 +1,6 @@
 package org.margin.server.social.margin.controllers;
 
+import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
@@ -30,19 +31,19 @@ public class MarginController {
     }
 
     @PostMapping(value = "/create_new_margin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> createNewMargin(
+    public ResponseEntity<MarginDTO> createNewMargin(
             @RequestPart("data") CreateNewMarginRequest request,
             @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
             @AuthenticationPrincipal User user) {
 
-        marginService.createMargin(
+        Margin created = marginService.createMargin(
                 request.marginName(),
                 request.marginDescription(),
                 Visibility.valueOf(request.visibility()),
                 marginIcon,
                 user);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(marginMapper.marginToDto(created));
     }
 
     @GetMapping("/get_margin/{marginId}")

@@ -58,7 +58,7 @@ public class MarginService {
     }
 
     @Transactional
-    public void createMargin(String name, String description, Visibility visibility, MultipartFile marginIcon, User user) {
+    public Margin createMargin(String name, String description, Visibility visibility, MultipartFile marginIcon, User user) {
         String marginIconUrl = null;
 
         if (marginIcon != null && !marginIcon.isEmpty()) {
@@ -86,6 +86,8 @@ public class MarginService {
                 Visibility.PUBLIC,
                 margin.getId()
         ), userDTO, margin);
+
+        return margin;
     }
 
     public Set<MarginDTO> getMarginsForUser(User user) {

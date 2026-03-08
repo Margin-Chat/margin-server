@@ -39,7 +39,7 @@ public class Margin {
     private String iconUrl;
 
     @OneToMany(mappedBy = "margin", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Space> spaces;
+    private List<Space> spaces = new ArrayList<>();
 
     @OneToMany(mappedBy = "margin", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MarginMember> members = new ArrayList<>();
