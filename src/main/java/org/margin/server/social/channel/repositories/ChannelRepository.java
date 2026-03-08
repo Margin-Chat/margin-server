@@ -1,4 +1,4 @@
-package org.margin.server.social.channel;
+package org.margin.server.social.channel.repositories;
 
 import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.space.models.Space;

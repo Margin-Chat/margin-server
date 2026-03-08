@@ -1,8 +1,8 @@
 package org.margin.server.social.conversation.repositories;
 
-import org.margin.server.social.conversation.Conversation;
-import org.margin.server.social.conversation.ConversationMember;
-import org.margin.server.social.conversation.ConversationMemberId;
+import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationMember;
+import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.messages.models.dtos.UnreadCountDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.projections.RecentChatUserProjection;

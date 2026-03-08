@@ -2,7 +2,7 @@ package org.margin.server.notifications;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;

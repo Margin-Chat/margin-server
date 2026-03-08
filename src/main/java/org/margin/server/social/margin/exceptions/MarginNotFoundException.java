@@ -1,4 +1,4 @@
-package org.margin.server.social.margin;
+package org.margin.server.social.margin.exceptions;
 
 public class MarginNotFoundException extends RuntimeException {
     public MarginNotFoundException(Long id) {

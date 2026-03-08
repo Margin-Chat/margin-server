@@ -1,7 +1,7 @@
 package org.margin.server.social.conversation.repositories;
 
 import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.conversation.Conversation;
+import org.margin.server.social.conversation.models.Conversation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,4 +1,4 @@
-package org.margin.server.social.margin;
+package org.margin.server.social.margin.controllers;
 
 import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginMapper;

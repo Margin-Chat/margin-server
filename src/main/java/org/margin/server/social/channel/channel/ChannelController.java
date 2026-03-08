@@ -1,6 +1,6 @@
-package org.margin.server.social.channel;
+package org.margin.server.social.channel.channel;
 
-import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;

@@ -1,7 +1,7 @@
 package org.margin.server.social.messages.services;
 
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.conversation.Conversation;
+import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 

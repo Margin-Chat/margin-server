@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.margin.server.social.conversation.Conversation;
+import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.space.models.Space;
 
 @Data

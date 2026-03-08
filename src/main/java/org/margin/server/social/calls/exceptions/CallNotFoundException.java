@@ -1,4 +1,4 @@
-package org.margin.server.social.exceptions;
+package org.margin.server.social.calls.exceptions;
 
 import lombok.Getter;
 

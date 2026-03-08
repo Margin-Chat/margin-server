@@ -3,7 +3,7 @@ package org.margin.server.social.margin.service;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.margin.MarginNotFoundException;
+import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.dtos.MarginDTO;

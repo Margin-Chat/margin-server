@@ -1,7 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.connection.ConnectionManager;
 import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;

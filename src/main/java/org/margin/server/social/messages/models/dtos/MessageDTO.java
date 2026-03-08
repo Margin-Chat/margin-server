@@ -1,11 +1,10 @@
 package org.margin.server.social.messages.models.dtos;
 
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 public record MessageDTO(
         Long id,

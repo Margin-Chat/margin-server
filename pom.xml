@@ -168,9 +168,9 @@
                 <configuration>
                     <url>jdbc:postgresql://localhost:5433/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
-                    <user>${env.DB_USERNAME}</user>
+                    <user>sysuser</user>
                     <!--suppress UnresolvedMavenProperty -->
-                    <password>${env.DB_PASSWORD}</password>
+                    <password>admin123</password>
                     <cleanDisabled>false</cleanDisabled>
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>

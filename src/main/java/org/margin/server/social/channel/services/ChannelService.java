@@ -1,15 +1,16 @@
-package org.margin.server.social.channel;
+package org.margin.server.social.channel.services;
 
 import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.channel.channel.ChannelType;
-import org.margin.server.social.conversation.Conversation;
-import org.margin.server.social.conversation.ConversationMember;
-import org.margin.server.social.conversation.ConversationMemberId;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.channel.repositories.ChannelRepository;
+import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationMember;
+import org.margin.server.social.conversation.models.ConversationMemberId;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.social.exceptions.ChannelNotFoundException;
+import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.springframework.stereotype.Service;

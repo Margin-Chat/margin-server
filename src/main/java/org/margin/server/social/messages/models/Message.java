@@ -6,10 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.margin.server.social.conversation.Conversation;
+import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;

@@ -1,7 +1,7 @@
 package org.margin.server.social.messages.controllers;
 
-import org.margin.server.social.conversation.Conversation;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.dtos.*;
 import org.margin.server.social.messages.services.MessageService;

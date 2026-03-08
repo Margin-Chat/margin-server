@@ -1,6 +1,6 @@
 package org.margin.server.exceptions;
 
-import org.margin.server.social.margin.MarginNotFoundException;
+import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;

@@ -1,4 +1,4 @@
-package org.margin.server.social.exceptions;
+package org.margin.server.social.conversation.exceptions;
 
 public class ConversationNotFoundException extends RuntimeException {
     public ConversationNotFoundException(String message) {

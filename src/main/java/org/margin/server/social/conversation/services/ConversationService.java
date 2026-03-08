@@ -1,10 +1,10 @@
 package org.margin.server.social.conversation.services;
 
 import org.margin.server.connection.ConnectionManager;
-import org.margin.server.social.conversation.Conversation;
-import org.margin.server.social.conversation.ConversationMember;
-import org.margin.server.social.conversation.ConversationMemberId;
-import org.margin.server.social.conversation.ConversationType;
+import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationMember;
+import org.margin.server.social.conversation.models.ConversationMemberId;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.messages.models.dtos.*;

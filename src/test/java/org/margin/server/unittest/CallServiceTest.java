@@ -7,7 +7,7 @@ import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
 import org.margin.server.social.calls.services.CallService;
-import org.margin.server.social.exceptions.CallNotFoundException;
+import org.margin.server.social.calls.exceptions.CallNotFoundException;
 import org.margin.server.users.models.User;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
