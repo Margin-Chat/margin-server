@@ -26,7 +26,8 @@ public enum WebSocketMessageType {
     SCREEN_SHARE_OFFER(IncomingCallOfferPayload.class),
     SCREEN_SHARE_ANSWER(IncomingCallOfferPayload.class),
     SCREEN_SHARE_STARTED(null),
-    SCREEN_SHARE_STOPPED(null);
+    SCREEN_SHARE_STOPPED(null),
+    NOTIFICATION(NotificationPayload.class);
 
     public final Class<?> payloadClass;
 

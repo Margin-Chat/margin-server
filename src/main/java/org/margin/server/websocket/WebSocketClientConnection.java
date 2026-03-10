@@ -3,7 +3,7 @@ package org.margin.server.websocket;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ClientConnection;
+import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.users.models.User;
 
 @Slf4j

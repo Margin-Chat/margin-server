@@ -7,7 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.WebSocketAttributes;

@@ -4,8 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.connection.ConnectionManager;
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -41,7 +41,7 @@ class WebSocketIntegrationTest {
 
     @MockitoBean private ConversationService conversationService;
     @MockitoBean private MessageService messageService;
-    @MockitoBean private NotificationService notificationService;
+    @MockitoBean private WebSocketDeliveryService webSocketDeliveryService;
     @Autowired private ConnectionManager connectionManager;
 
     private static final int WS_PORT = 8081;
@@ -148,7 +148,7 @@ class WebSocketIntegrationTest {
 
         verify(messageService, timeout(2000))
                 .sendMessage(any(), eq(conversation), eq("Hello integration"));
-        verify(notificationService, timeout(2000))
+        verify(webSocketDeliveryService, timeout(2000))
                 .notifyMessage(eq(messageDTO), anyList(), eq(ConversationType.DIRECT));
     }
 

@@ -1,5 +1,6 @@
 package org.margin.server.unittest;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +10,7 @@ import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.MarginMember;
+import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
@@ -42,6 +44,8 @@ class SpacesServiceTest {
     @Mock private ChannelRepository channelRepository;
     @Mock private ConversationMemberRepository conversationMemberRepository;
     @Mock private ChannelService channelService;
+    @Mock private EntityManager entityManager;
+    @Mock private MarginMemberRepository marginMemberRepository;
 
     @InjectMocks
     private SpacesService spacesService;

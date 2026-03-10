@@ -1,7 +1,8 @@
-package org.margin.server.notifications;
+package org.margin.server.websocket.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.notifications.Notification;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -18,17 +19,25 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class NotificationService {
+public class WebSocketDeliveryService {
 
     private final ConnectionManager connectionManager;
     private final WebSocketMessageBuilder messageBuilder;
     private final SpaceMemberRepository spaceMemberRepository;
 
-    public NotificationService(ConnectionManager connectionManager,
-                               WebSocketMessageBuilder messageBuilder, SpaceMemberRepository spaceMemberRepository) {
+    public WebSocketDeliveryService(ConnectionManager connectionManager,
+                                    WebSocketMessageBuilder messageBuilder,
+                                    SpaceMemberRepository spaceMemberRepository) {
         this.connectionManager = connectionManager;
         this.messageBuilder = messageBuilder;
         this.spaceMemberRepository = spaceMemberRepository;
+    }
+
+    public void notifyNotification(Notification notification) {
+        if (connectionManager.isUserOnline(notification.getRecipient().getId())) {
+            String json = messageBuilder.notification(notification);
+            connectionManager.sendToUser(notification.getRecipient().getId(), json);
+        }
     }
 
     public void notifyMessage(MessageDTO message, List<User> recipients, ConversationType conversationType) {
@@ -40,11 +49,9 @@ public class NotificationService {
             if (isOnline) {
                 connectionManager.sendToUser(recipient.getId(), json);
             } else {
-                // Only send push notifications for DMs and groups, not channels
                 if (conversationType == ConversationType.DIRECT ||
                         conversationType == ConversationType.GROUP) {
                     log.debug("User {} offline, message stored for later", recipient.getId());
-                    // TODO: Send push notification
                 }
             }
         }

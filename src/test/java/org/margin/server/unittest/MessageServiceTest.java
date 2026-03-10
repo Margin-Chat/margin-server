@@ -2,7 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;

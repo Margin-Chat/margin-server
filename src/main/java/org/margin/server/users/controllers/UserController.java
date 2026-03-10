@@ -1,6 +1,6 @@
 package org.margin.server.users.controllers;
 
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.dtos.*;

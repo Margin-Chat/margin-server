@@ -10,7 +10,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import org.springframework.beans.factory.annotation.Qualifier;

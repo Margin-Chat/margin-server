@@ -2,7 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -35,7 +35,7 @@ class SendMessageProcessorTest {
     private MessageService messageService;
 
     @Mock
-    private NotificationService notificationService;
+    private WebSocketDeliveryService webSocketDeliveryService;
 
     @InjectMocks
     private SendMessageProcessor processor;
@@ -70,7 +70,7 @@ class SendMessageProcessorTest {
 
         verify(conversationService).getById(10L);
         verify(messageService).sendMessage(sender, conversation, "Hello");
-        verify(notificationService).notifyMessage(messageDTO, List.of(sender, recipient), ConversationType.DIRECT);
+        verify(webSocketDeliveryService).notifyMessage(messageDTO, List.of(sender, recipient), ConversationType.DIRECT);
     }
 
     @Test
@@ -123,7 +123,7 @@ class SendMessageProcessorTest {
         processor.process(sender, message);
 
         ArgumentCaptor<List> recipientsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(notificationService).notifyMessage(eq(messageDTO), recipientsCaptor.capture(), eq(ConversationType.GROUP));
+        verify(webSocketDeliveryService).notifyMessage(eq(messageDTO), recipientsCaptor.capture(), eq(ConversationType.GROUP));
         assertEquals(3, recipientsCaptor.getValue().size());
     }
 
@@ -139,7 +139,7 @@ class SendMessageProcessorTest {
                 .thenThrow(new RuntimeException("Conversation not found"));
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
-        verifyNoInteractions(notificationService);
+        verifyNoInteractions(webSocketDeliveryService);
     }
 
     @Test
@@ -159,7 +159,7 @@ class SendMessageProcessorTest {
                 .thenThrow(new RuntimeException("DB error"));
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
-        verifyNoInteractions(notificationService);
+        verifyNoInteractions(webSocketDeliveryService);
     }
 
     private User createUser(Long id, String username) {

@@ -1,7 +1,6 @@
-package org.margin.server.connection;
+package org.margin.server.websocket.connection;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 

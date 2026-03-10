@@ -1,6 +1,6 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
@@ -16,14 +16,14 @@ import org.springframework.stereotype.Component;
 public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCallOfferPayload> {
 
     private final CallService callService;
-    private final NotificationService notificationService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
     private final UserService userService;
 
     public CallOfferProcessor(CallService callService,
-                              NotificationService notificationService,
+                              WebSocketDeliveryService webSocketDeliveryService,
                               UserService userService) {
         this.callService = callService;
-        this.notificationService = notificationService;
+        this.webSocketDeliveryService = webSocketDeliveryService;
         this.userService = userService;
     }
 
@@ -44,7 +44,7 @@ public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCal
                 payload.sdp()
         );
 
-        notificationService.notifyCallOffer(
+        webSocketDeliveryService.notifyCallOffer(
                 message.getRecipientId(),
                 call.getId(),
                 userService.toDTO(user),
@@ -52,7 +52,7 @@ public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCal
                 CallType.AUDIO.toString()
         );
 
-        notificationService.notifyCallCreated(
+        webSocketDeliveryService.notifyCallCreated(
                 user.getId(),
                 call.getId()
         );

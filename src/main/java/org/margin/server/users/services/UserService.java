@@ -1,6 +1,6 @@
 package org.margin.server.users.services;
 
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.stereotype.Service;
 import org.margin.server.users.models.User;

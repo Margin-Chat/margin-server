@@ -1,7 +1,7 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;

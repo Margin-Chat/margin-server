@@ -2,7 +2,7 @@ package org.margin.server.social.margin.service;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -118,6 +118,7 @@ public class MarginService {
                     member.setMargin(margin);
                     member.setRole(role);
                     member.setJoinedAt(LocalDateTime.now());
+                    margin.getMembers().add(member);
                     return marginMemberRepository.save(member);
                 });
     }

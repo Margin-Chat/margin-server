@@ -1,4 +1,4 @@
-package org.margin.server.connection;
+package org.margin.server.websocket.connection;
 
 import org.margin.server.users.models.User;
 

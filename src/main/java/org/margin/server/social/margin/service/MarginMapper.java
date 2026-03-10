@@ -1,6 +1,6 @@
 package org.margin.server.social.margin.service;
 
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
