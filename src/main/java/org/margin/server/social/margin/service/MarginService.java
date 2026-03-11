@@ -58,7 +58,11 @@ public class MarginService {
     }
 
     @Transactional
-    public Margin createMargin(String name, String description, Visibility visibility, MultipartFile marginIcon, User user) {
+    public Margin createMargin(String name,
+                               String description,
+                               Visibility visibility,
+                               MultipartFile marginIcon,
+                               User user) {
         String marginIconUrl = null;
 
         if (marginIcon != null && !marginIcon.isEmpty()) {
@@ -127,7 +131,10 @@ public class MarginService {
         Margin margin = getById(updateMarginDTO.marginId());
         margin.setName(updateMarginDTO.marginName());
         margin.setDescription(updateMarginDTO.description());
-        storageService.saveMarginIcon(icon);
+        if (icon != null && !icon.isEmpty()) {
+            String iconUrl = storageService.saveMarginIcon(icon);
+            margin.setIconUrl(iconUrl);
+        }
         return marginRepository.save(margin);
     }
 

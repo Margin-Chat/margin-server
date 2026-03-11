@@ -42,4 +42,23 @@ public class FilesController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    @GetMapping("/margin-icons/{fileName}")
+    public ResponseEntity<Resource> getMarginIcon(@PathVariable String fileName) {
+        try {
+            Resource resource = storageService.getProfilePicture("/margin-icons/" + fileName);
+
+            String contentType = Files.probeContentType(Path.of(fileName));
+            return ResponseEntity.ok()
+                    .contentType(contentType != null
+                            ? MediaType.parseMediaType(contentType)
+                            : MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+
+        } catch (NoSuchFileException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }
