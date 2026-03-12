@@ -1,6 +1,6 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.dtos.MessageResult;
@@ -16,14 +16,14 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<String> {
 
     private final ConversationService conversationService;
     private final MessageService messageService;
-    private final NotificationService notificationService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     public SendMessageProcessor(ConversationService conversationService,
                                 MessageService messageService,
-                                NotificationService notificationService) {
+                                WebSocketDeliveryService webSocketDeliveryService) {
         this.conversationService = conversationService;
         this.messageService = messageService;
-        this.notificationService = notificationService;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Override
@@ -36,6 +36,6 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<String> {
     public void process(User user, WebSocketMessageIn<String> message) {
         Conversation conversation = conversationService.getById(message.getRecipientId());
         MessageResult result = messageService.sendMessage(user, conversation, message.getPayload());
-        notificationService.notifyMessage(result.message(), result.recipients(), conversation.getType());
+        webSocketDeliveryService.notifyMessage(result.message(), result.recipients(), conversation.getType());
     }
 }

@@ -1,6 +1,6 @@
 package org.margin.server.social.conversation.services;
 
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;

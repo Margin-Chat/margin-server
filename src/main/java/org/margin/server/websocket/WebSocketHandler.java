@@ -6,13 +6,12 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.connection.ClientConnection;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ClientConnection;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.models.payloads.*;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 
 import java.util.List;

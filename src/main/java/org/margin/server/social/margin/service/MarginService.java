@@ -2,7 +2,7 @@ package org.margin.server.social.margin.service;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -58,7 +58,11 @@ public class MarginService {
     }
 
     @Transactional
-    public Margin createMargin(String name, String description, Visibility visibility, MultipartFile marginIcon, User user) {
+    public Margin createMargin(String name,
+                               String description,
+                               Visibility visibility,
+                               MultipartFile marginIcon,
+                               User user) {
         String marginIconUrl = null;
 
         if (marginIcon != null && !marginIcon.isEmpty()) {
@@ -118,6 +122,7 @@ public class MarginService {
                     member.setMargin(margin);
                     member.setRole(role);
                     member.setJoinedAt(LocalDateTime.now());
+                    margin.getMembers().add(member);
                     return marginMemberRepository.save(member);
                 });
     }
@@ -126,7 +131,10 @@ public class MarginService {
         Margin margin = getById(updateMarginDTO.marginId());
         margin.setName(updateMarginDTO.marginName());
         margin.setDescription(updateMarginDTO.description());
-        storageService.saveMarginIcon(icon);
+        if (icon != null && !icon.isEmpty()) {
+            String iconUrl = storageService.saveMarginIcon(icon);
+            margin.setIconUrl(iconUrl);
+        }
         return marginRepository.save(margin);
     }
 

@@ -1,115 +1,139 @@
 package org.margin.server.unittest;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.connection.ConnectionManager;
-import org.margin.server.notifications.NotificationService;
-import org.margin.server.social.conversation.models.ConversationType;
-import org.margin.server.social.messages.models.dtos.MessageDTO;
+import org.margin.server.notifications.Notification;
+import org.margin.server.notifications.NotificationType;
+import org.margin.server.notifications.repositories.NotificationRepository;
+import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.utils.WebSocketMessageBuilder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
-    @Mock private ConnectionManager connectionManager;
-    @Mock private WebSocketMessageBuilder messageBuilder;
+    @Mock
+    private NotificationRepository notificationRepository;
 
     @InjectMocks
     private NotificationService notificationService;
 
-    private UserDTO createTestUserDTO() {
-        return new UserDTO(
-                1L,
-                "jdoe",
-                "jdoe",
-                "jdoe@example.com",
-                "https://cdn.margin.org/pfp/1.png",
-                LocalDateTime.now(),
-                true
-        );
-    }
+    @Test
+    void createForMarginMembers_excludesSender() {
+        User sender = testUser(1L);
+        User member1 = testUser(2L);
+        User member2 = testUser(3L);
 
-    private MessageDTO createTestMessageDTO() {
-        return new MessageDTO(
-                100L,
-                10L,
-                ConversationType.DIRECT,
-                createTestUserDTO(),
-                "Testing message notification",
-                false,
-                Instant.now()
+        notificationService.createForMarginMembers(
+                List.of(sender, member1, member2), sender,
+                NotificationType.ANNOUNCEMENT, 100L, 10L
         );
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationRepository).saveAll(captor.capture());
+
+        List<Notification> saved = captor.getValue();
+        assertThat(saved).hasSize(2);
+        assertThat(saved).noneMatch(n -> n.getRecipient().getId().equals(sender.getId()));
     }
 
     @Test
-    @DisplayName("notifyMessage should only call sendToUser for online recipients")
-    void notifyMessage_FiltersByOnlineStatus() {
-        // Arrange
-        MessageDTO messageDto = createTestMessageDTO();
+    void createForMarginMembers_setsCorrectFields() {
+        User sender = testUser(1L);
+        User member = testUser(2L);
 
-        User onlineUser = new User();
-        onlineUser.setId(1L);
+        notificationService.createForMarginMembers(
+                List.of(member), sender,
+                NotificationType.ANNOUNCEMENT, 100L, 10L
+        );
 
-        User offlineUser = new User();
-        offlineUser.setId(2L);
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationRepository).saveAll(captor.capture());
 
-        String mockJson = "{\"type\":\"msg\", \"payload\":{...}}";
-        when(messageBuilder.message(messageDto)).thenReturn(mockJson);
-
-        when(connectionManager.isUserOnline(1L)).thenReturn(true);
-        when(connectionManager.isUserOnline(2L)).thenReturn(false);
-
-        // Act
-        notificationService.notifyMessage(messageDto, List.of(onlineUser, offlineUser), ConversationType.DIRECT);
-
-        // Assert
-        verify(connectionManager, times(1)).sendToUser(1L, mockJson);
-        verify(connectionManager, never()).sendToUser(2L, mockJson);
+        Notification saved = captor.getValue().get(0);
+        assertThat(saved.getRecipient()).isEqualTo(member);
+        assertThat(saved.getSender()).isEqualTo(sender);
+        assertThat(saved.getType()).isEqualTo(NotificationType.ANNOUNCEMENT);
+        assertThat(saved.getReferenceId()).isEqualTo(100L);
+        assertThat(saved.getMarginId()).isEqualTo(10L);
+        assertThat(saved.isSeen()).isFalse();
+        assertThat(saved.getCreatedAt()).isNotNull();
     }
 
     @Test
-    @DisplayName("notifyUserOffline should broadcast logout event to everyone else")
-    void notifyUserOffline_BroadcastsLogout() {
-        // Arrange
+    void markSeenForMargin_onlyMarksCorrectMargin() {
+        User recipient = testUser(1L);
+
+        Notification n1 = unseenNotification(recipient, 10L);
+        Notification n2 = unseenNotification(recipient, 10L);
+        Notification n3 = unseenNotification(recipient, 20L); // different margin
+
+        when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
+                .thenReturn(List.of(n1, n2, n3));
+
+        notificationService.markSeenForMargin(recipient.getId(), 10L);
+
+        assertThat(n1.isSeen()).isTrue();
+        assertThat(n2.isSeen()).isTrue();
+        assertThat(n3.isSeen()).isFalse();
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+    }
+
+    @Test
+    void getUnseenCountsPerMargin_groupsCorrectly() {
+        User recipient = testUser(1L);
+
+        Notification n1 = unseenNotification(recipient, 10L);
+        Notification n2 = unseenNotification(recipient, 10L);
+        Notification n3 = unseenNotification(recipient, 20L);
+
+        when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
+                .thenReturn(List.of(n1, n2, n3));
+
+        Map<Long, Long> counts = notificationService.getUnseenCountsPerMargin(recipient.getId());
+
+        assertThat(counts).containsEntry(10L, 2L);
+        assertThat(counts).containsEntry(20L, 1L);
+    }
+
+    @Test
+    void getNotificationsForUser_delegatesToRepository() {
+        User recipient = testUser(1L);
+        List<Notification> expected = List.of(unseenNotification(recipient, 10L));
+        when(notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipient.getId()))
+                .thenReturn(expected);
+
+        List<Notification> result = notificationService.getNotificationsForUser(recipient.getId());
+
+        assertThat(result).isEqualTo(expected);
+        verify(notificationRepository).findByRecipient_IdOrderByCreatedAtDesc(recipient.getId());
+    }
+
+    private User testUser(Long id) {
         User user = new User();
-        user.setId(77L);
-        String mockJson = "{\"type\":\"USER_LOGOUT\", \"userId\":77}";
-
-        when(messageBuilder.userActivity(any(), eq(user))).thenReturn(mockJson);
-
-        // Act
-        notificationService.notifyUserOffline(user);
-
-        // Assert
-        verify(connectionManager).broadcast(mockJson, 77L);
+        user.setId(id);
+        return user;
     }
 
-    @Test
-    @DisplayName("notifyCallCreated should send call details back to the caller")
-    void notifyCallCreated_SendsToCaller() {
-        // Arrange
-        Long callerId = 1L;
-        Long callId = 500L;
-        String mockJson = "{\"callId\":500}";
-
-        when(messageBuilder.callCreated(callerId, callId)).thenReturn(mockJson);
-
-        // Act
-        notificationService.notifyCallCreated(callerId, callId);
-
-        // Assert
-        verify(connectionManager).sendToUser(callerId, mockJson);
+    private Notification unseenNotification(User recipient, Long marginId) {
+        Notification n = new Notification();
+        n.setRecipient(recipient);
+        n.setMarginId(marginId);
+        n.setSeen(false);
+        n.setCreatedAt(LocalDateTime.now());
+        return n;
     }
 }

@@ -3,7 +3,8 @@ package org.margin.server.websocket.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.notifications.Notification;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.users.models.User;
@@ -13,6 +14,7 @@ import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
 import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
+import org.margin.server.websocket.models.payloads.NotificationPayload;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -73,6 +75,17 @@ public class WebSocketMessageBuilder {
 
     public String screenShareStopped(Long recipientId) {
         return buildMessage(WebSocketMessageType.SCREEN_SHARE_STOPPED, recipientId, null);
+    }
+
+    public String notification(Notification notification) {
+        var payload = new NotificationPayload(
+                notification.getNotificationId(),
+                notification.getType(),
+                notification.getReferenceId(),
+                notification.getMarginId(),
+                notification.getSender() != null ? new UserDTO(notification.getSender(), false) : null
+        );
+        return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipient().getId(), payload);
     }
 
     public String callEnd(Long recipientId) {

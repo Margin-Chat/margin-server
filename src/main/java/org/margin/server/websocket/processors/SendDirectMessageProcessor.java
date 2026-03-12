@@ -1,6 +1,6 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.services.MessageService;
@@ -14,14 +14,14 @@ import org.springframework.stereotype.Component;
 public class SendDirectMessageProcessor implements WebSocketMessageProcessor<String> {
 
     private final MessageService messageService;
-    private final NotificationService notificationService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
     private final UserService userService;
 
     public SendDirectMessageProcessor(MessageService messageService,
-                                      NotificationService notificationService,
+                                      WebSocketDeliveryService webSocketDeliveryService,
                                       UserService userService) {
         this.messageService = messageService;
-        this.notificationService = notificationService;
+        this.webSocketDeliveryService = webSocketDeliveryService;
         this.userService = userService;
     }
 
@@ -40,7 +40,7 @@ public class SendDirectMessageProcessor implements WebSocketMessageProcessor<Str
                 message.getPayload()
         );
 
-        notificationService.notifyMessage(
+        webSocketDeliveryService.notifyMessage(
                 result.message(),
                 result.recipients(),
                 ConversationType.DIRECT

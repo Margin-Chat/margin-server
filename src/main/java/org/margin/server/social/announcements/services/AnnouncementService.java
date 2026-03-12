@@ -1,9 +1,13 @@
 package org.margin.server.social.announcements.services;
 
+import org.margin.server.notifications.NotificationType;
+import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.announcements.models.Announcement;
 import org.margin.server.social.announcements.models.dtos.AnnouncementDTO;
 import org.margin.server.social.announcements.models.dtos.CreateAnnouncementRequest;
 import org.margin.server.social.announcements.repositories.AnnouncementRepository;
+import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -18,11 +22,13 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final MarginRepository marginRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
-    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, UserService userService) {
+    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, UserService userService, NotificationService notificationService) {
         this.announcementRepository = announcementRepository;
         this.marginRepository = marginRepository;
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     public List<Announcement> getAnnouncementsForMargin(Long marginId) {
@@ -40,14 +46,30 @@ public class AnnouncementService {
         );
     }
 
-    public Announcement createNewAnnouncement(CreateAnnouncementRequest createAnnouncementRequest, User author) {
+    public Announcement createAnnouncement(CreateAnnouncementRequest createAnnouncementRequest, User author) {
+        Margin margin = marginRepository.findById(createAnnouncementRequest.marginId()).orElseThrow();
+
         Announcement announcement = new Announcement();
-        announcement.setMargin(marginRepository.findById(createAnnouncementRequest.marginId()).orElseThrow());
+        announcement.setMargin(margin);
         announcement.setAuthor(author);
         announcement.setTitle(createAnnouncementRequest.title());
         announcement.setContent(createAnnouncementRequest.content());
         announcement.setCreatedAt(LocalDateTime.now());
-        return announcementRepository.save(announcement);
+        Announcement saved = announcementRepository.save(announcement);
+
+        List<User> members = margin.getMembers().stream()
+                .map(MarginMember::getUser)
+                .toList();
+
+        notificationService.createForMarginMembers(
+                members,
+                author,
+                NotificationType.ANNOUNCEMENT,
+                saved.getAnnouncementId(),
+                margin.getId()
+        );
+
+        return saved;
     }
 
     public Announcement editAnnouncement(AnnouncementDTO announcementDTO) {

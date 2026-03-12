@@ -1,7 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.calls.services.CallService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
@@ -14,12 +14,12 @@ import org.springframework.stereotype.Component;
 public class CallEndProcessor implements WebSocketMessageProcessor<IncomingCallEndPayload> {
 
     private final CallService callService;
-    private final NotificationService notificationService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     public CallEndProcessor(CallService callService,
-                            NotificationService notificationService) {
+                            WebSocketDeliveryService webSocketDeliveryService) {
         this.callService = callService;
-        this.notificationService = notificationService;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Override
@@ -33,7 +33,7 @@ public class CallEndProcessor implements WebSocketMessageProcessor<IncomingCallE
 
         callService.endCall(payload.callId(), payload.callDuration());
 
-        notificationService.notifyCallEnd(message.getRecipientId());
+        webSocketDeliveryService.notifyCallEnd(message.getRecipientId());
 
         log.debug("Call ended: {}", payload.callId());
     }

@@ -1,6 +1,6 @@
 package org.margin.server.social.space.controllers;
 
-import org.margin.server.connection.ConnectionManager;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;

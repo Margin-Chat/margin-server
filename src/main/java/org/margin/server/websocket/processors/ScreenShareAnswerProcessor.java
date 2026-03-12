@@ -1,6 +1,6 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.notifications.NotificationService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class ScreenShareAnswerProcessor implements WebSocketMessageProcessor<IncomingCallOfferPayload> {
 
-    private final NotificationService notificationService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
-    public ScreenShareAnswerProcessor(NotificationService notificationService) {
-        this.notificationService = notificationService;
+    public ScreenShareAnswerProcessor(WebSocketDeliveryService webSocketDeliveryService) {
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Override
@@ -24,6 +24,6 @@ public class ScreenShareAnswerProcessor implements WebSocketMessageProcessor<Inc
     @Override
     public void process(User user, WebSocketMessageIn<IncomingCallOfferPayload> message) {
         IncomingCallOfferPayload payload = message.getPayload();
-        notificationService.notifyScreenShareAnswer(message.getRecipientId(), payload.sdp(), payload.type());
+        webSocketDeliveryService.notifyScreenShareAnswer(message.getRecipientId(), payload.sdp(), payload.type());
     }
 }
