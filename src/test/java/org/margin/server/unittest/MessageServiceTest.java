@@ -38,7 +38,7 @@ class MessageServiceTest {
     private MessageService messageService;
 
     @Test
-    void sendMessage_directConversation_savesMessage() {
+    void createMessage_directConversation_savesMessage() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "Hello!";
@@ -49,7 +49,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.sendMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(content, result.message().content());
@@ -65,7 +65,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendMessage_groupConversation_returnsAllMembers() {
+    void createMessage_groupConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Hello group!";
@@ -80,7 +80,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.sendMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(3, result.recipients().size());
@@ -89,7 +89,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendMessage_channelConversation_returnsAllMembers() {
+    void createMessage_channelConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Channel channel = createChannel(5L);
         Conversation conversation = createConversation(10L, ConversationType.CHANNEL);
@@ -102,7 +102,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.sendMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(2, result.recipients().size());
@@ -136,7 +136,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendMessage_returnsAllMembersAsRecipients() {
+    void createMessage_returnsAllMembersAsRecipients() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Test message";
@@ -149,7 +149,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.sendMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
 
         assertEquals(3, result.recipients().size());
         assertTrue(result.recipients().contains(fromUser));
@@ -158,7 +158,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendMessage_handlesEmptyContent() {
+    void createMessage_handlesEmptyContent() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "";
@@ -169,7 +169,7 @@ class MessageServiceTest {
         when(conversationService.getConversationMembers(conversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, createUser(2L, "recipient")));
 
-        MessageResult result = messageService.sendMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals("", result.message().content());

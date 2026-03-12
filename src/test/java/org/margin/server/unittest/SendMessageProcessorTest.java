@@ -63,13 +63,13 @@ class SendMessageProcessorTest {
         message.setPayload("Hello");
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.sendMessage(eq(sender), eq(conversation), eq("Hello")))
+        when(messageService.createMessage(eq(sender), eq(conversation), eq("Hello")))
                 .thenReturn(result);
 
         processor.process(sender, message);
 
         verify(conversationService).getById(10L);
-        verify(messageService).sendMessage(sender, conversation, "Hello");
+        verify(messageService).createMessage(sender, conversation, "Hello");
         verify(webSocketDeliveryService).notifyMessage(messageDTO, List.of(sender, recipient), ConversationType.DIRECT);
     }
 
@@ -90,12 +90,12 @@ class SendMessageProcessorTest {
         message.setPayload(payload);
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.sendMessage(any(), any(), any())).thenReturn(result);
+        when(messageService.createMessage(any(), any(), any())).thenReturn(result);
 
         processor.process(sender, message);
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).sendMessage(eq(sender), eq(conversation), payloadCaptor.capture());
+        verify(messageService).createMessage(eq(sender), eq(conversation), payloadCaptor.capture());
         assertEquals(payload, payloadCaptor.getValue());
     }
 
@@ -118,7 +118,7 @@ class SendMessageProcessorTest {
         message.setPayload("Group message");
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.sendMessage(any(), any(), any())).thenReturn(result);
+        when(messageService.createMessage(any(), any(), any())).thenReturn(result);
 
         processor.process(sender, message);
 
@@ -155,7 +155,7 @@ class SendMessageProcessorTest {
         message.setPayload("Hello");
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.sendMessage(any(), any(), any()))
+        when(messageService.createMessage(any(), any(), any()))
                 .thenThrow(new RuntimeException("DB error"));
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));

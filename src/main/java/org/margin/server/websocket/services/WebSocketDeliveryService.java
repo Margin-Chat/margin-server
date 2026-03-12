@@ -2,6 +2,7 @@ package org.margin.server.websocket.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
+import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
@@ -42,19 +43,16 @@ public class WebSocketDeliveryService {
 
     public void notifyMessage(MessageDTO message, List<User> recipients, ConversationType conversationType) {
         String json = messageBuilder.message(message);
+        sendMessageToUsers(recipients, conversationType, json);
+    }
 
-        for (User recipient : recipients) {
-            boolean isOnline = connectionManager.isUserOnline(recipient.getId());
-
-            if (isOnline) {
-                connectionManager.sendToUser(recipient.getId(), json);
-            } else {
-                if (conversationType == ConversationType.DIRECT ||
-                        conversationType == ConversationType.GROUP) {
-                    log.debug("User {} offline, message stored for later", recipient.getId());
-                }
-            }
-        }
+    public void notifyEditedMessage(MessageDTO message, List<User> recipients, ConversationType conversationType) {
+        String json = messageBuilder.editMessage(message);
+        sendMessageToUsers(recipients, conversationType, json);
+    }
+    public void notifyDeletedMessage(MessageResult message) {
+        String json = messageBuilder.deleteMessage(message.message());
+        sendMessageToUsers(message.recipients(), message.message().conversationType(), json);
     }
 
     public void notifyUserOnline(User user) {
@@ -94,26 +92,6 @@ public class WebSocketDeliveryService {
         connectionManager.sendToUser(callerId, json);
     }
 
-    public void notifyScreenShareOffer(Long recipientId, String sdp, String type) {
-        String json = messageBuilder.screenShareOffer(recipientId, sdp, type);
-        connectionManager.sendToUser(recipientId, json);
-    }
-
-    public void notifyScreenShareAnswer(Long recipientId, String sdp, String type) {
-        String json = messageBuilder.screenShareAnswer(recipientId, sdp, type);
-        connectionManager.sendToUser(recipientId, json);
-    }
-
-    public void notifyScreenShareStarted(Long recipientId) {
-        String json = messageBuilder.screenShareStarted(recipientId);
-        connectionManager.sendToUser(recipientId, json);
-    }
-
-    public void notifyScreenShareStopped(Long recipientId) {
-        String json = messageBuilder.screenShareStopped(recipientId);
-        connectionManager.sendToUser(recipientId, json);
-    }
-
     public void notifySpaceMembersByChannelId(Long channelId, WebSocketMessageType type, ChannelVoiceParticipantPayload payload) {
         String json = messageBuilder.voiceParticipant(type, payload);
 
@@ -122,6 +100,21 @@ public class WebSocketDeliveryService {
         for (User member : members) {
             if (connectionManager.isUserOnline(member.getId())) {
                 connectionManager.sendToUser(member.getId(), json);
+            }
+        }
+    }
+
+    private void sendMessageToUsers(List<User> recipients, ConversationType conversationType, String json) {
+        for (User recipient : recipients) {
+            boolean isOnline = connectionManager.isUserOnline(recipient.getId());
+
+            if (isOnline) {
+                connectionManager.sendToUser(recipient.getId(), json);
+            } else {
+                if (conversationType == ConversationType.DIRECT ||
+                        conversationType == ConversationType.GROUP) {
+                    log.debug("User {} offline, message stored for later", recipient.getId());
+                }
             }
         }
     }
