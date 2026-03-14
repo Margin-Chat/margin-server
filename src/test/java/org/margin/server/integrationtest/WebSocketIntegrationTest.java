@@ -116,7 +116,7 @@ class WebSocketIntegrationTest {
         MessageResult result = new MessageResult(messageDTO, List.of(testUser, recipient));
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.sendMessage(any(), eq(conversation), eq("Hello integration")))
+        when(messageService.createMessage(any(), eq(conversation), eq("Hello integration")))
                 .thenReturn(result);
 
         CompletableFuture<Void> connected = new CompletableFuture<>();
@@ -147,7 +147,7 @@ class WebSocketIntegrationTest {
         Thread.sleep(300);
 
         verify(messageService, timeout(2000))
-                .sendMessage(any(), eq(conversation), eq("Hello integration"));
+                .createMessage(any(), eq(conversation), eq("Hello integration"));
         verify(webSocketDeliveryService, timeout(2000))
                 .notifyMessage(eq(messageDTO), anyList(), eq(ConversationType.DIRECT));
     }

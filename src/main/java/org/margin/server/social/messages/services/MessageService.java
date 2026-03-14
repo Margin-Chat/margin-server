@@ -9,8 +9,10 @@ import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.users.models.User;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +33,7 @@ public class MessageService {
 	}
 
 	@Transactional
-	public MessageResult sendMessage(User fromUser, Conversation conversation, String content) {
+	public MessageResult createMessage(User fromUser, Conversation conversation, String content) {
 		Message message = new Message();
 		message.setConversation(conversation);
 		message.setFromUser(fromUser);
@@ -50,21 +52,59 @@ public class MessageService {
 	}
 
 	@Transactional
+	public MessageResult editMessage(Conversation conversation, Long messageId, String  content) {
+		Message message = getMessage(messageId);
+		message.setMessage(content);
+		message.setIsEdited(true);
+		messageRepository.save(message);
+
+		List<User> recipients = conversationService.getConversationMembers(conversation.getId());
+
+		return new MessageResult(new MessageDTO(
+				message,
+				conversation.getType(),
+				connectionManager.isUserOnline(message.getFromUser().getId())),
+				recipients);
+
+	}
+
+	@Transactional
+	public MessageResult deleteMessage(Long messageId, Conversation conversation) {
+		Message message = messageRepository.findById(messageId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+		MessageDTO messageDTO = new MessageDTO(
+				message,
+				conversation.getType(),
+				connectionManager.isUserOnline(message.getFromUser().getId())
+		);
+
+		messageRepository.delete(message);
+
+		List<User> recipients = conversationService.getConversationMembers(conversation.getId());
+
+		return new MessageResult(messageDTO, recipients);
+	}
+
+	@Transactional
 	public MessageResult sendDirectMessage(User fromUser, User toUser, String content) {
 		Conversation conversation = conversationService.findOrCreateDirectConversation(fromUser, toUser);
-		return sendMessage(fromUser, conversation, content);
+		return createMessage(fromUser, conversation, content);
 	}
 
 	public List<MessageDTO> getConversationMessages(Long conversationId, int limit) {
-		List<MessageDTO> messages = messageRepository.findRecentMessages(conversationId, PageRequest.of(0, limit))
-				.stream()
-				.map(msg -> new MessageDTO(
-						msg, 
-						msg.getConversation().getType(),
-						connectionManager.isUserOnline(msg.getFromUser().getId())))
-				.collect(Collectors.toList())
-				.reversed();
 
-		return messages;
+        return messageRepository.findRecentMessages(conversationId, PageRequest.of(0, limit))
+                .stream()
+                .map(msg -> new MessageDTO(
+                        msg,
+                        msg.getConversation().getType(),
+                        connectionManager.isUserOnline(msg.getFromUser().getId())))
+                .collect(Collectors.toList())
+                .reversed();
+	}
+
+	public Message getMessage(Long messageId) {
+		return messageRepository.findById(messageId).orElseThrow();
 	}
 }

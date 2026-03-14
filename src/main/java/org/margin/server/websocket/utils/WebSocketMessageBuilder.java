@@ -46,6 +46,22 @@ public class WebSocketMessageBuilder {
         );
     }
 
+    public String editMessage(MessageDTO message) {
+        return buildMessage(
+                WebSocketMessageType.RECEIVE_EDIT_MESSAGE,
+                message.conversationId(),
+                message
+        );
+    }
+
+    public String deleteMessage(MessageDTO message) {
+        return buildMessage(
+                WebSocketMessageType.RECEIVE_DELETE_MESSAGE,
+                message.conversationId(),
+                message
+        );
+    }
+
     public String callOffer(Long callId, UserDTO caller, String sdp, String callType) {
         CallOfferPayload payload = new CallOfferPayload(callId, caller, sdp, callType);
         return buildMessage(WebSocketMessageType.CALL_OFFER, caller.id(), payload);
@@ -57,24 +73,6 @@ public class WebSocketMessageBuilder {
 
     public String callCandidate(Long recipientId, IncomingCallCandidatePayload payload) {
         return buildMessage(WebSocketMessageType.CALL_CANDIDATE, recipientId, payload);
-    }
-
-    public String screenShareOffer(Long recipientId, String sdp, String type) {
-        Map<String, String> payload = Map.of("sdp", sdp, "type", type);
-        return buildMessage(WebSocketMessageType.SCREEN_SHARE_OFFER, recipientId, payload);
-    }
-
-    public String screenShareAnswer(Long recipientId, String sdp, String type) {
-        Map<String, String> payload = Map.of("sdp", sdp, "type", type);
-        return buildMessage(WebSocketMessageType.SCREEN_SHARE_ANSWER, recipientId, payload);
-    }
-
-    public String screenShareStarted(Long recipientId) {
-        return buildMessage(WebSocketMessageType.SCREEN_SHARE_STARTED, recipientId, null);
-    }
-
-    public String screenShareStopped(Long recipientId) {
-        return buildMessage(WebSocketMessageType.SCREEN_SHARE_STOPPED, recipientId, null);
     }
 
     public String notification(Notification notification) {

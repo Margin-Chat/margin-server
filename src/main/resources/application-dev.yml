@@ -24,11 +24,17 @@ storage:
   local:
     upload-dir: ${user.home}/margin/uploads
     base-url: ${APP_BASE_URL:http://localhost:8080}/api/files
+  s3:
+    endpoint: http://localhost:9000
+    region: eu-central-1
+    bucket-name: margin-profile-pictures
+    access-key: minioadmin
+    secret-key: minioadmin
 
 jwt:
   secret: dev-secret-key-not-for-production-use-only
 
-mediasoup:
+sfu:
   url: http://localhost:3000
 
 management:
@@ -36,7 +42,6 @@ management:
     web:
       exposure:
         include: "*"
-  # This is the new 3.4 replacement for .enabled properties
   endpoint:
     health:
       access: unrestricted
@@ -44,6 +49,5 @@ management:
       access: unrestricted
     prometheus:
       access: unrestricted
-  # Separate port so it doesn't mess with your Netty chat server
   server:
     port: 9090

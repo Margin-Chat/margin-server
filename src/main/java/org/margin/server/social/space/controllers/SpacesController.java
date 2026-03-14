@@ -31,7 +31,10 @@ public class SpacesController {
 
     public SpacesController(SpacesService spacesService,
                             ConnectionManager connectionManager,
-                            MarginAuthorizationService marginAuthorizationService, UserService userService, MarginService marginService, MarginMapper marginMapper) {
+                            MarginAuthorizationService marginAuthorizationService,
+                            UserService userService,
+                            MarginService marginService,
+                            MarginMapper marginMapper) {
         this.spacesService = spacesService;
         this.connectionManager = connectionManager;
         this.marginAuthorizationService = marginAuthorizationService;
