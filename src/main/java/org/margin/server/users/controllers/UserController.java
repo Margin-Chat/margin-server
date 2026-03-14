@@ -2,7 +2,6 @@ package org.margin.server.users.controllers;
 
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.dtos.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.margin.server.users.services.UserService;
 import org.margin.server.users.models.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class UserController {
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          ConversationService conversationService, StorageService storageService) {
+                          ConversationService conversationService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
@@ -84,4 +84,17 @@ public class UserController {
     public List<UserDTO> searchForUser(@RequestParam String query) {
         return userService.searchForUser(query);
     }
+
+
+    @PatchMapping("me")
+    public UserDTO getCurrentUser(
+            @RequestParam String displayName,
+            @RequestParam String email,
+            @RequestParam MultipartFile file,
+            @AuthenticationPrincipal User user
+    ) {
+        User updatedUser = userService.updateUser(displayName, email, user, file);
+        return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
+    }
+
 }
