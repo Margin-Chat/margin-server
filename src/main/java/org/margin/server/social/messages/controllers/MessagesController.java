@@ -34,16 +34,15 @@ public class MessagesController {
     public GetConversationMessagesResponse getConversationMessagesForUser(
             @PathVariable Long otherUserId,
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false, defaultValue = "50") int limit) {
+            @RequestParam(required = false, defaultValue = "50") int limit,
+            @RequestParam(required = false) Long before) {
 
         if (otherUserId.equals(user.getId())) {
             throw new RuntimeException("Cannot get conversation with yourself");
         }
 
         Conversation conversation = conversationService.findDirectConversationBetweenUsers(
-                user.getId(),
-                otherUserId
-        );
+                user.getId(), otherUserId);
 
         if (conversation == null) {
             return new GetConversationMessagesResponse(List.of(), null);
@@ -52,8 +51,9 @@ public class MessagesController {
         if (!conversationService.isUserMember(conversation.getId(), user.getId())) {
             throw new RuntimeException("User is not a member of this conversation");
         }
+
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation.getId(), limit),
+                messageService.getConversationMessages(conversation.getId(), limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }
@@ -62,11 +62,13 @@ public class MessagesController {
     public GetConversationMessagesResponse getConversationMessagesForChannel(
             @PathVariable Long channelId,
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false, defaultValue = "50") int limit) {
+            @RequestParam(required = false, defaultValue = "50") int limit,
+            @RequestParam(required = false) Long before) {
+
         Conversation conversation = conversationService.getByChannelId(channelId);
 
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation.getId(), limit),
+                messageService.getConversationMessages(conversation.getId(), limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }

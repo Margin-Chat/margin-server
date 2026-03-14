@@ -12,6 +12,10 @@ public enum WebSocketMessageType {
     SEND_MESSAGE(String.class),
     RECEIVE_MESSAGE(String.class),
     SEND_DIRECT_MESSAGE(String.class),
+    SEND_EDIT_MESSAGE(EditMessagePayload.class),
+    RECEIVE_EDIT_MESSAGE(String.class),
+    SEND_DELETE_MESSAGE(String.class),
+    RECEIVE_DELETE_MESSAGE(String.class),
 
     // Call
     CALL_OFFER(IncomingCallOfferPayload.class),
@@ -22,11 +26,7 @@ public enum WebSocketMessageType {
     USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
     USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
 
-    // Screen share
-    SCREEN_SHARE_OFFER(IncomingCallOfferPayload.class),
-    SCREEN_SHARE_ANSWER(IncomingCallOfferPayload.class),
-    SCREEN_SHARE_STARTED(null),
-    SCREEN_SHARE_STOPPED(null),
+    // Notification
     NOTIFICATION(NotificationPayload.class);
 
     public final Class<?> payloadClass;

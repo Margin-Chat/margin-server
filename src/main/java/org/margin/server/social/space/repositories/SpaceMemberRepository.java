@@ -22,4 +22,15 @@ public interface SpaceMemberRepository extends JpaRepository<SpaceMember, Long> 
 
     @Query("SELECT sm.user FROM Channel c JOIN c.space s JOIN s.members sm WHERE c.id = :channelId")
     List<User> findSpaceMemberByChannel_Id(Long channelId);
+
+    @Query("""
+            SELECT COUNT(sm) > 0
+            FROM SpaceMember sm
+            WHERE sm.space.id =
+                (SELECT c.space.id
+                 FROM Channel c
+                 WHERE c.id = :channelId)
+            AND sm.user.id = :userId
+            """)
+    boolean existsByChannelIdAndUserId(Long userId, Long channelId);
 }

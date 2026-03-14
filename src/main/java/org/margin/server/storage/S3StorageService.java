@@ -36,6 +36,7 @@ public class S3StorageService implements StorageService {
                 .endpointOverride(URI.create(storageProperties.getS3().getEndpoint()))
                 .region(Region.of(storageProperties.getS3().getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .forcePathStyle(true)
                 .build();
     }
 

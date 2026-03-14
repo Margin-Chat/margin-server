@@ -18,7 +18,8 @@ public class AnnouncementController {
     private final AnnouncementService announcementService;
     private final MarginAuthorizationService marginAuthorizationService;
 
-    public AnnouncementController(AnnouncementService announcementService, MarginAuthorizationService marginAuthorizationService) {
+    public AnnouncementController(AnnouncementService announcementService,
+                                  MarginAuthorizationService marginAuthorizationService) {
         this.announcementService = announcementService;
         this.marginAuthorizationService = marginAuthorizationService;
     }

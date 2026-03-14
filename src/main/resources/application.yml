@@ -4,20 +4,27 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/margindb}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     hikari:
       maximum-pool-size: 50
       minimum-idle: 10
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  threads:
+    virtual:
+      enabled: true
 
   flyway:
-    clean-disabled: false
+    clean-disabled: true
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:dev-secret-key-not-for-production-use-only}
   expiration: 86400000
 
 storage:
@@ -32,5 +39,19 @@ storage:
     upload-dir: /var/margin/uploads/profile-pictures
     base-url: ${APP_BASE_URL}/api/files
 
-mediasoup:
-  url: ${MEDIASOUP_URL:http://localhost:3000}
+sfu:
+  url: ${SFU_URL:http://localhost:3000}
+  internal-api-key: ${INTERNAL_API_KEY:dev-internal-api-key-not-for-production-use-only}
+  token-secret: ${SFU_SECRET:dev-secret-sfu-key-not-for-production-use-only}
+  token-expiration: 3600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: unrestricted
+  server:
+    port: 9090
