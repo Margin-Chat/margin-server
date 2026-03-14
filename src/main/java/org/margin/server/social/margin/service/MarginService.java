@@ -153,8 +153,16 @@ public class MarginService {
                 marginMember.getJoinedAt());
     }
 
-    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO) {
+    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO, User user) {
         Margin margin = getById(marginId);
+        if (memberDTO.role().getRank() > MarginRole.ADMIN.getRank() &&
+                margin.getMembers().stream().filter(m ->
+                        m.getUser().getId().equals(memberDTO.user().id())).findFirst().orElseThrow().getRole() == MarginRole.ADMIN &&
+                margin.getMembers().stream().filter(m ->
+                        m.getRole() == MarginRole.ADMIN).count() == 1 &&
+                memberDTO.user().id().equals(user.getId()))
+        { throw new RuntimeException("At least one admin is required."); }
+
         margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(memberDTO.user().id()))
                 .findFirst()
