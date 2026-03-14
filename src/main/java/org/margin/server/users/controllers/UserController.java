@@ -1,14 +1,14 @@
 package org.margin.server.users.controllers;
 
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.*;
+import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.margin.server.users.services.UserService;
-import org.margin.server.users.models.User;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -86,15 +86,14 @@ public class UserController {
     }
 
 
-    @PatchMapping("me")
+    @PatchMapping("/update_user_info")
     public UserDTO getCurrentUser(
-            @RequestParam String displayName,
-            @RequestParam String email,
-            @RequestParam MultipartFile file,
+            @RequestParam(required = false) String displayName,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) MultipartFile file,
             @AuthenticationPrincipal User user
     ) {
         User updatedUser = userService.updateUser(displayName, email, user, file);
         return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
     }
-
 }
