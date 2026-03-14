@@ -34,7 +34,7 @@ storage:
 jwt:
   secret: dev-secret-key-not-for-production-use-only
 
-mediasoup:
+sfu:
   url: http://localhost:3000
 
 management:

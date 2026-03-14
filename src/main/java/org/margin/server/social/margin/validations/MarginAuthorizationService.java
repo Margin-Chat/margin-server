@@ -1,16 +1,21 @@
 package org.margin.server.social.margin.validations;
 
+import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
+import org.margin.server.social.space.repositories.SpacesRepository;
+import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -21,11 +26,15 @@ public class MarginAuthorizationService {
 
     private final MarginService marginService;
     private final SpaceMemberRepository spaceMemberRepository;
+    private final ChannelRepository channelRepository;
+    private final SpacesRepository spacesRepository;
 
     public MarginAuthorizationService(MarginService marginService,
-                                      SpaceMemberRepository spaceMemberRepository) {
+                                      SpaceMemberRepository spaceMemberRepository, ChannelRepository channelRepository, SpacesRepository spacesRepository) {
         this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
+        this.channelRepository = channelRepository;
+        this.spacesRepository = spacesRepository;
     }
 
     public void requireMarginMember(Long userId, Long marginId) {
@@ -60,6 +69,12 @@ public class MarginAuthorizationService {
         if (!SPACE_ADMIN_ROLES.contains(spaceMember.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Space admin role required");
+        }
+    }
+
+    public void requireChannelMembership(Long userId, Long channelId) {
+        if (!spaceMemberRepository.existsByChannelIdAndUserId(userId, channelId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User does not have access to the channel");
         }
     }
 }
