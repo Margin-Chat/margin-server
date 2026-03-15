@@ -2,8 +2,10 @@ package org.margin.server.social.margin.service;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.notifications.NotificationType;
+import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
+import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
@@ -12,18 +14,22 @@ import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.models.Visibility;
-import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +42,8 @@ public class MarginService {
     private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
+    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final NotificationService notificationService;
 
     public MarginService(MarginRepository marginRepository,
                          StorageService storageService,
@@ -43,7 +51,7 @@ public class MarginService {
                          ConnectionManager connectionManager,
                          UserService userService,
                          SpacesService spacesService,
-                         MarginMapper marginMapper) {
+                         MarginMapper marginMapper, WebSocketDeliveryService webSocketDeliveryService, NotificationService notificationService) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
@@ -51,6 +59,8 @@ public class MarginService {
         this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
+        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.notificationService = notificationService;
     }
 
     public Margin getById(Long marginId) {
@@ -78,7 +88,7 @@ public class MarginService {
 
         log.info("Created new Margin with id {}", margin.getId());
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN);
+        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user);
 
         log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
 
@@ -107,13 +117,13 @@ public class MarginService {
     }
 
     @Transactional
-    public MarginMember addUserToMargin(Long marginId, Long userId, MarginRole role) {
+    public MarginMember addUserToMargin(Long marginId, Long userId, MarginRole role, User addingUser) {
         Margin margin = marginRepository.findById(marginId)
                 .orElseThrow(() -> new MarginNotFoundException(marginId));
 
         User user = userService.getById(userId);
 
-        return margin.getMembers().stream()
+        MarginMember marginMember = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(user.getId()))
                 .findFirst()
                 .orElseGet(() -> {
@@ -125,6 +135,15 @@ public class MarginService {
                     margin.getMembers().add(member);
                     return marginMemberRepository.save(member);
                 });
+
+        webSocketDeliveryService.notifyUserAddedToMargin(user.getId(), marginMapper.marginToDto(margin));
+        notificationService.createForUsers(
+                Collections.singletonList(user),
+                addingUser,
+                NotificationType.ADDED_TO_MARGIN,
+                null,
+                marginId);
+        return marginMember;
     }
 
     public Margin updateMargin(UpdateMarginDTO updateMarginDTO, MultipartFile icon) {

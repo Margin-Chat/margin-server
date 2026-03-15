@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
@@ -127,6 +128,11 @@ public class WebSocketDeliveryService {
                 connectionManager.sendToUser(member.getId(), json);
             }
         }
+    }
+
+    public void notifyUserAddedToMargin(Long userId, MarginDTO marginDTO) {
+        String json = messageBuilder.buildMessage(WebSocketMessageType.USER_ADDED_TO_MARGIN, userId, marginDTO);
+        connectionManager.sendToUser(userId, json);
     }
 
     private void sendMessageToUsers(List<User> recipients, ConversationType conversationType, String json) {
