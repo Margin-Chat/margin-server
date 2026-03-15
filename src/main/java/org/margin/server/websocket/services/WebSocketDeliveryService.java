@@ -65,7 +65,7 @@ public class WebSocketDeliveryService {
         String json = messageBuilder.buildMessage(
                 WebSocketMessageType.RECEIVE_DELETE_MESSAGE,
                 messageResult.message().conversationId(),
-                messageResult
+                messageResult.message()
         );
         sendMessageToUsers(messageResult.recipients(), messageResult.message().conversationType(), json);
     }

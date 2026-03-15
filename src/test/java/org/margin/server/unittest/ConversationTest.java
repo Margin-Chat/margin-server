@@ -4,17 +4,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.dtos.ConversationDTO;
+import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
+import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.messages.models.dtos.ConversationDTO;
-import org.margin.server.social.messages.models.dtos.DirectConversationDTO;
-import org.margin.server.social.messages.models.dtos.GroupConversationDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,10 +29,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ConversationServiceTest {
 
-    @Mock private ConversationRepository conversationRepository;
-    @Mock private ConversationMemberRepository conversationMemberRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private ConnectionManager connectionManager;
+    @Mock
+    private ConversationRepository conversationRepository;
+    @Mock
+    private ConversationMemberRepository conversationMemberRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private ConnectionManager connectionManager;
 
     private ConversationService conversationService;
 

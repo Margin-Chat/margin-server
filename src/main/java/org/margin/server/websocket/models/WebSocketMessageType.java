@@ -11,7 +11,6 @@ public enum WebSocketMessageType {
     // Message
     SEND_MESSAGE(String.class),
     RECEIVE_MESSAGE(String.class),
-    SEND_DIRECT_MESSAGE(String.class),
     SEND_EDIT_MESSAGE(EditMessagePayload.class),
     RECEIVE_EDIT_MESSAGE(String.class),
     SEND_DELETE_MESSAGE(String.class),

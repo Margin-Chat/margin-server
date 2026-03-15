@@ -1,11 +1,12 @@
-package org.margin.server.social.messages.controllers;
+package org.margin.server.social.conversation.controllers;
 
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.messages.models.dtos.*;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,15 +15,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-public class MessagesController {
+public class ConversationController {
 
     private final MessageService messageService;
     private final ConversationService conversationService;
+    private final UserService userService;
 
-    public MessagesController(MessageService messageService,
-                              ConversationService conversationService) {
+    public ConversationController(MessageService messageService,
+                                  ConversationService conversationService, UserService userService) {
         this.messageService = messageService;
         this.conversationService = conversationService;
+        this.userService = userService;
     }
 
     @GetMapping("/conversations")
@@ -71,6 +74,21 @@ public class MessagesController {
                 messageService.getConversationMessages(conversation.getId(), limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
+    }
+
+    @PostMapping("/conversations/create_private")
+    public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
+                                                       @AuthenticationPrincipal User user) {
+        User recipientUser = userService.getById(request.recipientUserId());
+        Conversation directConversation =
+                conversationService.createDirectConversation(user, recipientUser);
+
+        messageService.sendMessage(
+                user,
+                request.encryptedContent(),
+                directConversation
+        );
+        return conversationService.getConversationDTO(directConversation, user.getId());
     }
 
     @PostMapping("/conversations/group")

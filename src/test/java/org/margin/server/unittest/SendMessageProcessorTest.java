@@ -2,12 +2,10 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.messages.models.dtos.MessageDTO;
-import org.margin.server.social.messages.models.dtos.MessageResult;
+import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
@@ -18,11 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,7 +30,7 @@ class SendMessageProcessorTest {
     private MessageService messageService;
 
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
+    private ConversationValidationService conversationValidationService;
 
     @InjectMocks
     private SendMessageProcessor processor;
@@ -48,14 +43,10 @@ class SendMessageProcessorTest {
     @Test
     void process_savesMessageAndNotifiesRecipients() {
         User sender = createUser(1L, "sender");
-        User recipient = createUser(2L, "recipient");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
         conversation.setType(ConversationType.DIRECT);
-
-        MessageDTO messageDTO = mock(MessageDTO.class);
-        MessageResult result = new MessageResult(messageDTO, List.of(sender, recipient));
 
         WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
         message.setType(WebSocketMessageType.SEND_MESSAGE);
@@ -63,14 +54,12 @@ class SendMessageProcessorTest {
         message.setPayload("Hello");
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.createMessage(eq(sender), eq(conversation), eq("Hello")))
-                .thenReturn(result);
+        doNothing().when(messageService).sendMessage(sender, "Hello", conversation);
 
         processor.process(sender, message);
 
         verify(conversationService).getById(10L);
-        verify(messageService).createMessage(sender, conversation, "Hello");
-        verify(webSocketDeliveryService).notifyMessage(messageDTO, List.of(sender, recipient), ConversationType.DIRECT);
+        verify(messageService).sendMessage(sender, "Hello", conversation);
     }
 
     @Test
@@ -82,49 +71,18 @@ class SendMessageProcessorTest {
         conversation.setType(ConversationType.GROUP);
 
         String payload = "Test message content";
-        MessageDTO messageDTO = mock(MessageDTO.class);
-        MessageResult result = new MessageResult(messageDTO, List.of(sender));
 
         WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
         message.setRecipientId(10L);
         message.setPayload(payload);
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.createMessage(any(), any(), any())).thenReturn(result);
 
         processor.process(sender, message);
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).createMessage(eq(sender), eq(conversation), payloadCaptor.capture());
+        verify(messageService).sendMessage(eq(sender), payloadCaptor.capture(), eq(conversation));
         assertEquals(payload, payloadCaptor.getValue());
-    }
-
-    @Test
-    void process_notifiesAllRecipients() {
-        User sender = createUser(1L, "sender");
-        User recipient1 = createUser(2L, "recipient1");
-        User recipient2 = createUser(3L, "recipient2");
-        List<User> recipients = List.of(sender, recipient1, recipient2);
-
-        Conversation conversation = new Conversation();
-        conversation.setId(10L);
-        conversation.setType(ConversationType.GROUP);
-
-        MessageDTO messageDTO = mock(MessageDTO.class);
-        MessageResult result = new MessageResult(messageDTO, recipients);
-
-        WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
-        message.setRecipientId(10L);
-        message.setPayload("Group message");
-
-        when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.createMessage(any(), any(), any())).thenReturn(result);
-
-        processor.process(sender, message);
-
-        ArgumentCaptor<List> recipientsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(webSocketDeliveryService).notifyMessage(eq(messageDTO), recipientsCaptor.capture(), eq(ConversationType.GROUP));
-        assertEquals(3, recipientsCaptor.getValue().size());
     }
 
     @Test
@@ -139,7 +97,7 @@ class SendMessageProcessorTest {
                 .thenThrow(new RuntimeException("Conversation not found"));
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
-        verifyNoInteractions(webSocketDeliveryService);
+        verifyNoInteractions(messageService);
     }
 
     @Test
@@ -155,11 +113,9 @@ class SendMessageProcessorTest {
         message.setPayload("Hello");
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.createMessage(any(), any(), any()))
-                .thenThrow(new RuntimeException("DB error"));
+        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender, "Hello", conversation);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
-        verifyNoInteractions(webSocketDeliveryService);
     }
 
     private User createUser(Long id, String username) {

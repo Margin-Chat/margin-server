@@ -1,4 +1,4 @@
-package org.margin.server.social.messages.models.dtos;
+package org.margin.server.social.conversation.models.dtos;
 
 import java.time.LocalDateTime;
 
