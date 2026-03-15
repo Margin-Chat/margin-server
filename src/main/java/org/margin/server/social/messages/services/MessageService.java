@@ -8,6 +8,7 @@ import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,14 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ConversationService conversationService;
     private final ConnectionManager connectionManager;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     public MessageService(MessageRepository messageRepository,
-                          ConversationService conversationService, ConnectionManager connectionManager) {
+                          ConversationService conversationService, ConnectionManager connectionManager, WebSocketDeliveryService webSocketDeliveryService) {
         this.messageRepository = messageRepository;
         this.conversationService = conversationService;
         this.connectionManager = connectionManager;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Transactional
@@ -87,9 +90,13 @@ public class MessageService {
     }
 
     @Transactional
-    public MessageResult sendDirectMessage(User fromUser, User toUser, String content) {
-        Conversation conversation = conversationService.findOrCreateDirectConversation(fromUser, toUser);
-        return createMessage(fromUser, conversation, content);
+    public void sendMessage(User fromUser, String content, Conversation conversation) {
+        MessageResult result = createMessage(fromUser, conversation, content);
+        webSocketDeliveryService.notifyMessage(
+                result.message(),
+                result.recipients(),
+                result.message().conversationType()
+        );
     }
 
     public List<MessageDTO> getConversationMessages(Long conversationId, int limit, Long before) {

@@ -3,12 +3,14 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
+import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,8 +25,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WebSocketDeliveryServiceTest {
 
-    @Mock private ConnectionManager connectionManager;
-    @Mock private WebSocketMessageBuilder messageBuilder;
+    @Mock
+    private ConnectionManager connectionManager;
+    @Mock
+    private WebSocketMessageBuilder messageBuilder;
+    @Mock
+    private SpaceMemberRepository spaceMemberRepository;
 
     @InjectMocks
     private WebSocketDeliveryService webSocketDeliveryService;
@@ -56,7 +62,6 @@ class WebSocketDeliveryServiceTest {
     @Test
     @DisplayName("notifyMessage should only call sendToUser for online recipients")
     void notifyMessage_FiltersByOnlineStatus() {
-        // Arrange
         MessageDTO messageDto = createTestMessageDTO();
 
         User onlineUser = new User();
@@ -66,50 +71,46 @@ class WebSocketDeliveryServiceTest {
         offlineUser.setId(2L);
 
         String mockJson = "{\"type\":\"msg\", \"payload\":{...}}";
-        when(messageBuilder.message(messageDto)).thenReturn(mockJson);
+
+        when(messageBuilder.buildMessage(eq(WebSocketMessageType.RECEIVE_MESSAGE), eq(messageDto.conversationId()), any()))
+                .thenReturn(mockJson);
 
         when(connectionManager.isUserOnline(1L)).thenReturn(true);
         when(connectionManager.isUserOnline(2L)).thenReturn(false);
 
-        // Act
         webSocketDeliveryService.notifyMessage(messageDto, List.of(onlineUser, offlineUser), ConversationType.DIRECT);
 
-        // Assert
         verify(connectionManager, times(1)).sendToUser(1L, mockJson);
-        verify(connectionManager, never()).sendToUser(2L, mockJson);
+        verify(connectionManager, never()).sendToUser(eq(2L), any());
     }
 
     @Test
     @DisplayName("notifyUserOffline should broadcast logout event to everyone else")
     void notifyUserOffline_BroadcastsLogout() {
-        // Arrange
         User user = new User();
         user.setId(77L);
         String mockJson = "{\"type\":\"USER_LOGOUT\", \"userId\":77}";
 
-        when(messageBuilder.userActivity(any(), eq(user))).thenReturn(mockJson);
+        when(messageBuilder.buildMessage(eq(WebSocketMessageType.USER_LOGOUT), eq(77L), any()))
+                .thenReturn(mockJson);
 
-        // Act
         webSocketDeliveryService.notifyUserOffline(user);
 
-        // Assert
         verify(connectionManager).broadcast(mockJson, 77L);
     }
 
     @Test
     @DisplayName("notifyCallCreated should send call details back to the caller")
     void notifyCallCreated_SendsToCaller() {
-        // Arrange
         Long callerId = 1L;
         Long callId = 500L;
         String mockJson = "{\"callId\":500}";
 
-        when(messageBuilder.callCreated(callerId, callId)).thenReturn(mockJson);
+        when(messageBuilder.buildMessage(eq(WebSocketMessageType.CALL_CREATED), eq(callerId), any()))
+                .thenReturn(mockJson);
 
-        // Act
         webSocketDeliveryService.notifyCallCreated(callerId, callId);
 
-        // Assert
         verify(connectionManager).sendToUser(callerId, mockJson);
     }
 }

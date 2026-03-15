@@ -1,9 +1,8 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.messages.models.dtos.MessageResult;
+import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
@@ -16,14 +15,13 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<String> {
 
     private final ConversationService conversationService;
     private final MessageService messageService;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ConversationValidationService conversationValidationService;
 
     public SendMessageProcessor(ConversationService conversationService,
-                                MessageService messageService,
-                                WebSocketDeliveryService webSocketDeliveryService) {
+                                MessageService messageService, ConversationValidationService conversationValidationService) {
         this.conversationService = conversationService;
         this.messageService = messageService;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.conversationValidationService = conversationValidationService;
     }
 
     @Override
@@ -35,7 +33,7 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<String> {
     @Override
     public void process(User user, WebSocketMessageIn<String> message) {
         Conversation conversation = conversationService.getById(message.getRecipientId());
-        MessageResult result = messageService.createMessage(user, conversation, message.getPayload());
-        webSocketDeliveryService.notifyMessage(result.message(), result.recipients(), conversation.getType());
+        conversationValidationService.validateUserIsInConversation(user, conversation);
+        messageService.sendMessage(user, message.getPayload(), conversation);
     }
 }

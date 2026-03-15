@@ -1,4 +1,4 @@
-package org.margin.server.social.messages.models.dtos;
+package org.margin.server.social.conversation.models.dtos;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 })
 public sealed interface ConversationDTO permits DirectConversationDTO, GroupConversationDTO, ChannelConversationDTO {
     Long id();
+
     String type();
+
     LocalDateTime createdAt();
 }

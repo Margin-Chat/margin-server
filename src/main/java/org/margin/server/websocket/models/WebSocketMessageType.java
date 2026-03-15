@@ -1,6 +1,7 @@
 package org.margin.server.websocket.models;
 
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.websocket.models.payloads.*;
 
 public enum WebSocketMessageType {
@@ -11,7 +12,6 @@ public enum WebSocketMessageType {
     // Message
     SEND_MESSAGE(String.class),
     RECEIVE_MESSAGE(String.class),
-    SEND_DIRECT_MESSAGE(String.class),
     SEND_EDIT_MESSAGE(EditMessagePayload.class),
     RECEIVE_EDIT_MESSAGE(String.class),
     SEND_DELETE_MESSAGE(String.class),
@@ -23,11 +23,15 @@ public enum WebSocketMessageType {
     CALL_CANDIDATE(IncomingCallCandidatePayload.class),
     CALL_CREATED(null),
     CALL_END(IncomingCallEndPayload.class),
+    CALL_NO_ANSWER(String.class),
     USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
     USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
 
     // Notification
-    NOTIFICATION(NotificationPayload.class);
+    NOTIFICATION(NotificationPayload.class),
+
+    // Margin
+    USER_ADDED_TO_MARGIN(MarginDTO.class);
 
     public final Class<?> payloadClass;
 

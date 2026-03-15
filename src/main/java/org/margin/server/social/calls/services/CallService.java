@@ -2,11 +2,11 @@ package org.margin.server.social.calls.services;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.calls.exceptions.CallNotFoundException;
 import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
-import org.margin.server.social.calls.exceptions.CallNotFoundException;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
@@ -54,5 +54,15 @@ public class CallService {
         callRepository.save(call);
 
         log.debug("Call {} ended (duration: {}s)", callId, durationSeconds);
+    }
+
+    @Transactional
+    public void callNoAnswer(Long callId) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
+        call.setEndedAt(LocalDateTime.now());
+        call.setDurationSeconds(0);
+        call.setStatus(CallStatus.NO_RESPONSE);
+        callRepository.save(call);
     }
 }

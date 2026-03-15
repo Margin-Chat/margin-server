@@ -61,7 +61,7 @@ public class AnnouncementService {
                 .map(MarginMember::getUser)
                 .toList();
 
-        notificationService.createForMarginMembers(
+        notificationService.createForUsers(
                 members,
                 author,
                 NotificationType.ANNOUNCEMENT,

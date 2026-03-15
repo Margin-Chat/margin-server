@@ -29,7 +29,7 @@ public class Notification {
     @JoinColumn(nullable = true, name = "sender_id")
     private User sender;
 
-    @Column(nullable = false, name = "margin_id")
+    @Column(nullable = true, name = "margin_id")
     private Long marginId;
 
     @Enumerated(EnumType.STRING)

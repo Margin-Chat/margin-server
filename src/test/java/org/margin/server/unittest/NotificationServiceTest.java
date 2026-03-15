@@ -7,6 +7,7 @@ import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -17,24 +18,26 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
-
+    @Mock
+    private WebSocketDeliveryService webSocketDeliveryService;
     @InjectMocks
     private NotificationService notificationService;
 
     @Test
-    void createForMarginMembers_excludesSender() {
+    void createForUsers_excludesSender() {
         User sender = testUser(1L);
         User member1 = testUser(2L);
         User member2 = testUser(3L);
 
-        notificationService.createForMarginMembers(
+        notificationService.createForUsers(
                 List.of(sender, member1, member2), sender,
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
@@ -48,11 +51,11 @@ class NotificationServiceTest {
     }
 
     @Test
-    void createForMarginMembers_setsCorrectFields() {
+    void createForUsers_setsCorrectFields() {
         User sender = testUser(1L);
         User member = testUser(2L);
 
-        notificationService.createForMarginMembers(
+        notificationService.createForUsers(
                 List.of(member), sender,
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
@@ -76,7 +79,7 @@ class NotificationServiceTest {
 
         Notification n1 = unseenNotification(recipient, 10L);
         Notification n2 = unseenNotification(recipient, 10L);
-        Notification n3 = unseenNotification(recipient, 20L); // different margin
+        Notification n3 = unseenNotification(recipient, 20L);
 
         when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
                 .thenReturn(List.of(n1, n2, n3));

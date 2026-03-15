@@ -81,7 +81,7 @@ public class MarginController {
             @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
         return ResponseEntity.ok(marginService.memberToDto(
-                marginService.addUserToMargin(request.marginId(), request.userId(), request.role())
+                marginService.addUserToMargin(request.marginId(), request.userId(), request.role(), user)
         ));
     }
 

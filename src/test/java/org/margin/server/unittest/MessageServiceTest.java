@@ -2,7 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -10,9 +10,10 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +35,8 @@ class MessageServiceTest {
     private ConversationService conversationService;
     @Mock
     private ConnectionManager connectionManager;
+    @Mock
+    private WebSocketDeliveryService webSocketDeliveryService;
     @InjectMocks
     private MessageService messageService;
 
@@ -112,7 +115,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void sendDirectMessage_findsOrCreatesConversation() {
+    void sendMessage_createsAndDeliversMessage() {
         User fromUser = createUser(1L, "sender");
         User toUser = createUser(2L, "recipient");
         String content = "Direct message content";
@@ -120,19 +123,18 @@ class MessageServiceTest {
         Conversation dmConversation = createConversation(10L, ConversationType.DIRECT);
         Message savedMessage = createSavedMessage(100L, dmConversation, fromUser, content);
 
-        when(conversationService.findOrCreateDirectConversation(fromUser, toUser)).thenReturn(dmConversation);
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(dmConversation.getId())).thenReturn(Arrays.asList(fromUser, toUser));
+        when(conversationService.getConversationMembers(dmConversation.getId()))
+                .thenReturn(Arrays.asList(fromUser, toUser));
 
-        MessageResult result = messageService.sendDirectMessage(fromUser, toUser, content);
+        messageService.sendMessage(fromUser, content, dmConversation);
 
-        assertNotNull(result);
-        assertEquals(content, result.message().content());
-        assertEquals(2, result.recipients().size());
-        assertTrue(result.recipients().contains(fromUser));
-        assertTrue(result.recipients().contains(toUser));
-        verify(conversationService).findOrCreateDirectConversation(fromUser, toUser);
         verify(messageRepository).save(any(Message.class));
+        verify(webSocketDeliveryService).notifyMessage(
+                argThat(msg -> msg.content().equals(content)),
+                argThat(recipients -> recipients.contains(toUser)),
+                eq(ConversationType.DIRECT)
+        );
     }
 
     @Test

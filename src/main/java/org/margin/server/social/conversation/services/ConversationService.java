@@ -1,17 +1,17 @@
 package org.margin.server.social.conversation.services;
 
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.social.messages.models.dtos.*;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -107,12 +107,6 @@ public class ConversationService {
     }
 
     @Transactional
-    public Conversation findOrCreateDirectConversation(User user1, User user2) {
-        return conversationRepository.findDirectConversationBetweenUsers(user1.getId(), user2.getId())
-                .orElseGet(() -> createDirectConversation(user1, user2));
-    }
-
-    @Transactional
     public Conversation createGroupConversation(User creator, List<Long> memberUserIds, String name) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.GROUP);
@@ -179,14 +173,14 @@ public class ConversationService {
                 .orElseThrow(() -> new RuntimeException("No conversation found for channel: " + channelId));
     }
 
-    private Conversation createDirectConversation(User user1, User user2) {
+    public Conversation createDirectConversation(User fromUser, User toUser) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.DIRECT);
         conversation.setCreatedAt(LocalDateTime.now());
         conversation = conversationRepository.save(conversation);
 
-        addMemberInternal(conversation, user1);
-        addMemberInternal(conversation, user2);
+        addMemberInternal(conversation, fromUser);
+        addMemberInternal(conversation, toUser);
 
         return conversation;
     }
