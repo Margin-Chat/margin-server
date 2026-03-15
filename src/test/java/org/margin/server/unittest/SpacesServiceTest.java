@@ -4,9 +4,9 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.MarginMember;
@@ -38,14 +38,22 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SpacesServiceTest {
 
-    @Mock private SpacesRepository spacesRepository;
-    @Mock private SpaceMemberRepository spaceMemberRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private ChannelRepository channelRepository;
-    @Mock private ConversationMemberRepository conversationMemberRepository;
-    @Mock private ChannelService channelService;
-    @Mock private EntityManager entityManager;
-    @Mock private MarginMemberRepository marginMemberRepository;
+    @Mock
+    private SpacesRepository spacesRepository;
+    @Mock
+    private SpaceMemberRepository spaceMemberRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private ChannelRepository channelRepository;
+    @Mock
+    private ConversationMemberRepository conversationMemberRepository;
+    @Mock
+    private ChannelService channelService;
+    @Mock
+    private EntityManager entityManager;
+    @Mock
+    private MarginMemberRepository marginMemberRepository;
 
     @InjectMocks
     private SpacesService spacesService;
@@ -89,13 +97,13 @@ class SpacesServiceTest {
 
     @Test
     @DisplayName("createNewSpace should create space, add creator as ADMIN, and create General Chat channel")
-
     void createNewSpace_Success() {
         CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
         UserDTO userDTO = testUserDTO(1L);
         User user = testUser(1L);
-        Margin margin = testMargin(user);
 
+        Margin margin = testMargin(user);
+        margin.setId(5L);
 
         when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.empty());
         when(spacesRepository.save(any(Space.class))).thenAnswer(i -> {
@@ -105,8 +113,6 @@ class SpacesServiceTest {
             return s;
         });
 
-        // addNewSpaceMemberToSpace does a findById on user and space
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(spacesRepository.findById(10L)).thenAnswer(i -> {
             Space s = new Space();
             s.setId(10L);
@@ -114,6 +120,11 @@ class SpacesServiceTest {
             s.setChannels(new ArrayList<>());
             return Optional.of(s);
         });
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(1L, 5L)).thenReturn(true);
+
         when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any())).thenReturn(false);
         when(spaceMemberRepository.save(any(SpaceMember.class))).thenAnswer(i -> i.getArgument(0));
 

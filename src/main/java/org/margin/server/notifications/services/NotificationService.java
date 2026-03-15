@@ -1,6 +1,5 @@
 package org.margin.server.notifications.services;
 
-import lombok.RequiredArgsConstructor;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
@@ -26,8 +25,8 @@ public class NotificationService {
     }
 
     @Transactional
-    public void createForMarginMembers(List<User> members, User sender, NotificationType type,
-                                       Long referenceId, Long marginId) {
+    public void createForUsers(List<User> members, User sender, NotificationType type,
+                               Long referenceId, Long marginId) {
         List<Notification> notifications = members.stream()
                 .filter(member -> !member.getId().equals(sender.getId()))
                 .map(member -> {
@@ -49,6 +48,11 @@ public class NotificationService {
     }
 
     @Transactional
+    public void createForUsers(List<User> members, User sender, NotificationType type, Long referenceId) {
+        createForUsers(members, sender, type, referenceId, null);
+    }
+
+    @Transactional
     public void markSeenForMargin(Long recipientId, Long marginId) {
         List<Notification> unseen = notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
                 .stream()
@@ -67,5 +71,10 @@ public class NotificationService {
         return notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
                 .stream()
                 .collect(Collectors.groupingBy(Notification::getMarginId, Collectors.counting()));
+    }
+
+    @Transactional
+    public void markSeenByReference(Long userId, Long referenceId) {
+        notificationRepository.markSeenByReference(userId, referenceId);
     }
 }

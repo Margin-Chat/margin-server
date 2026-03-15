@@ -1,6 +1,5 @@
 package org.margin.server.notifications.controllers;
 
-import lombok.RequiredArgsConstructor;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
@@ -25,16 +24,27 @@ public class NotificationController {
         return notificationService.getNotificationsForUser(user.getId());
     }
 
-    @GetMapping("/unseen-counts")
+    @GetMapping("/unseen_counts")
     public Map<Long, Long> getUnseenCounts(@AuthenticationPrincipal User user) {
         return notificationService.getUnseenCountsPerMargin(user.getId());
     }
 
-    @PostMapping("/mark-seen")
+    @PostMapping("/mark_seen")
     public void markSeen(@AuthenticationPrincipal User user,
                          @RequestBody MarkSeenRequest request) {
         notificationService.markSeenForMargin(user.getId(), request.marginId());
     }
 
-    public record MarkSeenRequest(Long marginId) {}
+    @PostMapping("/mark_seen_by_reference")
+    public void markSeenByReference(@AuthenticationPrincipal User user,
+                                    @RequestBody MarkSeenByReferenceRequest request) {
+        notificationService.markSeenByReference(user.getId(), request.referenceId());
+    }
+
+    public record MarkSeenRequest(Long marginId) {
+    }
+
+    public record MarkSeenByReferenceRequest(Long referenceId) {
+    }
+
 }
