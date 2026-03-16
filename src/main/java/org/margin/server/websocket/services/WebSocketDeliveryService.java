@@ -117,6 +117,11 @@ public class WebSocketDeliveryService {
         connectionManager.sendToUser(callerId, json);
     }
 
+    public void notifyCallNoAnswer(User recepientUser) {
+        String json = messageBuilder.buildMessage(WebSocketMessageType.CALL_NO_ANSWER, recepientUser.getId(), null);
+        connectionManager.sendToUser(recepientUser.getId(), json);
+    }
+
     public void notifySpaceMembersByChannelId(Long channelId,
                                               WebSocketMessageType type,
                                               ChannelVoiceParticipantPayload payload) {

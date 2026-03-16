@@ -7,6 +7,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -16,13 +17,15 @@ public class CallNoAnswerProcessor implements WebSocketMessageProcessor<String> 
     private final CallService callService;
     private final NotificationService notificationService;
     private final UserService userService;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     public CallNoAnswerProcessor(CallService callService,
                                  NotificationService notificationService,
-                                 UserService userService) {
+                                 UserService userService, WebSocketDeliveryService webSocketDeliveryService) {
         this.callService = callService;
         this.notificationService = notificationService;
         this.userService = userService;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Override
@@ -41,5 +44,6 @@ public class CallNoAnswerProcessor implements WebSocketMessageProcessor<String> 
                 user,
                 NotificationType.MISSED_CALL,
                 callId);
+        webSocketDeliveryService.notifyCallNoAnswer(recepientUser);
     }
 }

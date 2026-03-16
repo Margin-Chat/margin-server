@@ -1,5 +1,6 @@
 package org.margin.server.exceptions;
 
+import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -28,6 +29,13 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleGeneric(Exception ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         detail.setDetail("An unexpected error occurred");
+        return detail;
+    }
+
+    @ExceptionHandler(CallValidationException.class)
+    public ProblemDetail handleCallValidation(CallValidationException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        detail.setDetail(ex.getMessage());
         return detail;
     }
 }

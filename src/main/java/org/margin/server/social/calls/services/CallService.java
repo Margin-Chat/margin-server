@@ -34,9 +34,7 @@ public class CallService {
 
     @Transactional
     public void updateCallStatus(Long callId, CallStatus status) {
-        Call call = callRepository.findById(callId)
-                .orElseThrow(() -> new CallNotFoundException(callId));
-
+        Call call = getById(callId);
         call.setStatus(status);
         callRepository.save(call);
 
@@ -44,25 +42,38 @@ public class CallService {
     }
 
     @Transactional
-    public void endCall(Long callId, Integer durationSeconds) {
-        Call call = callRepository.findById(callId)
-                .orElseThrow(() -> new CallNotFoundException(callId));
-
+    public void endCall(Call call, Integer durationSeconds) {
         call.setStatus(CallStatus.ENDED);
         call.setEndedAt(LocalDateTime.now());
         call.setDurationSeconds(durationSeconds);
         callRepository.save(call);
 
-        log.debug("Call {} ended (duration: {}s)", callId, durationSeconds);
+        log.debug("Call {} ended (duration: {}s)", call.getId(), durationSeconds);
     }
 
     @Transactional
     public void callNoAnswer(Long callId) {
-        Call call = callRepository.findById(callId)
-                .orElseThrow(() -> new CallNotFoundException(callId));
+        Call call = getById(callId);
         call.setEndedAt(LocalDateTime.now());
         call.setDurationSeconds(0);
         call.setStatus(CallStatus.NO_RESPONSE);
         callRepository.save(call);
+
+        log.debug("Call {} wasn't answered", callId);
+    }
+
+    public void rejectCall(Long callId) {
+        Call call = getById(callId);
+        call.setStatus(CallStatus.REJECTED);
+        call.setEndedAt(LocalDateTime.now());
+        call.setDurationSeconds(0);
+        callRepository.save(call);
+
+        log.debug("Call {} was rejected", callId);
+    }
+
+    public Call getById(Long callId) {
+        return callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
     }
 }

@@ -24,6 +24,7 @@ public enum WebSocketMessageType {
     CALL_CREATED(null),
     CALL_END(IncomingCallEndPayload.class),
     CALL_NO_ANSWER(String.class),
+    CALL_REJECTED(String.class),
     USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
     USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
 
