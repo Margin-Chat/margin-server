@@ -4,25 +4,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.messages.models.dtos.MessageDTO;
-import org.margin.server.social.messages.models.dtos.MessageResult;
+import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
-import org.springframework.boot.test.context.SpringBootTest;
-
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,10 +36,16 @@ class WebSocketIntegrationTest {
     @MockitoBean
     private JwtService jwtService;
 
-    @MockitoBean private ConversationService conversationService;
-    @MockitoBean private MessageService messageService;
-    @MockitoBean private WebSocketDeliveryService webSocketDeliveryService;
-    @Autowired private ConnectionManager connectionManager;
+    @MockitoBean
+    private ConversationService conversationService;
+    @MockitoBean
+    private MessageService messageService;
+    @MockitoBean
+    private WebSocketDeliveryService webSocketDeliveryService;
+    @MockitoBean
+    private ConversationValidationService conversationValidationService;
+    @Autowired
+    private ConnectionManager connectionManager;
 
     private static final int WS_PORT = 8081;
     private static final String TEST_TOKEN = "test-token";
@@ -108,16 +111,7 @@ class WebSocketIntegrationTest {
         conversation.setId(10L);
         conversation.setType(ConversationType.DIRECT);
 
-        User recipient = new User();
-        recipient.setId(2L);
-        recipient.setUsername("recipient");
-
-        MessageDTO messageDTO = mock(MessageDTO.class);
-        MessageResult result = new MessageResult(messageDTO, List.of(testUser, recipient));
-
         when(conversationService.getById(10L)).thenReturn(conversation);
-        when(messageService.createMessage(any(), eq(conversation), eq("Hello integration")))
-                .thenReturn(result);
 
         CompletableFuture<Void> connected = new CompletableFuture<>();
 
@@ -147,9 +141,7 @@ class WebSocketIntegrationTest {
         Thread.sleep(300);
 
         verify(messageService, timeout(2000))
-                .createMessage(any(), eq(conversation), eq("Hello integration"));
-        verify(webSocketDeliveryService, timeout(2000))
-                .notifyMessage(eq(messageDTO), anyList(), eq(ConversationType.DIRECT));
+                .sendMessage(any(), eq("Hello integration"), eq(conversation));
     }
 
     @Test
@@ -187,7 +179,8 @@ class WebSocketIntegrationTest {
                 HttpClient.newHttpClient()
                         .newWebSocketBuilder()
                         .buildAsync(URI.create("ws://localhost:" + WS_PORT + "/ws?token=bad-token"),
-                                new WebSocket.Listener() {})
+                                new WebSocket.Listener() {
+                                })
                         .get(5, TimeUnit.SECONDS)
         );
     }

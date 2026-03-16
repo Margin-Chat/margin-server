@@ -1,9 +1,9 @@
 package org.margin.server.social.space.repositories;
 
+import org.margin.server.social.space.models.Space;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-import org.margin.server.social.space.models.Space;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,13 +17,14 @@ public interface SpacesRepository extends JpaRepository<Space, Long> {
     Optional<Space> getSpaceByName(String spaceName, Long marginId);
 
     @Query("""
-            SELECT sp
-            FROM Space sp
-            JOIN SpaceMember spm
-                ON spm.user.id = :userId
-            WHERE spm MEMBER OF sp.members
-    """)
-    List<Space> findByUser(Long userId);
+                    SELECT sp
+                    FROM Space sp
+                    JOIN SpaceMember spm
+                        ON spm.user.id = :userId
+                    WHERE spm MEMBER OF sp.members
+                    AND sp.margin.id = :marginId
+            """)
+    List<Space> findByUserAndMargin(Long userId, Long marginId);
 
     List<Space> findByMargin_Id(Long marginId);
 }

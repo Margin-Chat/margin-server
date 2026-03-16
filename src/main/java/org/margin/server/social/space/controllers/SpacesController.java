@@ -1,6 +1,5 @@
 package org.margin.server.social.space.controllers;
 
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
@@ -8,13 +7,14 @@ import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.margin.server.social.space.services.SpacesService;
 
 import java.util.List;
 
@@ -51,9 +51,9 @@ public class SpacesController {
                 .toList();
     }
 
-    @GetMapping("get_all_spaces_for_user")
-    public List<SpaceDTO> getAllSpacesForUser(@AuthenticationPrincipal User user) {
-        return spacesService.getSpacesForUser(user).stream()
+    @GetMapping("get_all_spaces_for_user/{marginId}")
+    public List<SpaceDTO> getAllSpacesForUser(@AuthenticationPrincipal User user, @PathVariable Long marginId) {
+        return spacesService.getSpacesForUserInMargin(user, marginId).stream()
                 .map(marginMapper::spaceToDto)
                 .toList();
     }

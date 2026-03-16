@@ -88,7 +88,7 @@ public class MarginService {
 
         log.info("Created new Margin with id {}", margin.getId());
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user);
+        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
 
         log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
 
@@ -117,7 +117,11 @@ public class MarginService {
     }
 
     @Transactional
-    public MarginMember addUserToMargin(Long marginId, Long userId, MarginRole role, User addingUser) {
+    public MarginMember addUserToMargin(Long marginId,
+                                        Long userId,
+                                        MarginRole role,
+                                        User addingUser,
+                                        boolean isNewlyCreated) {
         Margin margin = marginRepository.findById(marginId)
                 .orElseThrow(() -> new MarginNotFoundException(marginId));
 
@@ -135,6 +139,10 @@ public class MarginService {
                     margin.getMembers().add(member);
                     return marginMemberRepository.save(member);
                 });
+
+        if (isNewlyCreated) {
+            return marginMember;
+        }
 
         webSocketDeliveryService.notifyUserAddedToMargin(user.getId(), marginMapper.marginToDto(margin));
         notificationService.createForUsers(

@@ -36,6 +36,8 @@ jwt:
 
 sfu:
   url: http://localhost:3000
+  internal-api-key: ${INTERNAL_API_KEY:dev-internal-api-key-not-for-production-use-only}
+  token-secret: ${SFU_SECRET:dev-secret-sfu-key-not-for-production-use-only}
 
 management:
   endpoints:

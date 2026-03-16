@@ -2,15 +2,18 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.models.Visibility;
+import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
+import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
+import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -40,6 +43,12 @@ class MarginServiceTest {
     private SpacesService spacesService;
     @Mock
     private UserService userService;
+    @Mock
+    private MarginMapper marginMapper;
+    @Mock
+    private WebSocketDeliveryService webSocketDeliveryService;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private MarginService marginService;
@@ -64,6 +73,7 @@ class MarginServiceTest {
             m.setMembers(new ArrayList<>());
             return Optional.of(m);
         });
+        when(userService.getById(1L)).thenReturn(testUser());
     }
 
     @Test

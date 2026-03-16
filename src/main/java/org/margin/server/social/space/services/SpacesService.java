@@ -4,9 +4,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
@@ -15,20 +15,20 @@ import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
 import org.margin.server.social.space.exceptions.UserNotInMargin;
+import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
+import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.margin.server.social.space.models.Space;
-import org.margin.server.social.space.repositories.SpacesRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -75,8 +75,8 @@ public class SpacesService {
                 .toList();
     }
 
-    public List<Space> getSpacesForUser(User user) {
-        return spacesRepository.findByUser(user.getId());
+    public List<Space> getSpacesForUserInMargin(User user, Long marginId) {
+        return spacesRepository.findByUserAndMargin(user.getId(), marginId);
     }
 
     public List<Space> getSpacesForMargin(Long marginId) {
