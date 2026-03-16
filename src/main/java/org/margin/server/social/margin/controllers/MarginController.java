@@ -90,7 +90,7 @@ public class MarginController {
             @RequestBody UpdateMemberRoleRequest request,
             @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
-        return ResponseEntity.ok(marginService.updateMarginMemberRole(request.marginId(), request.member()));
+        return ResponseEntity.ok(marginService.updateMarginMemberRole(request.marginId(), request.member(), user));
     }
 
     @PostMapping("/remove_margin_member")

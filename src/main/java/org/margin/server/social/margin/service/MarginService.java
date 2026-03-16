@@ -180,12 +180,27 @@ public class MarginService {
                 marginMember.getJoinedAt());
     }
 
-    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO) {
+    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO, User user) {
         Margin margin = getById(marginId);
-        margin.getMembers().stream()
+        List<MarginMember> members = margin.getMembers();
+
+        Optional<MarginMember> marginMember = members.stream()
                 .filter(m -> m.getUser().getId().equals(memberDTO.user().id()))
-                .findFirst()
-                .ifPresent(m -> m.setRole(memberDTO.role()));
+                .findFirst();
+
+        if (marginMember.isEmpty()) {
+            throw new MarginNotFoundException(marginId);
+        }
+
+        if (marginMember.get().getRole().equals(MarginRole.ADMIN)) {
+            members.stream()
+                    .filter(m -> !m.getUser().getId().equals(memberDTO.user().id()))
+                    .filter(m -> m.getRole().equals(MarginRole.ADMIN))
+                    .findAny()
+                    .orElseThrow(() -> new RuntimeException("At least one admin required."));
+        }
+
+        marginMember.get().setRole(memberDTO.role());
         marginRepository.save(margin);
         return memberDTO;
     }
