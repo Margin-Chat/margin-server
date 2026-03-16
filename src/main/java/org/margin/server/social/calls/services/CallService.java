@@ -52,14 +52,13 @@ public class CallService {
     }
 
     @Transactional
-    public void callNoAnswer(Long callId) {
-        Call call = getById(callId);
+    public void callNoAnswer(Call call) {
         call.setEndedAt(LocalDateTime.now());
         call.setDurationSeconds(0);
         call.setStatus(CallStatus.NO_RESPONSE);
         callRepository.save(call);
 
-        log.debug("Call {} wasn't answered", callId);
+        log.debug("Call {} wasn't answered", call.getId());
     }
 
     public void rejectCall(Long callId) {
