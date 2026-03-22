@@ -3,8 +3,10 @@ package org.margin.server.notifications.controllers;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -31,20 +33,11 @@ public class NotificationController {
 
     @PostMapping("/mark_seen")
     public void markSeen(@AuthenticationPrincipal User user,
-                         @RequestBody MarkSeenRequest request) {
-        notificationService.markSeenForMargin(user.getId(), request.marginId());
+                         @RequestBody Long notificationId) {
+        Notification notification = notificationService.getNotification(notificationId);
+        if (!notification.getRecipient().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        notificationService.markNotificationAsSeen(notification);
     }
-
-    @PostMapping("/mark_seen_by_reference")
-    public void markSeenByReference(@AuthenticationPrincipal User user,
-                                    @RequestBody MarkSeenByReferenceRequest request) {
-        notificationService.markSeenByReference(user.getId(), request.referenceId());
-    }
-
-    public record MarkSeenRequest(Long marginId) {
-    }
-
-    public record MarkSeenByReferenceRequest(Long referenceId) {
-    }
-
 }

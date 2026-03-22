@@ -12,6 +12,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.models.payloads.CallMediaStatePayload;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
 import org.margin.server.websocket.models.payloads.CallSessionDescription;
@@ -120,6 +121,11 @@ public class WebSocketDeliveryService {
     public void notifyCallNoAnswer(User recepientUser) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.CALL_NO_ANSWER, recepientUser.getId(), null);
         connectionManager.sendToUser(recepientUser.getId(), json);
+    }
+
+    public void notifyCallMediaState(Long recipientId, CallMediaStatePayload payload) {
+        String json = messageBuilder.buildMessage(WebSocketMessageType.CALL_MEDIA_STATE, recipientId, payload);
+        connectionManager.sendToUser(recipientId, json);
     }
 
     public void notifySpaceMembersByChannelId(Long channelId,

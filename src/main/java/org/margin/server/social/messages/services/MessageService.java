@@ -50,7 +50,8 @@ public class MessageService {
         return new MessageResult(new MessageDTO(
                 message,
                 conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId())),
+                connectionManager.isUserOnline(message.getFromUser().getId()),
+                getMarginId(conversation)),
                 recipients);
     }
 
@@ -66,7 +67,8 @@ public class MessageService {
         return new MessageResult(new MessageDTO(
                 message,
                 conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId())),
+                connectionManager.isUserOnline(message.getFromUser().getId()),
+                getMarginId(conversation)),
                 recipients);
 
     }
@@ -79,7 +81,8 @@ public class MessageService {
         MessageDTO messageDTO = new MessageDTO(
                 message,
                 conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId())
+                connectionManager.isUserOnline(message.getFromUser().getId()),
+                getMarginId(conversation)
         );
 
         messageRepository.delete(message);
@@ -99,14 +102,18 @@ public class MessageService {
         );
     }
 
-    public List<MessageDTO> getConversationMessages(Long conversationId, int limit, Long before) {
+    @Transactional(readOnly = true)
+    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
         List<Message> messages = before != null
-                ? messageRepository.findMessagesBefore(conversationId, before, PageRequest.of(0, limit))
-                : messageRepository.findRecentMessages(conversationId, PageRequest.of(0, limit));
+                ? messageRepository.findMessagesBefore(conversation.getId(), before, PageRequest.of(0, limit))
+                : messageRepository.findRecentMessages(conversation.getId(), PageRequest.of(0, limit));
 
         return messages.stream()
-                .map(msg -> new MessageDTO(msg, msg.getConversation().getType(),
-                        connectionManager.isUserOnline(msg.getFromUser().getId())))
+                .map(msg -> new MessageDTO(
+                        msg,
+                        msg.getConversation().getType(),
+                        connectionManager.isUserOnline(msg.getFromUser().getId()),
+                        getMarginId(conversation)))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), l -> {
                     java.util.Collections.reverse(l);
                     return l;
@@ -115,5 +122,10 @@ public class MessageService {
 
     public Message getMessage(Long messageId) {
         return messageRepository.findById(messageId).orElseThrow();
+    }
+
+    private Long getMarginId(Conversation conversation) {
+        if (conversation.getChannel() == null) return null;
+        return conversation.getChannel().getSpace().getMargin().getId();
     }
 }

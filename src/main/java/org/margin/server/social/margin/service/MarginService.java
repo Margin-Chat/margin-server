@@ -144,7 +144,6 @@ public class MarginService {
             return marginMember;
         }
 
-        webSocketDeliveryService.notifyUserAddedToMargin(user.getId(), marginMapper.marginToDto(margin));
         notificationService.createForUsers(
                 Collections.singletonList(user),
                 addingUser,

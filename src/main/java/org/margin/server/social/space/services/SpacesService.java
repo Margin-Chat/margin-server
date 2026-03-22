@@ -75,6 +75,7 @@ public class SpacesService {
                 .toList();
     }
 
+    @Transactional
     public List<Space> getSpacesForUserInMargin(User user, Long marginId) {
         return spacesRepository.findByUserAndMargin(user.getId(), marginId);
     }

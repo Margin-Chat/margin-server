@@ -57,7 +57,7 @@ class NotificationControllerTest {
 
         notificationController.markSeen(user, request);
 
-        verify(notificationService).markSeenForMargin(user.getId(), 10L);
+        verify(notificationService).markNotificationAsSeen(user.getId(), 10L, request.notificationId);
     }
 
     private User testUser(Long id) {

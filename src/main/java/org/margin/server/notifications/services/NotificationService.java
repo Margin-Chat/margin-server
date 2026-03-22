@@ -53,14 +53,9 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markSeenForMargin(Long recipientId, Long marginId) {
-        List<Notification> unseen = notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
-                .stream()
-                .filter(n -> n.getMarginId().equals(marginId))
-                .toList();
-
-        unseen.forEach(n -> n.setSeen(true));
-        notificationRepository.saveAll(unseen);
+    public void markNotificationAsSeen(Notification notification) {
+        notification.setSeen(true);
+        notificationRepository.save(notification);
     }
 
     public List<Notification> getNotificationsForUser(Long recipientId) {
@@ -70,11 +65,16 @@ public class NotificationService {
     public Map<Long, Long> getUnseenCountsPerMargin(Long recipientId) {
         return notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
                 .stream()
+                .filter(n -> n.getMarginId() != null)
                 .collect(Collectors.groupingBy(Notification::getMarginId, Collectors.counting()));
     }
 
     @Transactional
     public void markSeenByReference(Long userId, Long referenceId) {
         notificationRepository.markSeenByReference(userId, referenceId);
+    }
+
+    public Notification getNotification(Long notificationId) {
+        return notificationRepository.findById(notificationId).orElseThrow();
     }
 }

@@ -47,17 +47,19 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     boolean isUserMemberOfConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 
     @Query("""
-                SELECT 
-                    cm.conversation.id,
-                    m.fromUser.id,
-                    SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END)
-                FROM ConversationMember cm
-                LEFT JOIN Message m ON m.conversation.id = cm.conversation.id
-                WHERE cm.user.id = :userId
-                GROUP BY cm.conversation.id, m.fromUser.id
-                HAVING SUM(CASE WHEN m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) > 0
-            """)
+                 SELECT
+                     cm.conversation.id,
+                     m.fromUser.id,
+                     SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
+                     SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
+                     COALESCE(ch.space.margin.id, -1)
+                 FROM ConversationMember cm
+                 LEFT JOIN Message m ON m.conversation.id = cm.conversation.id
+                 LEFT JOIN Channel ch ON ch.conversation.id = cm.conversation.id
+                 WHERE cm.user.id = :userId
+                 GROUP BY cm.conversation.id, m.fromUser.id, ch.space.margin.id
+                 HAVING SUM(CASE WHEN m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) > 0
+            \s""")
     List<UnreadCountDTO> getUnreadMessagesCounts(@Param("userId") Long userId);
 
     List<ConversationMember> findByConversation(Conversation conversation);

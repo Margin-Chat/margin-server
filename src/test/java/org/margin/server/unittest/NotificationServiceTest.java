@@ -74,7 +74,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    void markSeenForMargin_onlyMarksCorrectMargin() {
+    void markNotificationAsSeen() {
         User recipient = testUser(1L);
 
         Notification n1 = unseenNotification(recipient, 10L);
@@ -84,7 +84,7 @@ class NotificationServiceTest {
         when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
                 .thenReturn(List.of(n1, n2, n3));
 
-        notificationService.markSeenForMargin(recipient.getId(), 10L);
+        notificationService.markNotificationAsSeen(recipient.getId(), 10L, request.notificationId);
 
         assertThat(n1.isSeen()).isTrue();
         assertThat(n2.isSeen()).isTrue();

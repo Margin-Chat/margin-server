@@ -4,6 +4,7 @@ public record UnreadCountDTO(
         Long conversationId,
         Long fromUserId,
         Long unreadDmsCount,
-        Long unreadChannelsCount
+        Long unreadChannelsCount,
+        Long marginId
 ) {
 }

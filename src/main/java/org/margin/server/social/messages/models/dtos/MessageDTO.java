@@ -13,9 +13,10 @@ public record MessageDTO(
         UserDTO user,
         String content,
         boolean isEdited,
-        Instant createdAt
+        Instant createdAt,
+        Long marginId
 ) {
-    public MessageDTO(Message message, ConversationType conversationType, boolean isUserOnline) {
+    public MessageDTO(Message message, ConversationType conversationType, boolean isUserOnline, Long marginId) {
         this(
                 message.getId(),
                 message.getConversation().getId(),
@@ -23,7 +24,8 @@ public record MessageDTO(
                 new UserDTO(message.getFromUser(), isUserOnline),
                 message.getMessage(),
                 message.getIsEdited(),
-                message.getCreatedAt().toInstant(java.time.ZoneOffset.UTC)
+                message.getCreatedAt().toInstant(java.time.ZoneOffset.UTC),
+                marginId
         );
     }
 }

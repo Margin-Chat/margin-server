@@ -56,7 +56,7 @@ public class ConversationController {
         }
 
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation.getId(), limit, before),
+                messageService.getConversationMessages(conversation, limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }
@@ -71,7 +71,7 @@ public class ConversationController {
         Conversation conversation = conversationService.getByChannelId(channelId);
 
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation.getId(), limit, before),
+                messageService.getConversationMessages(conversation, limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }
