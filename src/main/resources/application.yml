@@ -31,8 +31,8 @@ storage:
   type: ${STORAGE_TYPE:s3}
   s3:
     endpoint: ${HETZNER_S3_ENDPOINT}
-    region: eu-central-1
-    bucket-name: margin-profile-pictures
+    region: eu-central
+    bucket-name: margin
     access-key: ${S3_ACCESS_KEY}
     secret-key: ${S3_SECRET_KEY}
   local:
@@ -41,6 +41,7 @@ storage:
 
 sfu:
   url: ${SFU_URL:http://localhost:3000}
+  public-url: ${SFU_PUBLIC_URL:ws://localhost:3000}
   internal-api-key: ${INTERNAL_API_KEY:dev-internal-api-key-not-for-production-use-only}
   token-secret: ${SFU_SECRET:dev-secret-sfu-key-not-for-production-use-only}
   token-expiration: 3600000

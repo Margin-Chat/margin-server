@@ -1,20 +1,20 @@
 package org.margin.server.authentication.controllers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.models.LoginRequest;
 import org.margin.server.authentication.models.RegisterRequest;
+import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.authentication.services.AuthenticationService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @Slf4j
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
@@ -69,6 +69,10 @@ public class AuthenticationController {
             log.warn("Registration failed for username {}: {}", request.username(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
+        } catch (Exception e) {
+            log.error("Unexpected error during registration for username {}: {}", request.username(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
         }
     }
 }

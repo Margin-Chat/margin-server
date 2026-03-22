@@ -28,6 +28,7 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
     @Mock
     private WebSocketDeliveryService webSocketDeliveryService;
+
     @InjectMocks
     private NotificationService notificationService;
 
@@ -84,7 +85,7 @@ class NotificationServiceTest {
         when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
                 .thenReturn(List.of(n1, n2, n3));
 
-        notificationService.markNotificationAsSeen(recipient.getId(), 10L, request.notificationId);
+        notificationService.markNotificationAsSeen(n1);
 
         assertThat(n1.isSeen()).isTrue();
         assertThat(n2.isSeen()).isTrue();

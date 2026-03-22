@@ -55,7 +55,8 @@ class WebSocketDeliveryServiceTest {
                 createTestUserDTO(),
                 "Testing message notification",
                 false,
-                Instant.now()
+                Instant.now(),
+                1L
         );
     }
 

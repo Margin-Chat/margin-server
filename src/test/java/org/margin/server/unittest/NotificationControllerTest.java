@@ -10,12 +10,14 @@ import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,11 +55,23 @@ class NotificationControllerTest {
     @Test
     void markSeen_delegatesToService() {
         User user = testUser(1L);
-        NotificationController.MarkSeenRequest request = new NotificationController.MarkSeenRequest(10L);
+        Notification notification = testNotification(user, 10L);
+        when(notificationService.getNotification(99L)).thenReturn(notification);
 
-        notificationController.markSeen(user, request);
+        notificationController.markSeen(user, 99L);
 
-        verify(notificationService).markNotificationAsSeen(user.getId(), 10L, request.notificationId);
+        verify(notificationService).markNotificationAsSeen(notification);
+    }
+
+    @Test
+    void markSeen_throwsForbidden_whenNotificationBelongsToOtherUser() {
+        User requester = testUser(1L);
+        User owner = testUser(2L);
+        Notification notification = testNotification(owner, 10L);
+        when(notificationService.getNotification(99L)).thenReturn(notification);
+
+        assertThatThrownBy(() -> notificationController.markSeen(requester, 99L))
+                .isInstanceOf(ResponseStatusException.class);
     }
 
     private User testUser(Long id) {

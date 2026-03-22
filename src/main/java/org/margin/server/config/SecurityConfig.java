@@ -63,8 +63,8 @@ public class SecurityConfig {
                                 .requestMatchers("/auth/**", "/api/auth/**").permitAll()
                                 .requestMatchers("/api/files/**").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
-                                .requestMatchers("/sfu/peer_left", "/sfu/peer_joined").permitAll()
-
+                                .requestMatchers("/api/sfu/peer_left", "/api/sfu/peer_joined").permitAll()
+                                
                                 .requestMatchers("/api/conversations/**").authenticated()
                                 .requestMatchers("/api/spaces/**").authenticated()
                                 .requestMatchers("/api/margins/**").authenticated()

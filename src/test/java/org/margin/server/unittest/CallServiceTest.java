@@ -2,12 +2,12 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.calls.exceptions.CallNotFoundException;
 import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
 import org.margin.server.social.calls.services.CallService;
-import org.margin.server.social.calls.exceptions.CallNotFoundException;
 import org.margin.server.users.models.User;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -85,7 +85,7 @@ class CallServiceTest {
 
         when(callRepository.findById(callId)).thenReturn(Optional.of(call));
 
-        callService.endCall(callId, durationSeconds);
+        callService.endCall(call, durationSeconds);
 
         ArgumentCaptor<Call> captor = ArgumentCaptor.forClass(Call.class);
         verify(callRepository).save(captor.capture());
@@ -99,10 +99,14 @@ class CallServiceTest {
     @Test
     void endCall_throwsExceptionWhenCallNotFound() {
         Long callId = 999L;
-        when(callRepository.findById(callId)).thenReturn(Optional.empty());
+        Call call = new Call();
+        call.setId(callId);
+        call.setStatus(CallStatus.ACCEPTED);
+
+        when(callRepository.findById(callId)).thenReturn(Optional.of(call));
 
         assertThrows(CallNotFoundException.class,
-                () -> callService.endCall(callId, 120));
+                () -> callService.endCall(call, 120));
     }
 
     private User createUser(Long id, String username) {

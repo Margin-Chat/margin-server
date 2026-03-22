@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-@RequestMapping("/sfu")
+@RequestMapping("/api/sfu")
 public class SfuController {
     private final SfuService sfuService;
     private final MarginAuthorizationService marginAuthorizationService;
@@ -37,7 +37,7 @@ public class SfuController {
         marginAuthorizationService.requireChannelMembership(user.getId(), Long.parseLong(roomId));
         sfuService.createOrJoinRoom(roomId);
         String roomToken = sfuTokenService.generateRoomToken(user.getId(), roomId);
-        return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuUrl(), roomToken));
+        return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken));
     }
 
     @PostMapping("peer_joined")

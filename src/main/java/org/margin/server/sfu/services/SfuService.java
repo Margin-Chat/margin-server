@@ -2,19 +2,19 @@ package org.margin.server.sfu.services;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
+import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -33,6 +33,9 @@ public class SfuService {
     @Getter
     @Value("${sfu.url:http://localhost:3000}")
     private String sfuUrl;
+    @Getter
+    @Value("${sfu.public-url:ws://localhost:3000}")
+    private String sfuPublicUrl;
     @Value("${sfu.internal-api-key}")
     private String internalApiKey;
 
@@ -57,7 +60,8 @@ public class SfuService {
                 url,
                 HttpMethod.POST,
                 new HttpEntity<>(internalHeaders()),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
         );
     }
 
