@@ -3,11 +3,14 @@ package org.margin.server.users.services;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.models.dtos.UserSearchResultDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,10 +45,20 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public List<UserDTO> searchForUser(String query) {
-        return userRepository.findTop20ByUsernameContainingIgnoreCase(query).stream()
-                .map(user -> new UserDTO(user, connectionManager.isUserOnline(user.getId())))
-                .collect(Collectors.toList());
+    public List<UserSearchResultDTO> searchUsers(Long searcherId, String query) {
+        return userRepository.findUsersInSharedMargins(searcherId, query).stream()
+                .collect(Collectors.groupingBy(
+                        UserWithSharedMarginProjection::user,
+                        LinkedHashMap::new,
+                        Collectors.mapping(UserWithSharedMarginProjection::marginName, Collectors.toList())
+                ))
+                .entrySet().stream()
+                .limit(20)
+                .map(entry -> new UserSearchResultDTO(
+                        new UserDTO(entry.getKey(), connectionManager.isUserOnline(entry.getKey().getId())),
+                        entry.getValue()
+                ))
+                .toList();
     }
 
     public void evictUserCache(Long userId) {

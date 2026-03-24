@@ -101,7 +101,7 @@ public class MarginService {
                 margin.getId()
         ), userDTO, margin);
 
-        return margin;
+        return marginRepository.findById(margin.getId()).orElseThrow();
     }
 
     public Set<MarginDTO> getMarginsForUser(User user) {

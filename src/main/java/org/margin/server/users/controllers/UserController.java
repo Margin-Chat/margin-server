@@ -81,8 +81,9 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public List<UserDTO> searchForUser(@RequestParam String query) {
-        return userService.searchForUser(query);
+    public List<UserSearchResultDTO> searchForUser(@AuthenticationPrincipal User user,
+                                                   @RequestParam String query) {
+        return userService.searchUsers(user.getId(), query);
     }
 
 
