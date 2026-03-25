@@ -6,6 +6,7 @@ import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageRepository;
@@ -197,6 +198,9 @@ class MessageServiceTest {
         channel.setId(id);
         Space space = new Space();
         space.setId(1L);
+        Margin margin = new Margin();
+        margin.setId(1L);
+        space.setMargin(margin);
         channel.setSpace(space);
         return channel;
     }

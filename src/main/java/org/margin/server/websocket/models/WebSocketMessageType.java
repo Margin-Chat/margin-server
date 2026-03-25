@@ -33,7 +33,8 @@ public enum WebSocketMessageType {
     NOTIFICATION(NotificationPayload.class),
 
     // Margin
-    USER_ADDED_TO_MARGIN(MarginDTO.class);
+    USER_ADDED_TO_MARGIN(MarginDTO.class),
+    MARGIN_INVITE(String.class);
 
     public final Class<?> payloadClass;
 

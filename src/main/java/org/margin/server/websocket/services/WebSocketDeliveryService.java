@@ -141,6 +141,12 @@ public class WebSocketDeliveryService {
         }
     }
 
+    public void notifyMarginInvite(String inviteCode,
+                                   Long recipientId) {
+        String json = messageBuilder.buildMessage(WebSocketMessageType.MARGIN_INVITE, recipientId, inviteCode);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
     public void notifyUserAddedToMargin(Long userId, MarginDTO marginDTO) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.USER_ADDED_TO_MARGIN, userId, marginDTO);
         connectionManager.sendToUser(userId, json);

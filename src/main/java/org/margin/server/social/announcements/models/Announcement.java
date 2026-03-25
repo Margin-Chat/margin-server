@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;

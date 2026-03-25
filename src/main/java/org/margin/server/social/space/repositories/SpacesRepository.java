@@ -27,4 +27,7 @@ public interface SpacesRepository extends JpaRepository<Space, Long> {
     List<Space> findByUserAndMargin(Long userId, Long marginId);
 
     List<Space> findByMargin_Id(Long marginId);
+
+    @Query("SELECT s FROM Space s WHERE s.margin.id = :marginId AND s.isDefault = true")
+    List<Space> findDefaultSpacesByMarginId(Long marginId);
 }

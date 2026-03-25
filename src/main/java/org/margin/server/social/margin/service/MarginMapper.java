@@ -1,14 +1,14 @@
 package org.margin.server.social.margin.service;
 
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.channel.channel.ChannelDTO;
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -63,6 +63,7 @@ public class MarginMapper {
                 space.getMargin().getId(),
                 space.getVisibility(),
                 channels,
-                members);
+                members,
+                space.isDefault());
     }
 }

@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.services.NotificationService;
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.service.MarginMapper;

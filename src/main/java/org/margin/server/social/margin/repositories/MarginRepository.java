@@ -1,7 +1,7 @@
 package org.margin.server.social.margin.repositories;
 
-import org.margin.server.social.margin.models.Margin;
-import org.margin.server.social.margin.models.MarginMember;
+import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

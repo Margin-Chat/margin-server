@@ -4,9 +4,9 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
-import org.margin.server.social.margin.models.Margin;
-import org.margin.server.social.margin.models.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
@@ -91,15 +91,13 @@ public class MarginService {
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
 
         log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
-
-        UserDTO userDTO = userService.toDTO(user);
-
+        
         spacesService.createNewSpace(new CreateSpaceDTO(
                 "General Space",
                 "A space for general organization",
                 Visibility.PUBLIC,
                 margin.getId()
-        ), userDTO, margin);
+        ), user, margin, true);
 
         return marginRepository.findById(margin.getId()).orElseThrow();
     }
@@ -212,5 +210,9 @@ public class MarginService {
 
     public Optional<MarginMember> findMember(Long userId, Long marginId) {
         return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
+    }
+
+    public boolean isUserMember(Long margin, User targetUser) {
+        return marginMemberRepository.existsByMarginIdAndUserId(margin, targetUser.getId());
     }
 }

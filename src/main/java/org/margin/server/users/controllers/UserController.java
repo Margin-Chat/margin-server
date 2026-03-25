@@ -86,6 +86,11 @@ public class UserController {
         return userService.searchUsers(user.getId(), query);
     }
 
+    @GetMapping("/lookup")
+    public ResponseEntity<UserDTO> lookupByUsername(@RequestParam String username) {
+        User user = userService.getByUsername(username);
+        return ResponseEntity.ok(userService.toDTO(user));
+    }
 
     @PatchMapping("/update_user_info")
     public UserDTO getCurrentUser(

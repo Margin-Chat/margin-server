@@ -1,4 +1,4 @@
-package org.margin.server.social.margin.models;
+package org.margin.server.social.margin.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

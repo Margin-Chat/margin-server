@@ -1,21 +1,18 @@
 package org.margin.server.social.margin.validations;
 
-import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
-import org.margin.server.social.margin.service.MarginService;
+import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
-import org.margin.server.social.margin.models.MarginMember;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.EnumSet;
-import java.util.Optional;
 import java.util.Set;
 
 @Service

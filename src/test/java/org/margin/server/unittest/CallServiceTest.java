@@ -76,37 +76,27 @@ class CallServiceTest {
 
     @Test
     void endCall_updatesCallWithEndDetails() {
-        Long callId = 1L;
-        Integer durationSeconds = 120;
-
         Call call = new Call();
-        call.setId(callId);
+        call.setId(1L);
         call.setStatus(CallStatus.ACCEPTED);
 
-        when(callRepository.findById(callId)).thenReturn(Optional.of(call));
-
-        callService.endCall(call, durationSeconds);
+        callService.endCall(call, 120);
 
         ArgumentCaptor<Call> captor = ArgumentCaptor.forClass(Call.class);
         verify(callRepository).save(captor.capture());
 
         Call endedCall = captor.getValue();
         assertEquals(CallStatus.ENDED, endedCall.getStatus());
-        assertEquals(durationSeconds, endedCall.getDurationSeconds());
+        assertEquals(120, endedCall.getDurationSeconds());
         assertNotNull(endedCall.getEndedAt());
     }
 
     @Test
-    void endCall_throwsExceptionWhenCallNotFound() {
-        Long callId = 999L;
-        Call call = new Call();
-        call.setId(callId);
-        call.setStatus(CallStatus.ACCEPTED);
-
-        when(callRepository.findById(callId)).thenReturn(Optional.of(call));
+    void rejectCall_throwsExceptionWhenCallNotFound() {
+        when(callRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(CallNotFoundException.class,
-                () -> callService.endCall(call, 120));
+                () -> callService.rejectCall(999L));
     }
 
     private User createUser(Long id, String username) {

@@ -1,8 +1,9 @@
-package org.margin.server.social.margin.models;
+package org.margin.server.social.margin.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.users.models.User;
 
 import java.time.LocalDateTime;

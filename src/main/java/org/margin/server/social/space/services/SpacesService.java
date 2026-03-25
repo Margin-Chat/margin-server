@@ -11,7 +11,7 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
 import org.margin.server.social.space.exceptions.UserNotInMargin;
@@ -20,12 +20,9 @@ import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
-import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -85,7 +82,7 @@ public class SpacesService {
     }
 
     @Transactional
-    public Space createNewSpace(CreateSpaceDTO dto, UserDTO user, Margin margin) {
+    public Space createNewSpace(CreateSpaceDTO dto, User user, Margin margin, boolean isDefault) {
         Optional<Space> spaceByName = spacesRepository.getSpaceByName(dto.name(), margin.getId());
 
         if (spaceByName.isPresent()) {
@@ -97,6 +94,7 @@ public class SpacesService {
         newSpace.setDescription(dto.description());
         newSpace.setVisibility(dto.visibility());
         newSpace.setMargin(margin);
+        newSpace.setDefault(isDefault);
         Space space = spacesRepository.save(newSpace);
 
         log.info("Created space {}", space.getId());
@@ -105,12 +103,7 @@ public class SpacesService {
         entityManager.flush();
         entityManager.refresh(space);
 
-        addNewSpaceMemberToSpace(new SpaceMemberDTO(
-                user,
-                space.getId(),
-                SpaceRole.ADMIN,
-                LocalDateTime.now()
-        ));
+        addNewUserToSpace(user, space, SpaceRole.ADMIN);
         return space;
     }
 
@@ -128,31 +121,39 @@ public class SpacesService {
 
         List<SpaceMember> spaceMembers = users.stream()
                 .filter(u -> !existingUsers.contains(u))
-                .map(u -> createSpaceMember(u, space))
+                .map(u -> createSpaceMember(u, space, SpaceRole.MEMBER))
                 .toList();
 
         spaceMemberRepository.saveAll(spaceMembers);
     }
 
     @Transactional
-    public SpaceMember addNewSpaceMemberToSpace(SpaceMemberDTO spaceMemberDTO) {
-        User user = userRepository.findById(spaceMemberDTO.user().id()).orElseThrow(() ->
-                new UserNotFoundException(spaceMemberDTO.user().id()));
+    public List<Space> getDefaultSpacesForMargin(Long marginId) {
+        return spacesRepository.findDefaultSpacesByMarginId(marginId);
+    }
 
-        Space space = spacesRepository.findById(spaceMemberDTO.spaceId()).orElseThrow(() ->
-                new SpaceNotFoundException(spaceMemberDTO.spaceId()));
+    @Transactional
+    public void addUsersToDefaultSpacesForMargin(Long marginId, User user) {
+        List<Space> defaultSpacesForMargin = getDefaultSpacesForMargin(marginId);
 
+        for (Space space : defaultSpacesForMargin) {
+            addNewUserToSpace(user, space, SpaceRole.MEMBER);
+        }
+    }
+
+    @Transactional
+    public SpaceMember addNewUserToSpace(User user, Space space, SpaceRole role) {
         boolean isInMargin = marginMemberRepository
-                .existsByUser_IdAndMargin_Id(spaceMemberDTO.user().id(), space.getMargin().getId());
+                .existsByUser_IdAndMargin_Id(user.getId(), space.getMargin().getId());
         if (!isInMargin) {
-            throw new UserNotInMargin(spaceMemberDTO.user().id());
+            throw new UserNotInMargin(user.getId());
         }
 
         if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user, space)) {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
 
-        SpaceMember spaceMember = createSpaceMember(user, space);
+        SpaceMember spaceMember = createSpaceMember(user, space, role);
         for (Channel channel : space.getChannels()) {
             Conversation conversation = conversationRepository.findByChannel(channel)
                     .orElseThrow(() -> new RuntimeException("No conversation for channel " + channel.getId()));
@@ -166,11 +167,11 @@ public class SpacesService {
     }
 
     @Transactional
-    protected SpaceMember createSpaceMember(User u, Space space) {
+    protected SpaceMember createSpaceMember(User u, Space space, SpaceRole role) {
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setSpace(space);
         spaceMember.setUser(u);
-        spaceMember.setRole(SpaceRole.MEMBER);
+        spaceMember.setRole(role);
         spaceMember.setJoinedAt(LocalDateTime.now());
         return spaceMember;
     }

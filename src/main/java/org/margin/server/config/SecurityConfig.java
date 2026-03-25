@@ -64,10 +64,11 @@ public class SecurityConfig {
                                 .requestMatchers("/api/files/**").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/api/sfu/peer_left", "/api/sfu/peer_joined").permitAll()
-                                
+
                                 .requestMatchers("/api/conversations/**").authenticated()
                                 .requestMatchers("/api/spaces/**").authenticated()
                                 .requestMatchers("/api/margins/**").authenticated()
+                                .requestMatchers("/api/invites/**").authenticated()
                                 .requestMatchers("/api/channels/**").authenticated()
                                 .requestMatchers("/api/users/**").authenticated()
                                 .requestMatchers("/api/announcements/**").authenticated()

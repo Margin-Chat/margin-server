@@ -5,6 +5,7 @@ CREATE TABLE spaces
     description VARCHAR(255)                            NOT NULL,
     visibility  VARCHAR(50)                             NOT NULL,
     margin_id   BIGINT                                  NOT NULL,
+    is_default  BOOLEAN DEFAULT FALSE                   NOT NULL,
     CONSTRAINT pk_spaces PRIMARY KEY (space_id),
     CONSTRAINT fk_spaces_margin FOREIGN KEY (margin_id) REFERENCES margins (margin_id)
 );

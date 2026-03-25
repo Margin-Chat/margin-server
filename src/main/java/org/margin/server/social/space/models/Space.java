@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.models.Visibility;
 
 import java.util.ArrayList;
@@ -47,4 +47,7 @@ public class Space {
 
     @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SpaceMember> members = new ArrayList<>();
+
+    @Column(nullable = false, name = "is_default")
+    private boolean isDefault;
 }

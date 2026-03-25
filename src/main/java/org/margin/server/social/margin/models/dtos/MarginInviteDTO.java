@@ -1,0 +1,35 @@
+package org.margin.server.social.margin.models.dtos;
+
+import org.margin.server.social.margin.entities.MarginInvite;
+
+import java.time.LocalDateTime;
+
+public record MarginInviteDTO(
+        Long id,
+        String inviteCode,
+        String marginName,
+        String invitedByUsername,
+        String invitedUsername,
+        String status,
+        String type,
+        LocalDateTime createdAt,
+        LocalDateTime expiresAt,
+        Integer maxUses,
+        int currentUses
+) {
+    public static MarginInviteDTO from(MarginInvite invite) {
+        return new MarginInviteDTO(
+                invite.getId(),
+                invite.getInviteCode(),
+                invite.getMargin().getName(),
+                invite.getInvitedBy().getUsername(),
+                invite.getInvitedUser() != null ? invite.getInvitedUser().getUsername() : null,
+                invite.getStatus().name(),
+                invite.getType().name(),
+                invite.getCreatedAt(),
+                invite.getExpiresAt(),
+                invite.getMaxUses(),
+                invite.getCurrentUses()
+        );
+    }
+}

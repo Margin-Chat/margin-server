@@ -8,8 +8,8 @@ import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
-import org.margin.server.social.margin.models.Margin;
-import org.margin.server.social.margin.models.MarginMember;
+import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
@@ -92,14 +92,13 @@ class SpacesServiceTest {
         when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.of(new Space()));
 
         assertThrows(DuplicateKeyException.class,
-                () -> spacesService.createNewSpace(dto, testUserDTO(1L), margin));
+                () -> spacesService.createNewSpace(dto, testUser(1L), margin, false));
     }
 
     @Test
     @DisplayName("createNewSpace should create space, add creator as ADMIN, and create General Chat channel")
     void createNewSpace_Success() {
         CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
-        UserDTO userDTO = testUserDTO(1L);
         User user = testUser(1L);
 
         Margin margin = testMargin(user);
@@ -121,17 +120,22 @@ class SpacesServiceTest {
             return Optional.of(s);
         });
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(spacesRepository.findById(10L)).thenAnswer(i -> {
+            Space s = new Space();
+            s.setId(10L);
+            s.setMargin(margin);
+            s.setChannels(new ArrayList<>());
+            return Optional.of(s);
+        });
 
         when(marginMemberRepository.existsByUser_IdAndMargin_Id(1L, 5L)).thenReturn(true);
-
         when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any())).thenReturn(false);
         when(spaceMemberRepository.save(any(SpaceMember.class))).thenAnswer(i -> i.getArgument(0));
 
         when(channelService.createChannel(any(Space.class), eq("General Chat"), anyString()))
                 .thenReturn(new Channel());
 
-        Space result = spacesService.createNewSpace(dto, userDTO, margin);
+        Space result = spacesService.createNewSpace(dto, user, margin, false);
 
         assertNotNull(result);
         assertEquals(10L, result.getId());

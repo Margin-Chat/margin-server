@@ -3,6 +3,7 @@ package org.margin.server.social.space.controllers;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
+import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
@@ -64,8 +65,8 @@ public class SpacesController {
         marginAuthorizationService.requireMarginAdmin(user.getId(), dto.marginId());
         return ResponseEntity.ok(marginMapper.spaceToDto(spacesService.createNewSpace(
                 dto,
-                userService.toDTO(user),
-                marginService.getById(dto.marginId()))));
+                user,
+                marginService.getById(dto.marginId()), false)));
     }
 
     @PostMapping("add_space_member")
@@ -73,7 +74,11 @@ public class SpacesController {
                                                          @RequestBody SpaceMemberDTO spaceMemberDTO) {
         Long marginId = spacesService.getById(spaceMemberDTO.spaceId()).getMargin().getId();
         marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceMemberDTO.spaceId(), marginId);
-        SpaceMember member = spacesService.addNewSpaceMemberToSpace(spaceMemberDTO);
+
+        User userToAdd = userService.getById(spaceMemberDTO.user().id());
+        Space space = spacesService.getById(spaceMemberDTO.spaceId());
+
+        SpaceMember member = spacesService.addNewUserToSpace(userToAdd, space, spaceMemberDTO.role());
         return ResponseEntity.ok(new SpaceMemberDTO(
                 new UserDTO(member.getUser(), connectionManager.isUserOnline(member.getUser().getId())),
                 member.getSpace().getId(),

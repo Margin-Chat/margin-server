@@ -3,13 +3,14 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserEncryption; // Assuming this name
-import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.models.UserEncryption;
+import org.margin.server.users.models.dtos.UserSearchResultDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
 import org.margin.server.users.services.UserCacheService;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,14 +20,18 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private UserCacheService userCacheService;
-    @Mock private ConnectionManager connectionManager;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private UserCacheService userCacheService;
+    @Mock
+    private ConnectionManager connectionManager;
 
     @InjectMocks
     private UserService userService;
@@ -54,46 +59,45 @@ class UserServiceTest {
     @Test
     @DisplayName("savePublicPrivateKeysForUser should update encryption details and save")
     void savePublicPrivateKeysForUser_Success() {
-        // Arrange
         Long userId = 1L;
         User user = new User();
         user.setId(userId);
-        // Assuming User has a getEncryption() that returns a non-null object
-        // If it's null by default, you'd need: user.setEncryption(new UserEncryption());
         UserEncryption encryption = new UserEncryption();
         user.setEncryption(encryption);
 
         when(userCacheService.getById(userId)).thenReturn(user);
 
-        // Act
         userService.savePublicPrivateKeysForUser(userId, "pub-key", "priv-key");
 
-        // Assert
         assertEquals("pub-key", user.getEncryption().getPublicKey());
         assertEquals("priv-key", user.getEncryption().getEncryptedPrivateKey());
         verify(userRepository).save(user);
     }
 
     @Test
-    @DisplayName("searchForUser should return a list of UserDTOs")
-    void searchForUser_ReturnsDtos() {
-        // Arrange
+    @DisplayName("searchUsers should return grouped results with shared margins")
+    void searchUsers_ReturnsGroupedResults() {
         User user = new User();
-        user.setId(1L);
+        user.setId(2L);
         user.setUsername("bob");
         user.setEmail("bob@margin.org");
         user.setCreatedAt(LocalDateTime.now());
 
-        when(userRepository.findTop20ByUsernameContainingIgnoreCase("bo"))
-                .thenReturn(List.of(user));
+        Long searcherId = 1L;
 
-        // Act
-        List<UserDTO> result = userService.searchForUser("bo");
+        when(userRepository.findUsersInSharedMargins(searcherId, "bo"))
+                .thenReturn(List.of(
+                        new UserWithSharedMarginProjection(user, "Team Alpha"),
+                        new UserWithSharedMarginProjection(user, "Team Beta")
+                ));
+        when(connectionManager.isUserOnline(2L)).thenReturn(true);
 
-        // Assert
+        List<UserSearchResultDTO> result = userService.searchUsers(searcherId, "bo");
+
         assertEquals(1, result.size());
-        assertEquals("bob", result.getFirst().username());
-        assertInstanceOf(UserDTO.class, result.getFirst());
+        assertEquals("bob", result.getFirst().user().username());
+        assertTrue(result.getFirst().user().isOnline());
+        assertEquals(List.of("Team Alpha", "Team Beta"), result.getFirst().sharedMargins());
     }
 
     @Test

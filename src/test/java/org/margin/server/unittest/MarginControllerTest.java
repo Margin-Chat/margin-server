@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.exceptions.GlobalExceptionHandler;
 import org.margin.server.social.margin.controllers.MarginController;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
-import org.margin.server.social.margin.service.MarginMapper;
-import org.margin.server.social.margin.service.MarginService;
-import org.margin.server.social.margin.models.Margin;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
+import org.margin.server.social.margin.service.MarginMapper;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.users.models.User;
@@ -26,8 +26,10 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class MarginControllerTest {

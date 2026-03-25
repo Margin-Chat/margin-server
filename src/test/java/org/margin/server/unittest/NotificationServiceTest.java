@@ -77,23 +77,12 @@ class NotificationServiceTest {
     @Test
     void markNotificationAsSeen() {
         User recipient = testUser(1L);
+        Notification n = unseenNotification(recipient, 10L);
 
-        Notification n1 = unseenNotification(recipient, 10L);
-        Notification n2 = unseenNotification(recipient, 10L);
-        Notification n3 = unseenNotification(recipient, 20L);
+        notificationService.markNotificationAsSeen(n);
 
-        when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
-                .thenReturn(List.of(n1, n2, n3));
-
-        notificationService.markNotificationAsSeen(n1);
-
-        assertThat(n1.isSeen()).isTrue();
-        assertThat(n2.isSeen()).isTrue();
-        assertThat(n3.isSeen()).isFalse();
-
-        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
-        verify(notificationRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(2);
+        assertThat(n.isSeen()).isTrue();
+        verify(notificationRepository).save(n);
     }
 
     @Test

@@ -1,6 +1,6 @@
 package org.margin.server.social.margin.controllers;
 
-import org.margin.server.social.margin.models.Margin;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
