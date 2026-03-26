@@ -10,7 +10,7 @@ import org.margin.server.social.calls.repositories.CallRepository;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -44,7 +44,7 @@ public class CallService {
     @Transactional
     public void endCall(Call call, Integer durationSeconds) {
         call.setStatus(CallStatus.ENDED);
-        call.setEndedAt(LocalDateTime.now());
+        call.setEndedAt(Instant.now());
         call.setDurationSeconds(durationSeconds);
         callRepository.save(call);
 
@@ -53,7 +53,7 @@ public class CallService {
 
     @Transactional
     public void callNoAnswer(Call call) {
-        call.setEndedAt(LocalDateTime.now());
+        call.setEndedAt(Instant.now());
         call.setDurationSeconds(0);
         call.setStatus(CallStatus.NO_RESPONSE);
         callRepository.save(call);
@@ -64,7 +64,7 @@ public class CallService {
     public void rejectCall(Long callId) {
         Call call = getById(callId);
         call.setStatus(CallStatus.REJECTED);
-        call.setEndedAt(LocalDateTime.now());
+        call.setEndedAt(Instant.now());
         call.setDurationSeconds(0);
         callRepository.save(call);
 

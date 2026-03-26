@@ -24,13 +24,13 @@ import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +45,7 @@ public class SpacesService {
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
     private final EntityManager entityManager;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     public SpacesService(SpacesRepository spacesRepository,
                          SpaceMemberRepository spaceMemberRepository,
@@ -54,7 +55,7 @@ public class SpacesService {
                          MarginMemberRepository marginMemberRepository,
                          ConversationRepository conversationRepository,
                          ConversationMemberRepository conversationMemberRepository,
-                         EntityManager entityManager) {
+                         EntityManager entityManager, WebSocketDeliveryService webSocketDeliveryService) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
         this.userRepository = userRepository;
@@ -64,6 +65,7 @@ public class SpacesService {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.entityManager = entityManager;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     public List<Space> getSpaces() {
@@ -112,22 +114,6 @@ public class SpacesService {
     }
 
     @Transactional
-    public void addUsersToSpace(Long spaceId, List<User> users) {
-        Space space = spacesRepository.findById(spaceId).orElseThrow();
-
-        Set<User> existingUsers = space.getMembers().stream()
-                .map(SpaceMember::getUser)
-                .collect(Collectors.toSet());
-
-        List<SpaceMember> spaceMembers = users.stream()
-                .filter(u -> !existingUsers.contains(u))
-                .map(u -> createSpaceMember(u, space, SpaceRole.MEMBER))
-                .toList();
-
-        spaceMemberRepository.saveAll(spaceMembers);
-    }
-
-    @Transactional
     public List<Space> getDefaultSpacesForMargin(Long marginId) {
         return spacesRepository.findDefaultSpacesByMarginId(marginId);
     }
@@ -143,9 +129,8 @@ public class SpacesService {
 
     @Transactional
     public SpaceMember addNewUserToSpace(User user, Space space, SpaceRole role) {
-        boolean isInMargin = marginMemberRepository
-                .existsByUser_IdAndMargin_Id(user.getId(), space.getMargin().getId());
-        if (!isInMargin) {
+        if (!marginMemberRepository
+                .existsByUser_IdAndMargin_Id(user.getId(), space.getMargin().getId())) {
             throw new UserNotInMargin(user.getId());
         }
 
@@ -160,9 +145,17 @@ public class SpacesService {
             ConversationMember conversationMember = new ConversationMember();
             conversationMember.setUser(user);
             conversationMember.setConversation(conversation);
-            conversationMember.setJoinedAt(LocalDateTime.now());
+            conversationMember.setJoinedAt(Instant.now());
             conversationMemberRepository.save(conversationMember);
         }
+
+        webSocketDeliveryService.notifyUserJoinedSpace(
+                spaceMemberRepository.findSpaceMemberBySpace(space).stream()
+                        .map(SpaceMember::getUser)
+                        .collect(Collectors.toList()),
+                user,
+                space.getId());
+
         return spaceMemberRepository.save(spaceMember);
     }
 
@@ -172,7 +165,7 @@ public class SpacesService {
         spaceMember.setSpace(space);
         spaceMember.setUser(u);
         spaceMember.setRole(role);
-        spaceMember.setJoinedAt(LocalDateTime.now());
+        spaceMember.setJoinedAt(Instant.now());
         return spaceMember;
     }
 

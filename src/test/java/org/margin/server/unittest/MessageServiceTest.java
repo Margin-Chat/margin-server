@@ -19,7 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -189,7 +189,7 @@ class MessageServiceTest {
         Conversation conversation = new Conversation();
         conversation.setId(id);
         conversation.setType(type);
-        conversation.setCreatedAt(LocalDateTime.now());
+        conversation.setCreatedAt(Instant.now());
         return conversation;
     }
 
@@ -211,7 +211,7 @@ class MessageServiceTest {
         message.setConversation(conversation);
         message.setFromUser(fromUser);
         message.setMessage(content);
-        message.setCreatedAt(LocalDateTime.now());
+        message.setCreatedAt(Instant.now());
         return message;
     }
 }

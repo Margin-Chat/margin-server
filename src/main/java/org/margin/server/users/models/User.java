@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -18,39 +18,39 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(exclude = {"encryption", "security"})
 @Table(name = "users")
 public class User {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@NotBlank
-	@Size(max = 50)
-	@Column(unique = true, nullable = false)
-	private String username;
+    @NotBlank
+    @Size(max = 50)
+    @Column(unique = true, nullable = false)
+    private String username;
 
-	@NotBlank
-	@Size(max = 50)
-	private String displayName;
+    @NotBlank
+    @Size(max = 50)
+    private String displayName;
 
-	@NotBlank
-	@Email
-	@Column(unique = true, nullable = false)
-	private String email;
+    @NotBlank
+    @Email
+    @Column(unique = true, nullable = false)
+    private String email;
 
-	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-	@NotBlank
-	private String password;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @NotBlank
+    private String password;
 
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-	@Column(name = "profile_picture_url", length = 500)
-	private String profilePictureUrl;
+    @Column(name = "profile_picture_url", length = 500)
+    private String profilePictureUrl;
 
-	@JsonIgnore
-	@OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-	private UserEncryption encryption;
+    @JsonIgnore
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserEncryption encryption;
 
-	@JsonIgnore
-	@OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-	private UserSecurity security;
+    @JsonIgnore
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserSecurity security;
 }

@@ -6,7 +6,7 @@ import lombok.*;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Data
@@ -35,5 +35,5 @@ public class MarginMember {
     private MarginRole role;
 
     @Column(name = "joined_at")
-    private LocalDateTime joinedAt;
+    private Instant joinedAt;
 }

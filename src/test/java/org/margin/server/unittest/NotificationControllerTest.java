@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +86,7 @@ class NotificationControllerTest {
         n.setMarginId(marginId);
         n.setType(NotificationType.ANNOUNCEMENT);
         n.setSeen(false);
-        n.setCreatedAt(LocalDateTime.now());
+        n.setCreatedAt(Instant.now());
         return n;
     }
 }

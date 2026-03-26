@@ -17,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
@@ -42,7 +41,7 @@ class WebSocketDeliveryServiceTest {
                 "jdoe",
                 "jdoe@example.com",
                 "https://cdn.margin.org/pfp/1.png",
-                LocalDateTime.now(),
+                Instant.now(),
                 true
         );
     }

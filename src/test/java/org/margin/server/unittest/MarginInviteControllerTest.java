@@ -21,7 +21,8 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -162,7 +163,7 @@ class MarginInviteControllerTest {
     @Test
     void getInviteDetails_whenExpired_shouldThrow410() {
         MarginInvite invite = testLinkInvite(margin, adminUser);
-        invite.setExpiresAt(LocalDateTime.now().minusDays(1));
+        invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
         assertThatThrownBy(() -> marginInviteController.getInviteDetails("abc-123"))
@@ -189,7 +190,7 @@ class MarginInviteControllerTest {
     @Test
     void acceptLinkInvite_whenExpired_shouldThrow410() {
         MarginInvite invite = testLinkInvite(margin, adminUser);
-        invite.setExpiresAt(LocalDateTime.now().minusDays(1));
+        invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
         assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", targetUser))
@@ -235,7 +236,7 @@ class MarginInviteControllerTest {
     @Test
     void acceptDirectInvite_whenExpired_shouldThrow410() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
-        invite.setExpiresAt(LocalDateTime.now().minusDays(1));
+        invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
         assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, targetUser))
@@ -315,7 +316,7 @@ class MarginInviteControllerTest {
         invite.setInvitedBy(invitedBy);
         invite.setType(MarginInvite.InviteType.LINK);
         invite.setStatus(MarginInvite.InviteStatus.PENDING);
-        invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         invite.setInviteCode("abc-123");
         return invite;
     }
@@ -329,7 +330,7 @@ class MarginInviteControllerTest {
         invite.setType(MarginInvite.InviteType.DIRECT);
         invite.setStatus(MarginInvite.InviteStatus.PENDING);
         invite.setMaxUses(1);
-        invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         invite.setInviteCode("direct-123");
         return invite;
     }

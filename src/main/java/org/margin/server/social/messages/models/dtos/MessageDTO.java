@@ -24,7 +24,7 @@ public record MessageDTO(
                 new UserDTO(message.getFromUser(), isUserOnline),
                 message.getMessage(),
                 message.getIsEdited(),
-                message.getCreatedAt().toInstant(java.time.ZoneOffset.UTC),
+                message.getCreatedAt(),
                 marginId
         );
     }

@@ -3,7 +3,7 @@ package org.margin.server.social.conversation.models.dtos;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -16,5 +16,5 @@ public sealed interface ConversationDTO permits DirectConversationDTO, GroupConv
 
     String type();
 
-    LocalDateTime createdAt();
+    Instant createdAt();
 }

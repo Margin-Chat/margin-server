@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -43,10 +43,10 @@ public class MarginInvite {
     private InviteType type;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    private Instant expiresAt;
 
     @Column(name = "max_uses")
     private Integer maxUses;
@@ -63,7 +63,7 @@ public class MarginInvite {
     }
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+        return Instant.now().isAfter(expiresAt);
     }
 
     public boolean isUsable() {

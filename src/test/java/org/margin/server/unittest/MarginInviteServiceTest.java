@@ -20,7 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -80,7 +81,7 @@ class MarginInviteServiceTest {
         assertThat(result.getType()).isEqualTo(MarginInvite.InviteType.LINK);
         assertThat(result.getStatus()).isEqualTo(MarginInvite.InviteStatus.PENDING);
         assertThat(result.getInviteCode()).isNotNull();
-        assertThat(result.getExpiresAt()).isAfter(LocalDateTime.now().plusDays(6));
+        assertThat(result.getExpiresAt()).isAfter(Instant.now().plus(Duration.ofDays(6)));
     }
 
     @Test
@@ -196,7 +197,7 @@ class MarginInviteServiceTest {
         when(marginInviteRepository.findInvitesForUserByStatus(
                 eq(targetUser.getId()),
                 eq(MarginInvite.InviteStatus.PENDING),
-                any(LocalDateTime.class)))
+                any(Instant.class)))
                 .thenReturn(List.of(invite));
 
         List<MarginInvite> result = marginInviteService.getPendingInvites(targetUser);
@@ -260,7 +261,7 @@ class MarginInviteServiceTest {
         invite.setMargin(margin);
         invite.setInvitedBy(invitedBy);
         invite.setType(MarginInvite.InviteType.LINK);
-        invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         return invite;
     }
 
@@ -272,7 +273,7 @@ class MarginInviteServiceTest {
         invite.setInvitedUser(invitedUser);
         invite.setType(MarginInvite.InviteType.DIRECT);
         invite.setMaxUses(1);
-        invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         return invite;
     }
 }

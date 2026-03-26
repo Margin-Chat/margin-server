@@ -15,7 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,7 +81,7 @@ class UserServiceTest {
         user.setId(2L);
         user.setUsername("bob");
         user.setEmail("bob@margin.org");
-        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedAt(Instant.now());
 
         Long searcherId = 1L;
 

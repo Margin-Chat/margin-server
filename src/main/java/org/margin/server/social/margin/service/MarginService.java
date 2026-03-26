@@ -25,7 +25,7 @@ import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -91,7 +91,7 @@ public class MarginService {
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
 
         log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
-        
+
         spacesService.createNewSpace(new CreateSpaceDTO(
                 "General Space",
                 "A space for general organization",
@@ -133,7 +133,7 @@ public class MarginService {
                     member.setUser(user);
                     member.setMargin(margin);
                     member.setRole(role);
-                    member.setJoinedAt(LocalDateTime.now());
+                    member.setJoinedAt(Instant.now());
                     margin.getMembers().add(member);
                     return marginMemberRepository.save(member);
                 });

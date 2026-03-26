@@ -1,21 +1,21 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.storage.StorageService;
+import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
+import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -112,7 +112,7 @@ public class AuthenticationService {
         user.setEmail(email.toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
         user.setProfilePictureUrl(profilePictureUrl);
-        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedAt(Instant.now());
 
         UserEncryption encryption = new UserEncryption();
         encryption.setUser(user);
@@ -134,16 +134,16 @@ public class AuthenticationService {
         if (user.getSecurity().getAccountLockedUntil() == null) {
             return false;
         }
-        return user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now());
+        return user.getSecurity().getAccountLockedUntil().isAfter(Instant.now());
     }
 
     private void handleFailedLogin(String email) {
         userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
             user.getSecurity().setFailedLoginAttempts(user.getSecurity().getFailedLoginAttempts() + 1);
-            user.getSecurity().setLastFailedLoginAttempt(LocalDateTime.now());
+            user.getSecurity().setLastFailedLoginAttempt(Instant.now());
 
             if (user.getSecurity().getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
-                user.getSecurity().setAccountLockedUntil(LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
+                user.getSecurity().setAccountLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
                 log.warn("Account locked for user {} until {}",
                         user.getDisplayName(), user.getSecurity().getAccountLockedUntil());
             }

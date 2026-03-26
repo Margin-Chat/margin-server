@@ -11,7 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,7 @@ class NotificationRepositoryTest {
     @Test
     void findByRecipient_IdOrderByCreatedAtDesc_returnsInOrder() {
         Notification older = savedNotification(recipient, sender, 1L, 10L, false);
-        older.setCreatedAt(LocalDateTime.now().minusDays(1));
+        older.setCreatedAt(Instant.now().minus(Duration.ofDays(7)));
         notificationRepository.save(older);
 
         Notification newer = savedNotification(recipient, sender, 2L, 10L, false);
@@ -94,7 +95,7 @@ class NotificationRepositoryTest {
         n.setReferenceId(referenceId);
         n.setMarginId(marginId);
         n.setSeen(seen);
-        n.setCreatedAt(LocalDateTime.now());
+        n.setCreatedAt(Instant.now());
         return notificationRepository.save(n);
     }
 
@@ -104,7 +105,7 @@ class NotificationRepositoryTest {
         user.setUsername(email);
         user.setDisplayName(email);
         user.setPassword("password");
-        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedAt(Instant.now());
         return user;
     }
 }

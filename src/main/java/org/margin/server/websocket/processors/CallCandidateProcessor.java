@@ -1,13 +1,15 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import lombok.extern.slf4j.Slf4j;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 public class CallCandidateProcessor implements WebSocketMessageProcessor<IncomingCallCandidatePayload> {
 
     private final WebSocketDeliveryService webSocketDeliveryService;
@@ -23,6 +25,11 @@ public class CallCandidateProcessor implements WebSocketMessageProcessor<Incomin
 
     @Override
     public void process(User user, WebSocketMessageIn<IncomingCallCandidatePayload> message) {
+        log.info("CallCandidateProcessor: from={} to={} candidate={}",
+                user.getId(),
+                message.getRecipientId(),
+                message.getPayload());
+
         webSocketDeliveryService.notifyCallCandidate(
                 message.getRecipientId(),
                 message.getPayload()

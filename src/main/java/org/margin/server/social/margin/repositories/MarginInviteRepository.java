@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public interface MarginInviteRepository extends JpaRepository<MarginInvite, Long
     List<MarginInvite> findInvitesForUserByStatus(
             @Param("userId") Long userId,
             @Param("status") MarginInvite.InviteStatus status,
-            @Param("now") LocalDateTime now);
+            @Param("now") Instant now);
 
     @Query("""
             SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END

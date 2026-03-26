@@ -1,10 +1,11 @@
 package org.margin.server.users.models.dtos;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record RecentChatUsersDTO(
         UserDTO user,
         String lastMessage,
-        LocalDateTime lastMessageTime,
+        Instant lastMessageTime,
         boolean lastMessageIncoming
-) {}
+) {
+}

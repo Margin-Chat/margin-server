@@ -9,7 +9,7 @@ import lombok.ToString;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -39,8 +39,8 @@ public class Announcement {
     private String content;
 
     @Column(nullable = false, name = "created_at")
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "edited_at")
-    private LocalDateTime editedAt;
+    private Instant editedAt;
 }

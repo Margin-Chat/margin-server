@@ -4,12 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
-import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallMediaStatePayload;
@@ -29,13 +29,15 @@ public class WebSocketDeliveryService {
     private final ConnectionManager connectionManager;
     private final WebSocketMessageBuilder messageBuilder;
     private final SpaceMemberRepository spaceMemberRepository;
+    private final UserService userService;
 
     public WebSocketDeliveryService(ConnectionManager connectionManager,
                                     WebSocketMessageBuilder messageBuilder,
-                                    SpaceMemberRepository spaceMemberRepository) {
+                                    SpaceMemberRepository spaceMemberRepository, UserService userService) {
         this.connectionManager = connectionManager;
         this.messageBuilder = messageBuilder;
         this.spaceMemberRepository = spaceMemberRepository;
+        this.userService = userService;
     }
 
     public void notifyNotification(Notification notification) {
@@ -147,9 +149,14 @@ public class WebSocketDeliveryService {
         connectionManager.sendToUser(recipientId, json);
     }
 
-    public void notifyUserAddedToMargin(Long userId, MarginDTO marginDTO) {
-        String json = messageBuilder.buildMessage(WebSocketMessageType.USER_ADDED_TO_MARGIN, userId, marginDTO);
-        connectionManager.sendToUser(userId, json);
+    public void notifyUserJoinedSpace(List<User> spaceMembers, User newMember, Long spaceId) {
+        Map<String, Object> payload = Map.of("spaceId", spaceId, "user", userService.toDTO(newMember));
+        String json = messageBuilder.buildMessage(WebSocketMessageType.USER_JOINED_SPACE, spaceId, payload);
+        for (User member : spaceMembers) {
+            if (connectionManager.isUserOnline(member.getId())) {
+                connectionManager.sendToUser(member.getId(), json);
+            }
+        }
     }
 
     private void sendMessageToUsers(List<User> recipients, ConversationType conversationType, String json) {

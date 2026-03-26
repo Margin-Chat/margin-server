@@ -11,7 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -45,10 +45,10 @@ public class Message {
     @NotNull
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "edited_at")
-    private LocalDateTime editedAt;
+    private Instant editedAt;
 
     public Message(Conversation conversation, User fromUser, String message) {
         this.conversation = conversation;

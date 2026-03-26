@@ -3,6 +3,7 @@ package org.margin.server.social.channel.services;
 import org.margin.server.social.channel.channel.Channel;
 import org.margin.server.social.channel.channel.ChannelDTO;
 import org.margin.server.social.channel.channel.ChannelType;
+import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
@@ -10,13 +11,12 @@ import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +51,7 @@ public class ChannelService {
         conversation.setType(ConversationType.CHANNEL);
         conversation.setChannel(channel);
         conversation.setName(name);
-        conversation.setCreatedAt(LocalDateTime.now());
+        conversation.setCreatedAt(Instant.now());
         conversationRepository.save(conversation);
 
         List<SpaceMember> members = space.getMembers();
@@ -60,7 +60,7 @@ public class ChannelService {
             var conversationMember = new ConversationMember();
             conversationMember.setConversation(conversation);
             conversationMember.setUser(member.getUser());
-            conversationMember.setJoinedAt(LocalDateTime.now());
+            conversationMember.setJoinedAt(Instant.now());
             conversationMember.setId(new ConversationMemberId(
                     conversation.getId(),
                     member.getUser().getId()

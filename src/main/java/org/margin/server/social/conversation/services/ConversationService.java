@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -111,7 +111,7 @@ public class ConversationService {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.GROUP);
         conversation.setName(name);
-        conversation.setCreatedAt(LocalDateTime.now());
+        conversation.setCreatedAt(Instant.now());
         conversation = conversationRepository.save(conversation);
 
         addMemberInternal(conversation, creator);
@@ -147,7 +147,7 @@ public class ConversationService {
     public void updateLastRead(Long conversationId, Long userId) {
         ConversationMemberId id = new ConversationMemberId(conversationId, userId);
         conversationMemberRepository.findById(id).ifPresent(member -> {
-            member.setLastReadAt(LocalDateTime.now());
+            member.setLastReadAt(Instant.now());
             conversationMemberRepository.save(member);
         });
     }
@@ -176,7 +176,7 @@ public class ConversationService {
     public Conversation createDirectConversation(User fromUser, User toUser) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.DIRECT);
-        conversation.setCreatedAt(LocalDateTime.now());
+        conversation.setCreatedAt(Instant.now());
         conversation = conversationRepository.save(conversation);
 
         addMemberInternal(conversation, fromUser);
@@ -190,7 +190,7 @@ public class ConversationService {
         member.setId(new ConversationMemberId(conversation.getId(), user.getId()));
         member.setConversation(conversation);
         member.setUser(user);
-        member.setJoinedAt(LocalDateTime.now());
+        member.setJoinedAt(Instant.now());
         conversationMemberRepository.save(member);
     }
 }

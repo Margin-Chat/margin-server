@@ -2,7 +2,7 @@ package org.margin.server.users.models.dtos;
 
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record UserDTO(
         Long id,
@@ -10,7 +10,7 @@ public record UserDTO(
         String displayName,
         String email,
         String profilePictureUrl,
-        LocalDateTime createdAt,
+        Instant createdAt,
         boolean isOnline
 ) {
     public UserDTO(User user, boolean online) {

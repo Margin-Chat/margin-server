@@ -13,7 +13,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -54,7 +54,7 @@ public class AnnouncementService {
         announcement.setAuthor(author);
         announcement.setTitle(createAnnouncementRequest.title());
         announcement.setContent(createAnnouncementRequest.content());
-        announcement.setCreatedAt(LocalDateTime.now());
+        announcement.setCreatedAt(Instant.now());
         Announcement saved = announcementRepository.save(announcement);
 
         List<User> members = margin.getMembers().stream()
@@ -76,7 +76,7 @@ public class AnnouncementService {
         Announcement announcement = getById(announcementDTO.announcementId());
         announcement.setTitle(announcementDTO.title());
         announcement.setContent(announcementDTO.content());
-        announcement.setEditedAt(LocalDateTime.now());
+        announcement.setEditedAt(Instant.now());
         return announcementRepository.save(announcement);
     }
 

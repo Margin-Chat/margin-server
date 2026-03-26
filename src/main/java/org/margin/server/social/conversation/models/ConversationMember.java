@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -33,8 +33,8 @@ public class ConversationMember {
 
     @NotNull
     @Column(name = "joined_at", nullable = false)
-    private LocalDateTime joinedAt;
+    private Instant joinedAt;
 
     @Column(name = "last_read_at")
-    private LocalDateTime lastReadAt;
+    private Instant lastReadAt;
 }

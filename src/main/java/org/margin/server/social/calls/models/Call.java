@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "calls")
@@ -41,13 +41,13 @@ public class Call {
     private String sdp;
 
     @Column(name = "offered_at", nullable = false)
-    private LocalDateTime offeredAt;
+    private Instant offeredAt;
 
     @Column(name = "answered_at")
-    private LocalDateTime answeredAt;
+    private Instant answeredAt;
 
     @Column(name = "ended_at")
-    private LocalDateTime endedAt;
+    private Instant endedAt;
 
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
@@ -66,7 +66,7 @@ public class Call {
 
     @PrePersist
     protected void onCreate() {
-        offeredAt = LocalDateTime.now();
+        offeredAt = Instant.now();
         if (status == null) {
             status = CallStatus.OFFERED;
         }

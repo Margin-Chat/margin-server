@@ -2,7 +2,7 @@ package org.margin.server.social.margin.models.dtos;
 
 import org.margin.server.social.margin.entities.MarginInvite;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record MarginInviteDTO(
         Long id,
@@ -12,8 +12,8 @@ public record MarginInviteDTO(
         String invitedUsername,
         String status,
         String type,
-        LocalDateTime createdAt,
-        LocalDateTime expiresAt,
+        Instant createdAt,
+        Instant expiresAt,
         Integer maxUses,
         int currentUses
 ) {

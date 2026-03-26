@@ -14,7 +14,8 @@ import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -35,8 +36,8 @@ public class MarginInviteService {
         MarginInvite marginInvite = new MarginInvite();
         marginInvite.setMargin(margin);
         marginInvite.setInvitedBy(invitedBy);
-        marginInvite.setCreatedAt(LocalDateTime.now());
-        marginInvite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        marginInvite.setCreatedAt(Instant.now());
+        marginInvite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         marginInvite.setMaxUses(maxUses);
         marginInvite.setType(MarginInvite.InviteType.LINK);
         return marginInviteRepository.save(marginInvite);
@@ -56,8 +57,8 @@ public class MarginInviteService {
         marginInvite.setMargin(margin);
         marginInvite.setInvitedBy(invitedBy);
         marginInvite.setInvitedUser(targetUser);
-        marginInvite.setCreatedAt(LocalDateTime.now());
-        marginInvite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        marginInvite.setCreatedAt(Instant.now());
+        marginInvite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         marginInvite.setMaxUses(1);
         marginInvite.setType(MarginInvite.InviteType.DIRECT);
         MarginInvite savedInvited = marginInviteRepository.save(marginInvite);
@@ -118,7 +119,7 @@ public class MarginInviteService {
         return marginInviteRepository.findInvitesForUserByStatus(
                 user.getId(),
                 MarginInvite.InviteStatus.PENDING,
-                LocalDateTime.now());
+                Instant.now());
     }
 
     public boolean hasPendingInviteForMargin(Long marginId, Long userId) {

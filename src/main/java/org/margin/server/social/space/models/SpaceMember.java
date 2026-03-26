@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.margin.server.users.models.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Data
@@ -34,5 +34,5 @@ public class SpaceMember {
     private SpaceRole role;
 
     @Column(name = "joined_at")
-    private LocalDateTime joinedAt;
+    private Instant joinedAt;
 }

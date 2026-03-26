@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -27,8 +27,8 @@ public class UserSecurity {
     private Integer failedLoginAttempts = 0;
 
     @Column(name = "last_failed_login_attempt")
-    private LocalDateTime lastFailedLoginAttempt;
+    private Instant lastFailedLoginAttempt;
 
     @Column(name = "account_locked_until")
-    private LocalDateTime accountLockedUntil;
+    private Instant accountLockedUntil;
 }

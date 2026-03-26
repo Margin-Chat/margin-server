@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.margin.server.social.channel.channel.Channel;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -30,7 +30,7 @@ public class Conversation {
 
     @NotNull
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "channel_id")
@@ -38,6 +38,6 @@ public class Conversation {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
     }
 }

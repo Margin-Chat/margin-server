@@ -13,7 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -126,7 +126,7 @@ class NotificationServiceTest {
         n.setRecipient(recipient);
         n.setMarginId(marginId);
         n.setSeen(false);
-        n.setCreatedAt(LocalDateTime.now());
+        n.setCreatedAt(Instant.now());
         return n;
     }
 }

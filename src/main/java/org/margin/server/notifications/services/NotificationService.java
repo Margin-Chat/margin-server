@@ -8,7 +8,7 @@ import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,7 +37,7 @@ public class NotificationService {
                     n.setReferenceId(referenceId);
                     n.setMarginId(marginId);
                     n.setSeen(false);
-                    n.setCreatedAt(LocalDateTime.now());
+                    n.setCreatedAt(Instant.now());
                     return n;
                 })
                 .toList();

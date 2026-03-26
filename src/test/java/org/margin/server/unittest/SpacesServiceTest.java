@@ -12,8 +12,10 @@ import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.models.Visibility;
+import org.margin.server.social.space.exceptions.UserNotInMargin;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
+import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
@@ -21,7 +23,6 @@ import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -145,27 +146,62 @@ class SpacesServiceTest {
     }
 
     @Test
-    @DisplayName("addUsersToSpace should not add existing users")
-    void addUsersToSpace_AvoidsDuplicates() {
-        Long spaceId = 1L;
+    @DisplayName("addNewUserToSpace should add a valid new user")
+    void addNewUserToSpace_Success() {
         Space space = new Space();
-        User existingUser = testUser(1L);
+        Margin margin = new Margin();
+        margin.setId(1L);
+        space.setMargin(margin);
+        space.setChannels(List.of());
+
         User newUser = testUser(2L);
 
-        SpaceMember sm = new SpaceMember();
-        sm.setUser(existingUser);
-        space.setMembers(List.of(sm));
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(newUser.getId(), margin.getId())).thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser, space)).thenReturn(false);
+        when(spaceMemberRepository.save(any(SpaceMember.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
+        spacesService.addNewUserToSpace(newUser, space, SpaceRole.MEMBER);
 
-        spacesService.addUsersToSpace(spaceId, List.of(existingUser, newUser));
+        verify(spaceMemberRepository).save(any(SpaceMember.class));
+    }
 
-        ArgumentCaptor<List<SpaceMember>> captor = ArgumentCaptor.forClass(List.class);
-        verify(spaceMemberRepository).saveAll(captor.capture());
+    @Test
+    @DisplayName("addNewUserToSpace should throw on duplicate user")
+    void addNewUserToSpace_RejectsDuplicate() {
+        Space space = new Space();
+        Margin margin = new Margin();
+        margin.setId(1L);
+        space.setMargin(margin);
 
-        List<SpaceMember> saved = captor.getValue();
-        assertEquals(1, saved.size());
-        assertEquals(2L, saved.get(0).getUser().getId());
+        User existingUser = testUser(1L);
+
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(existingUser.getId(), margin.getId())).thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser, space)).thenReturn(true);
+
+        assertThrows(DuplicateKeyException.class, () ->
+                spacesService.addNewUserToSpace(existingUser, space, SpaceRole.MEMBER)
+        );
+
+        verify(spaceMemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("addNewUserToSpace should reject user not in margin")
+    void addNewUserToSpace_RejectsNonMarginMember() {
+        Space space = new Space();
+        Margin margin = new Margin();
+        margin.setId(1L);
+        space.setMargin(margin);
+
+        User outsider = testUser(3L);
+
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(outsider.getId(), margin.getId())).thenReturn(false);
+
+        assertThrows(UserNotInMargin.class, () ->
+                spacesService.addNewUserToSpace(outsider, space, SpaceRole.MEMBER)
+        );
+
+        verify(spaceMemberRepository, never()).save(any());
     }
 
     @Test

@@ -1,13 +1,13 @@
 package org.margin.server.authentication.services;
 
+import org.margin.server.users.models.User;
+import org.margin.server.users.repositories.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
         if (user.getSecurity().getAccountLockedUntil() != null &&
-                user.getSecurity().getAccountLockedUntil().isAfter(LocalDateTime.now())) {
+                user.getSecurity().getAccountLockedUntil().isAfter(Instant.now())) {
             throw new UsernameNotFoundException("Account is locked");
         }
 
