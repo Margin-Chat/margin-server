@@ -4,7 +4,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
@@ -23,6 +23,7 @@ import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,6 +56,8 @@ class SpacesServiceTest {
     private EntityManager entityManager;
     @Mock
     private MarginMemberRepository marginMemberRepository;
+    @Mock
+    private WebSocketDeliveryService webSocketDeliveryService;
 
     @InjectMocks
     private SpacesService spacesService;
@@ -157,7 +160,7 @@ class SpacesServiceTest {
         User newUser = testUser(2L);
 
         when(marginMemberRepository.existsByUser_IdAndMargin_Id(newUser.getId(), margin.getId())).thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser, space)).thenReturn(false);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser.getId(), space.getId())).thenReturn(false);
         when(spaceMemberRepository.save(any(SpaceMember.class))).thenAnswer(inv -> inv.getArgument(0));
 
         spacesService.addNewUserToSpace(newUser, space, SpaceRole.MEMBER);
@@ -176,7 +179,7 @@ class SpacesServiceTest {
         User existingUser = testUser(1L);
 
         when(marginMemberRepository.existsByUser_IdAndMargin_Id(existingUser.getId(), margin.getId())).thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser, space)).thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser.getId(), space.getId())).thenReturn(true);
 
         assertThrows(DuplicateKeyException.class, () ->
                 spacesService.addNewUserToSpace(existingUser, space, SpaceRole.MEMBER)

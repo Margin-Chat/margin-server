@@ -1,15 +1,17 @@
 package org.margin.server.social.conversation.controllers;
 
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -20,12 +22,14 @@ public class ConversationController {
     private final MessageService messageService;
     private final ConversationService conversationService;
     private final UserService userService;
+    private final ConversationAuthorizationService conversationAuthorizationService;
 
     public ConversationController(MessageService messageService,
-                                  ConversationService conversationService, UserService userService) {
+                                  ConversationService conversationService, UserService userService, ConversationAuthorizationService conversationAuthorizationService) {
         this.messageService = messageService;
         this.conversationService = conversationService;
         this.userService = userService;
+        this.conversationAuthorizationService = conversationAuthorizationService;
     }
 
     @GetMapping("/conversations")
@@ -39,10 +43,7 @@ public class ConversationController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false, defaultValue = "50") int limit,
             @RequestParam(required = false) Long before) {
-
-        if (otherUserId.equals(user.getId())) {
-            throw new RuntimeException("Cannot get conversation with yourself");
-        }
+        conversationAuthorizationService.requireRecipientNotSelf(user.getId(), otherUserId);
 
         Conversation conversation = conversationService.findDirectConversationBetweenUsers(
                 user.getId(), otherUserId);
@@ -110,9 +111,7 @@ public class ConversationController {
             @PathVariable Long conversationId,
             @AuthenticationPrincipal User user) {
 
-        if (!conversationService.isUserMember(conversationId, user.getId())) {
-            throw new RuntimeException("User is not a member of this conversation");
-        }
+        conversationAuthorizationService.requireConversationMember(conversationId, user.getId());
 
         conversationService.updateLastRead(conversationId, user.getId());
         return ResponseEntity.ok().build();
@@ -131,13 +130,9 @@ public class ConversationController {
 
         Conversation conversation = conversationService.getById(conversationId);
 
-        if (conversation.getType() != ConversationType.GROUP) {
-            throw new RuntimeException("Can only add members to group conversations");
-        }
+        conversationAuthorizationService.requireConversationTypeGroup(conversation);
 
-        if (!conversationService.isUserMember(conversationId, user.getId())) {
-            throw new RuntimeException("You are not a member of this conversation");
-        }
+        conversationAuthorizationService.requireConversationMember(conversationId, user.getId());
 
         conversationService.addMember(conversationId, request.userId());
         return ResponseEntity.ok().build();
@@ -151,13 +146,10 @@ public class ConversationController {
 
         Conversation conversation = conversationService.getById(conversationId);
 
-        if (conversation.getType() != ConversationType.GROUP) {
-            throw new RuntimeException("Can only remove members from group conversations");
-        }
+        conversationAuthorizationService.requireConversationTypeGroup(conversation);
 
         if (!userId.equals(user.getId())) {
-            // TODO: Check if user is admin/creator of the group
-            throw new RuntimeException("Cannot remove other users");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot remove other users");
         }
 
         conversationService.removeMember(conversationId, userId);

@@ -1,6 +1,6 @@
 package org.margin.server.social.channel.repositories;
 
-import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.space.models.Space;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

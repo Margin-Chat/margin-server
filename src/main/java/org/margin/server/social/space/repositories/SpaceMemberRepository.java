@@ -12,8 +12,9 @@ import java.util.Optional;
 
 @Repository
 public interface SpaceMemberRepository extends JpaRepository<SpaceMember, Long> {
-    boolean existsSpaceMemberByUserAndSpace(User user, Space space);
-
+    @Query("SELECT COUNT(sm) > 0 FROM SpaceMember sm WHERE sm.user.id = :userId AND sm.space.id = :spaceId")
+    boolean existsSpaceMemberByUserAndSpace(Long userId, Long spaceId);
+    
     List<SpaceMember> findByUser(User user);
 
     List<SpaceMember> findSpaceMemberBySpace(Space space);

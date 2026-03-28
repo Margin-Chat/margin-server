@@ -1,6 +1,6 @@
 package org.margin.server.social.space.models.dtos;
 
-import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.models.Visibility;
 
 import java.util.List;

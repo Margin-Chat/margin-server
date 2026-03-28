@@ -27,7 +27,7 @@ public class FilesController {
     @GetMapping("/user-profiles/{fileName}")
     public ResponseEntity<Resource> getProfilePicture(@PathVariable String fileName) {
         try {
-            Resource resource = storageService.getProfilePicture("/user-profiles/" + fileName);
+            Resource resource = storageService.getFile("/user-profiles/" + fileName);
 
             String contentType = Files.probeContentType(Path.of(fileName));
             return ResponseEntity.ok()
@@ -46,7 +46,7 @@ public class FilesController {
     @GetMapping("/margin-icons/{fileName}")
     public ResponseEntity<Resource> getMarginIcon(@PathVariable String fileName) {
         try {
-            Resource resource = storageService.getProfilePicture("/margin-icons/" + fileName);
+            Resource resource = storageService.getFile("/margin-icons/" + fileName);
 
             String contentType = Files.probeContentType(Path.of(fileName));
             return ResponseEntity.ok()

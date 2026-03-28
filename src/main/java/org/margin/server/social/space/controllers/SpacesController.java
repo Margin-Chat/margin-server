@@ -94,7 +94,7 @@ public class SpacesController {
         return ResponseEntity.ok(marginMapper.spaceToDto(spacesService.updateSpace(spaceDTO)));
     }
 
-    @PostMapping("delete_space")
+    @DeleteMapping("delete_space")
     public ResponseEntity<Void> deleteSpace(@AuthenticationPrincipal User user,
                                             @RequestBody SpaceDTO spaceDTO) {
         marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.marginId());

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.entities.Channel;
 
 import java.time.Instant;
 

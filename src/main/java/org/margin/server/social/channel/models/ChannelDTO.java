@@ -1,4 +1,6 @@
-package org.margin.server.social.channel.channel;
+package org.margin.server.social.channel.models;
+
+import org.margin.server.social.channel.entities.Channel;
 
 public record ChannelDTO(
         Long id,

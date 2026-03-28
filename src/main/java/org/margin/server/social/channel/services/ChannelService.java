@@ -1,9 +1,9 @@
 package org.margin.server.social.channel.services;
 
-import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.channel.channel.ChannelDTO;
-import org.margin.server.social.channel.channel.ChannelType;
+import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
+import org.margin.server.social.channel.models.ChannelDTO;
+import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
@@ -75,7 +75,7 @@ public class ChannelService {
 
     @Transactional
     public Channel updateChannel(ChannelDTO channelDTO) {
-        Channel channel = getChannel(channelDTO.id());
+        Channel channel = getById(channelDTO.id());
         channel.setName(channelDTO.name());
         channel.setDescription(channelDTO.description());
         channel.setChannelType(ChannelType.Communication);
@@ -84,7 +84,7 @@ public class ChannelService {
 
     @Transactional
     public void deleteChannel(Long channelId) {
-        Channel channel = getChannel(channelId);
+        Channel channel = getById(channelId);
 
         Conversation conversation = channel.getConversation();
         conversationMemberRepository.deleteAll(conversationMemberRepository.findByConversation(conversation));
@@ -92,7 +92,7 @@ public class ChannelService {
         channelRepository.delete(channel);
     }
 
-    private Channel getChannel(Long id) {
+    public Channel getById(Long id) {
         return channelRepository.findById(id).orElseThrow(() -> new ChannelNotFoundException(id));
     }
 }

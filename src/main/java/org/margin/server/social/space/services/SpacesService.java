@@ -4,7 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.channel.channel.Channel;
+import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
@@ -23,7 +23,6 @@ import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -38,7 +37,6 @@ import java.util.stream.Collectors;
 public class SpacesService {
     private final SpacesRepository spacesRepository;
     private final SpaceMemberRepository spaceMemberRepository;
-    private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
     private final ChannelService channelService;
     private final MarginMemberRepository marginMemberRepository;
@@ -49,7 +47,6 @@ public class SpacesService {
 
     public SpacesService(SpacesRepository spacesRepository,
                          SpaceMemberRepository spaceMemberRepository,
-                         UserRepository userRepository,
                          ChannelRepository channelRepository,
                          ChannelService channelService,
                          MarginMemberRepository marginMemberRepository,
@@ -58,7 +55,6 @@ public class SpacesService {
                          EntityManager entityManager, WebSocketDeliveryService webSocketDeliveryService) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
-        this.userRepository = userRepository;
         this.channelRepository = channelRepository;
         this.channelService = channelService;
         this.marginMemberRepository = marginMemberRepository;
@@ -134,7 +130,7 @@ public class SpacesService {
             throw new UserNotInMargin(user.getId());
         }
 
-        if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user, space)) {
+        if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user.getId(), space.getId())) {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
 

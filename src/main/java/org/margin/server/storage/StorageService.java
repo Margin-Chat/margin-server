@@ -7,7 +7,10 @@ import java.io.IOException;
 
 public interface StorageService {
     String saveProfilePicture(MultipartFile file);
+
     String saveMarginIcon(MultipartFile file);
+
     void deleteProfilePicture(String url);
-    Resource getProfilePicture(String url) throws IOException;
+
+    Resource getFile(String url) throws IOException;
 }

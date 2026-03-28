@@ -6,10 +6,10 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.websocket.connection.ClientConnection;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.connection.ClientConnection;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
@@ -102,6 +102,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     @SuppressWarnings("unchecked")
     public void handleWebSocketMessage(ChannelHandlerContext ctx, WebSocketMessageIn<?> message) {
+        if (message.getType() == WebSocketMessageType.PING) {
+            ctx.writeAndFlush(new TextWebSocketFrame("{\"type\":\"PONG\"}"));
+            return;
+        }
+
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user == null) {
             ctx.close();

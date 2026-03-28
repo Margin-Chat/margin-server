@@ -1,13 +1,11 @@
 package org.margin.server.social.margin.validations;
 
-import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
-import org.margin.server.social.space.repositories.SpacesRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,15 +21,11 @@ public class MarginAuthorizationService {
 
     private final MarginService marginService;
     private final SpaceMemberRepository spaceMemberRepository;
-    private final ChannelRepository channelRepository;
-    private final SpacesRepository spacesRepository;
 
     public MarginAuthorizationService(MarginService marginService,
-                                      SpaceMemberRepository spaceMemberRepository, ChannelRepository channelRepository, SpacesRepository spacesRepository) {
+                                      SpaceMemberRepository spaceMemberRepository) {
         this.marginService = marginService;
         this.spaceMemberRepository = spaceMemberRepository;
-        this.channelRepository = channelRepository;
-        this.spacesRepository = spacesRepository;
     }
 
     public void requireMarginMember(Long userId, Long marginId) {
@@ -69,9 +63,15 @@ public class MarginAuthorizationService {
         }
     }
 
-    public void requireChannelMembership(Long userId, Long channelId) {
+    public void requireChannelMember(Long userId, Long channelId) {
         if (!spaceMemberRepository.existsByChannelIdAndUserId(userId, channelId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User does not have access to the channel");
+        }
+    }
+
+    public void requireSpaceMember(Long id, Long spaceId) {
+        if (!spaceMemberRepository.existsSpaceMemberByUserAndSpace(id, spaceId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User does not have access to the space");
         }
     }
 }

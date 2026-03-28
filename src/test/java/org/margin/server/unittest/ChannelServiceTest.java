@@ -4,10 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.channel.channel.Channel;
-import org.margin.server.social.channel.channel.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
@@ -23,17 +23,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ChannelServiceTest {
 
-    @Mock private ChannelRepository channelRepository;
-    @Mock private ConversationRepository conversationRepository;
-    @Mock private SpacesService spacesService;
-    @Mock private ConversationMemberRepository conversationMemberRepository;
+    @Mock
+    private ChannelRepository channelRepository;
+    @Mock
+    private ConversationRepository conversationRepository;
+    @Mock
+    private SpacesService spacesService;
+    @Mock
+    private ConversationMemberRepository conversationMemberRepository;
 
     @InjectMocks
     private ChannelService channelService;

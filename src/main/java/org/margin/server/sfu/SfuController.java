@@ -31,10 +31,10 @@ public class SfuController {
         this.sfuTokenService = sfuTokenService;
     }
 
-    @GetMapping("create_or_join")
+    @PostMapping("create_or_join")
     public ResponseEntity<SfuJoinResponse> getConnectionInfo(@RequestParam String roomId,
                                                              @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireChannelMembership(user.getId(), Long.parseLong(roomId));
+        marginAuthorizationService.requireChannelMember(user.getId(), Long.parseLong(roomId));
         sfuService.createOrJoinRoom(roomId);
         String roomToken = sfuTokenService.generateRoomToken(user.getId(), roomId);
         return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken));
@@ -57,7 +57,9 @@ public class SfuController {
     }
 
     @GetMapping("voice_participants/{channelId}")
-    public ResponseEntity<List<UserDTO>> getVoiceParticipants(@PathVariable Long channelId) {
+    public ResponseEntity<List<UserDTO>> getVoiceParticipants(@PathVariable Long channelId,
+                                                              @AuthenticationPrincipal User user) {
+        marginAuthorizationService.requireChannelMember(user.getId(), channelId);
         return ResponseEntity.ok(sfuService.getVoiceParticipants(channelId));
     }
 }

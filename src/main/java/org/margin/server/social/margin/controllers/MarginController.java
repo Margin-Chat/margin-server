@@ -67,7 +67,7 @@ public class MarginController {
         return ResponseEntity.ok(marginMapper.marginToDto(marginService.updateMargin(updateMarginDTO, marginIcon)));
     }
 
-    @PostMapping("/delete_margin")
+    @DeleteMapping("/delete_margin")
     public ResponseEntity<Void> deleteMargin(@RequestBody Long marginId,
                                              @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);

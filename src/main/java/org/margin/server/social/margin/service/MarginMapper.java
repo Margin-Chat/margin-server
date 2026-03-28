@@ -1,6 +1,7 @@
 package org.margin.server.social.margin.service;
 
-import org.margin.server.social.channel.channel.ChannelDTO;
+import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
@@ -53,7 +54,7 @@ public class MarginMapper {
                 : List.of();
 
         List<ChannelDTO> channels = space.getChannels() != null
-                ? space.getChannels().stream().map(ChannelDTO::new).toList()
+                ? space.getChannels().stream().map(this::channelToDto).toList()
                 : List.of();
 
         return new SpaceDTO(
@@ -65,5 +66,16 @@ public class MarginMapper {
                 channels,
                 members,
                 space.isDefault());
+    }
+
+    public ChannelDTO channelToDto(Channel channel) {
+        return new ChannelDTO(
+                channel.getId(),
+                channel.getName(),
+                channel.getDescription(),
+                channel.getConversation().getId(),
+                channel.getChannelType(),
+                channel.getSpace().getId()
+        );
     }
 }

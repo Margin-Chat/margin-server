@@ -33,7 +33,10 @@ public enum WebSocketMessageType {
 
     // Margin
     MARGIN_INVITE(String.class),
-    USER_JOINED_SPACE(String.class);
+    USER_JOINED_SPACE(String.class),
+
+    PING(null),
+    PONG(null);
 
     public final Class<?> payloadClass;
 

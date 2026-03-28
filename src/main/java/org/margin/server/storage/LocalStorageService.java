@@ -1,6 +1,5 @@
 package org.margin.server.storage;
 
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -71,7 +70,7 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
-    public Resource getProfilePicture(String url) throws IOException {
+    public Resource getFile(String url) throws IOException {
         String fileName = url.substring(url.lastIndexOf('/') + 1);
         Path filePath = Paths.get(storageProperties.getLocal().getUploadDir()).resolve(fileName);
 
