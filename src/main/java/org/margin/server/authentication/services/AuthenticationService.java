@@ -1,7 +1,9 @@
 package org.margin.server.authentication.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.authentication.entities.BetaKey;
 import org.margin.server.authentication.models.AuthResponse;
+import org.margin.server.authentication.repositories.BetaKeyRepository;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -16,8 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -31,6 +31,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final StorageService storageService;
     private final ConnectionManager connectionManager;
+    private final BetaKeyRepository betaKeyRepository;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -38,13 +39,14 @@ public class AuthenticationService {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             StorageService storageService,
-            ConnectionManager connectionManager) {
+            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.storageService = storageService;
         this.connectionManager = connectionManager;
+        this.betaKeyRepository = betaKeyRepository;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
@@ -86,13 +88,22 @@ public class AuthenticationService {
     }
 
     public void registerUser(String username,
+                             String displayName,
                              String email,
                              String password,
                              String privateKey,
                              String publicKey,
                              String salt,
                              String iv,
+                             String betaKey,
                              MultipartFile profilePicture) {
+        BetaKey key = betaKeyRepository.findByKey(betaKey)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid beta key"));
+
+        if (key.isUsed()) {
+            throw new IllegalArgumentException("This beta key has already been used");
+        }
+
         if (userRepository.findByEmail(email.toLowerCase()).isPresent()) {
             throw new IllegalArgumentException("Email already in use");
         }
@@ -108,7 +119,7 @@ public class AuthenticationService {
 
         User user = new User();
         user.setUsername(username.toLowerCase());
-        user.setDisplayName(toTitleCase(username));
+        user.setDisplayName(displayName);
         user.setEmail(email.toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
         user.setProfilePictureUrl(profilePictureUrl);
@@ -127,7 +138,11 @@ public class AuthenticationService {
         security.setFailedLoginAttempts(0);
         user.setSecurity(security);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        key.setUsedBy(savedUser);
+        key.setUsedAt(Instant.now());
+        betaKeyRepository.save(key);
     }
 
     private boolean isAccountLocked(User user) {
@@ -167,11 +182,5 @@ public class AuthenticationService {
             connection.close();
             connectionManager.removeConnection(user);
         }
-    }
-
-    private String toTitleCase(String input) {
-        return Arrays.stream(input.trim().split("\\s+"))
-                .map(word -> Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
     }
 }

@@ -1,5 +1,6 @@
 package org.margin.server.exceptions;
 
+import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -7,8 +8,10 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MarginNotFoundException.class)
@@ -25,10 +28,10 @@ public class GlobalExceptionHandler {
         return detail;
     }
 
-    @ExceptionHandler(Exception.class)
-    public ProblemDetail handleGeneric(Exception ex) {
-        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        detail.setDetail("An unexpected error occurred");
+    @ExceptionHandler(ResponseStatusException.class)
+    public ProblemDetail handleResponseStatus(ResponseStatusException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(ex.getStatusCode());
+        detail.setDetail(ex.getReason());
         return detail;
     }
 

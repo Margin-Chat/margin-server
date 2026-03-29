@@ -50,8 +50,9 @@ public class MarginController {
     @GetMapping("/get_margin/{marginId}")
     public MarginDTO getMargin(@PathVariable Long marginId,
                                @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginMember(user.getId(), marginId);
-        return marginMapper.marginToDto(marginService.getById(marginId));
+        Margin margin = marginService.getById(marginId);
+        marginAuthorizationService.requireMarginMember(user.getId(), margin.getId());
+        return marginMapper.marginToDto(margin);
     }
 
     @GetMapping("/get_margins")

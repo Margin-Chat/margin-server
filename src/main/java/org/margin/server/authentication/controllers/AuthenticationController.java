@@ -50,12 +50,14 @@ public class AuthenticationController {
         try {
             authenticationService.registerUser(
                     request.username(),
+                    request.displayName(),
                     request.email(),
                     request.password(),
                     request.encryptedPrivateKey(),
                     request.publicKey(),
                     request.salt(),
                     request.iv(),
+                    request.betaKey(),
                     profilePicture);
 
             AuthResponse authResponse = authenticationService.authenticateUser(
