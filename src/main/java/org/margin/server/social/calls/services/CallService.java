@@ -22,8 +22,8 @@ public class CallService {
     }
 
     @Transactional
-    public Call createCall(User fromUserId, User toUserId, CallStatus status, CallType type, String sdp) {
-        Call call = new Call(fromUserId, toUserId, status, type, sdp);
+    public Call createCall(User fromUserId, User toUserId, CallStatus status, CallType type) {
+        Call call = new Call(fromUserId, toUserId, status, type);
         Call saved = callRepository.save(call);
 
         log.debug("Call created: {} -> {} (type: {}, id: {})",

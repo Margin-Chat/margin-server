@@ -5,7 +5,6 @@ CREATE TABLE calls
     receiver_id      BIGINT                                  NOT NULL,
     status           VARCHAR(50)                             NOT NULL,
     type             VARCHAR(50)                             NOT NULL,
-    sdp              TEXT,
     offered_at       TIMESTAMP WITHOUT TIME ZONE             NOT NULL,
     answered_at      TIMESTAMP WITHOUT TIME ZONE,
     ended_at         TIMESTAMP WITHOUT TIME ZONE,

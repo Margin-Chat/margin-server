@@ -3,7 +3,7 @@ package org.margin.server.social.conversation.repositories;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
-import org.margin.server.social.conversation.models.dtos.UnreadCountDTO;
+import org.margin.server.social.conversation.models.projections.UnreadCountProjection;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.projections.RecentChatUserProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -48,18 +48,17 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     @Query("""
             SELECT
-                cm.conversation.id,
-                m.fromUser.id,
-                SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
-                SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END),
-                COALESCE(ch.space.margin.id, -1)
+                cm.conversation.id AS conversationId,
+                SUM(CASE WHEN cm.conversation.type = 'DIRECT' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) AS unreadDmsCount,
+                SUM(CASE WHEN cm.conversation.type = 'CHANNEL' AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) AS unreadChannelsCount,
+                COALESCE(ch.space.margin.id, -1) AS marginId
             FROM ConversationMember cm
             LEFT JOIN Message m ON m.conversation.id = cm.conversation.id
             LEFT JOIN Channel ch ON ch.conversation.id = cm.conversation.id
             WHERE cm.user.id = :userId
-            GROUP BY cm.conversation.id, m.fromUser.id, ch.space.margin.id
+            GROUP BY cm.conversation.id, cm.conversation.type, ch.space.margin.id
             HAVING SUM(CASE WHEN m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt) AND m.fromUser.id != :userId THEN 1 ELSE 0 END) > 0""")
-    List<UnreadCountDTO> getUnreadMessagesCounts(@Param("userId") Long userId);
+    List<UnreadCountProjection> getUnreadMessagesCounts(@Param("userId") Long userId);
 
     List<ConversationMember> findByConversation(Conversation conversation);
 }

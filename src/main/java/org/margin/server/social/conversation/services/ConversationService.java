@@ -153,7 +153,14 @@ public class ConversationService {
     }
 
     public List<UnreadCountDTO> getUnreadMessagesCounts(Long userId) {
-        return conversationMemberRepository.getUnreadMessagesCounts(userId);
+        return conversationMemberRepository.getUnreadMessagesCounts(userId).stream()
+                .map(p -> new UnreadCountDTO(
+                        p.getConversationId(),
+                        p.getUnreadDmsCount(),
+                        p.getUnreadChannelsCount(),
+                        p.getMarginId()
+                ))
+                .toList();
     }
 
     public List<RecentChatUsersDTO> getRecentChatUsers(Long userId) {

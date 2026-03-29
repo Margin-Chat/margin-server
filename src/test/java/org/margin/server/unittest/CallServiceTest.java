@@ -33,14 +33,13 @@ class CallServiceTest {
     void createCall_savesAndReturnsCall() {
         User fromUser = createUser(1L, "caller");
         User toUser = createUser(2L, "receiver");
-        String sdp = "test-sdp-data";
 
-        Call savedCall = new Call(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO, sdp);
+        Call savedCall = new Call(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO);
         savedCall.setId(100L);
 
         when(callRepository.save(any(Call.class))).thenReturn(savedCall);
 
-        Call result = callService.createCall(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO, sdp);
+        Call result = callService.createCall(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO);
 
         assertNotNull(result);
         assertEquals(100L, result.getId());

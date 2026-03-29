@@ -37,9 +37,6 @@ public class Call {
     @Column(nullable = false)
     private CallType type;
 
-    @Column(columnDefinition = "TEXT")
-    private String sdp;
-
     @Column(name = "offered_at", nullable = false)
     private Instant offeredAt;
 
@@ -55,13 +52,11 @@ public class Call {
     public Call(User caller,
                 User receiverId,
                 CallStatus status,
-                CallType type,
-                String sdp) {
+                CallType type) {
         this.caller = caller;
         this.receiver = receiverId;
         this.status = status;
         this.type = type;
-        this.sdp = sdp;
     }
 
     @PrePersist
