@@ -49,7 +49,8 @@ public class CallNoAnswerProcessor implements WebSocketMessageProcessor<String> 
                 Collections.singletonList(recepientUser),
                 user,
                 NotificationType.MISSED_CALL,
-                call.getId());
+                call.getId(),
+                null);
         webSocketDeliveryService.notifyCallNoAnswer(recepientUser);
     }
 }
