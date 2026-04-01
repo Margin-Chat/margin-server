@@ -3,22 +3,22 @@ package org.margin.server.websocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.margin.server.authentication.services.JwtService;
 
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -59,8 +59,8 @@ public class WebSocketServer {
     }
 
     private void run() {
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
+        bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()

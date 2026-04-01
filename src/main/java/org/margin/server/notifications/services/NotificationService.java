@@ -1,5 +1,6 @@
 package org.margin.server.notifications.services;
 
+import jakarta.annotation.Resource;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
@@ -15,6 +16,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class NotificationService {
+
+    @Resource
+    private NotificationService notificationService;
     private final NotificationRepository notificationRepository;
     private final WebSocketDeliveryService webSocketDeliveryService;
 
@@ -49,7 +53,7 @@ public class NotificationService {
 
     @Transactional
     public void createForUsers(List<User> members, User sender, NotificationType type, Long referenceId) {
-        createForUsers(members, sender, type, referenceId, null);
+        notificationService.createForUsers(members, sender, type, referenceId, null);
     }
 
     @Transactional

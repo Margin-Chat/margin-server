@@ -1,7 +1,6 @@
 package org.margin.server.sfu.services;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,10 +25,10 @@ public class SfuTokenService {
 
     public String generateRoomToken(Long userId, String roomId) {
         return Jwts.builder()
-                .setClaims(Map.of("userId", userId, "roomId", roomId))
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + tokenExpiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .claims(Map.of("userId", userId, "roomId", roomId))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
+                .signWith(getSigningKey())
                 .compact();
     }
 }

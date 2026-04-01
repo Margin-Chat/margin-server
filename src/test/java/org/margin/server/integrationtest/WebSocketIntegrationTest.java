@@ -68,9 +68,9 @@ class WebSocketIntegrationTest {
     private void waitForPort(int port, long timeoutMs) throws Exception {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
-            try (var ignored = new java.net.Socket("localhost", port)) {
+            try (var _ = new java.net.Socket("localhost", port)) {
                 return;
-            } catch (Exception e) {
+            } catch (Exception _) {
                 Thread.sleep(100);
             }
         }

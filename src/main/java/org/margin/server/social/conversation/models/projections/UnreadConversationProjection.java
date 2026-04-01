@@ -1,11 +1,9 @@
 package org.margin.server.social.conversation.models.projections;
 
-public interface UnreadCountProjection {
+public interface UnreadConversationProjection {
     Long getConversationId();
 
-    Long getUnreadDmsCount();
-
-    Long getUnreadChannelsCount();
+    String getType();
 
     Long getMarginId();
 }

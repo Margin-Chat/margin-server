@@ -77,7 +77,7 @@ public class AuthenticationService {
                     user.getEncryption().getSalt(),
                     user.getEncryption().getIv());
 
-        } catch (BadCredentialsException e) {
+        } catch (BadCredentialsException _) {
             handleFailedLogin(email);
             log.info("Authentication failed for email: {}", email);
             return new AuthResponse(

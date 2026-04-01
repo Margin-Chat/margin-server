@@ -1,5 +1,6 @@
 package org.margin.server.social.messages.services;
 
+import jakarta.annotation.Resource;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 @Service
 public class MessageService {
 
+    @Resource
+    private MessageService messageService;
     private final MessageRepository messageRepository;
     private final ConversationService conversationService;
     private final ConnectionManager connectionManager;
@@ -94,7 +97,7 @@ public class MessageService {
 
     @Transactional
     public void sendMessage(User fromUser, String content, Conversation conversation) {
-        MessageResult result = createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessage(fromUser, conversation, content);
         webSocketDeliveryService.notifyMessage(
                 result.message(),
                 result.recipients(),

@@ -47,8 +47,9 @@ class NotificationServiceTest {
         verify(notificationRepository).saveAll(captor.capture());
 
         List<Notification> saved = captor.getValue();
-        assertThat(saved).hasSize(2);
-        assertThat(saved).noneMatch(n -> n.getRecipient().getId().equals(sender.getId()));
+        assertThat(saved)
+                .hasSize(2)
+                .noneMatch(n -> n.getRecipient().getId().equals(sender.getId()));
     }
 
     @Test
@@ -98,8 +99,9 @@ class NotificationServiceTest {
 
         Map<Long, Long> counts = notificationService.getUnseenCountsPerMargin(recipient.getId());
 
-        assertThat(counts).containsEntry(10L, 2L);
-        assertThat(counts).containsEntry(20L, 1L);
+        assertThat(counts)
+                .containsEntry(10L, 2L)
+                .containsEntry(20L, 1L);
     }
 
     @Test

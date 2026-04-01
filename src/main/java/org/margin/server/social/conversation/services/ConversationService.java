@@ -5,6 +5,7 @@ import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.*;
+import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.models.User;
@@ -152,21 +153,28 @@ public class ConversationService {
         });
     }
 
-    public List<UnreadCountDTO> getUnreadMessagesCounts(Long userId) {
-        return conversationMemberRepository.getUnreadMessagesCounts(userId).stream()
-                .map(p -> new UnreadCountDTO(
-                        p.getConversationId(),
-                        p.getUnreadDmsCount(),
-                        p.getUnreadChannelsCount(),
-                        p.getMarginId()
-                ))
+    public UnreadConversationsDTO getUnreadConversations(Long userId) {
+        var projections = conversationMemberRepository.getUnreadConversations(userId);
+
+        List<Long> direct = projections.stream()
+                .filter(p -> "DIRECT".equals(p.getType()))
+                .map(UnreadConversationProjection::getConversationId)
                 .toList();
+
+        List<UnreadConversationsDTO.ChannelUnread> channelUnreads = projections.stream()
+                .filter(p -> "CHANNEL".equals(p.getType()))
+                .map(p ->
+                        new UnreadConversationsDTO.ChannelUnread(p.getConversationId(), p.getMarginId()))
+                .toList();
+
+        return new UnreadConversationsDTO(direct, channelUnreads);
     }
 
     public List<RecentChatUsersDTO> getRecentChatUsers(Long userId) {
         return conversationMemberRepository.findRecentChatUsers(userId)
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
+                        p.conversationId(),
                         new UserDTO(p.user(), connectionManager.isUserOnline(p.user().getId())),
                         p.lastMessage(),
                         p.lastMessageTime(),

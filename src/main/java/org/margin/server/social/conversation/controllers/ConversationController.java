@@ -118,10 +118,10 @@ public class ConversationController {
     }
 
     @GetMapping("/conversations/unread")
-    public List<UnreadCountDTO> getUnreadMessagesCount(@AuthenticationPrincipal User user) {
-        return conversationService.getUnreadMessagesCounts(user.getId());
+    public UnreadConversationsDTO getUnreadConversations(@AuthenticationPrincipal User user) {
+        return conversationService.getUnreadConversations(user.getId());
     }
-
+    
     @PostMapping("/conversations/{conversationId}/members")
     public ResponseEntity<Void> addMemberToConversation(
             @PathVariable Long conversationId,

@@ -11,7 +11,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/announcements")
@@ -31,7 +30,7 @@ public class AnnouncementController {
         marginAuthorizationService.requireMarginMember(user.getId(), marginId);
         return announcementService.getAnnouncementsForMargin(marginId).stream()
                 .map(announcementService::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @PostMapping("/create")

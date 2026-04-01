@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -148,7 +147,7 @@ public class SpacesService {
         webSocketDeliveryService.notifyUserJoinedSpace(
                 spaceMemberRepository.findSpaceMemberBySpace(space).stream()
                         .map(SpaceMember::getUser)
-                        .collect(Collectors.toList()),
+                        .toList(),
                 user,
                 space.getId());
 

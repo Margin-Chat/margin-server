@@ -1,10 +1,10 @@
 package org.margin.server.users.services;
 
+import org.margin.server.users.models.User;
+import org.margin.server.users.repositories.UserRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
 
 @Service
 public class UserCacheService {
@@ -21,5 +21,6 @@ public class UserCacheService {
 
     @CacheEvict(value = "users", key = "#userId")
     public void evictUserCache(Long userId) {
+        // Intentionally empty
     }
 }

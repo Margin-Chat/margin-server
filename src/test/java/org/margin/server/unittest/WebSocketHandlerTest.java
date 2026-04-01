@@ -7,11 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.WebSocketAttributes;
 import org.margin.server.websocket.WebSocketHandler;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
@@ -21,18 +21,23 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketHandlerTest {
 
-    @Mock private JwtService jwtService;
-    @Mock private ConnectionManager connectionManager;
-    @Mock private PresenceService presenceService;
-    @Mock private ChannelHandlerContext ctx;
-    @Mock private Channel channel;
-    @Mock private Attribute<User> userAttribute;
+    @Mock
+    private JwtService jwtService;
+    @Mock
+    private ConnectionManager connectionManager;
+    @Mock
+    private PresenceService presenceService;
+    @Mock
+    private ChannelHandlerContext ctx;
+    @Mock
+    private Channel channel;
+    @Mock
+    private Attribute<User> userAttribute;
 
     private WebSocketMessageProcessor<Object> testProcessor;
     private WebSocketHandler handler;
@@ -47,8 +52,10 @@ class WebSocketHandlerTest {
             public WebSocketMessageType getType() {
                 return WebSocketMessageType.SEND_MESSAGE;
             }
+
             @Override
             public void process(User user, WebSocketMessageIn<Object> message) {
+                // Empty for SQ
             }
         };
         testProcessor = spy(testProcessor);

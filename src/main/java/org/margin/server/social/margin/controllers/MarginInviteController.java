@@ -3,6 +3,7 @@ package org.margin.server.social.margin.controllers;
 import lombok.RequiredArgsConstructor;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.models.dtos.MarginInviteDTO;
 import org.margin.server.social.margin.service.MarginInviteService;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -74,7 +75,7 @@ public class MarginInviteController {
     public ResponseEntity<MarginInviteDTO> getInviteDetails(@PathVariable String code) {
         MarginInvite invite = marginInviteService.findInviteDetails(code).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
-        
+
         if (!invite.isUsable()) {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
@@ -83,7 +84,7 @@ public class MarginInviteController {
     }
 
     @PostMapping("/join/{code}")
-    public ResponseEntity<?> acceptLinkInvite(
+    public ResponseEntity<MarginDTO> acceptLinkInvite(
             @PathVariable String code,
             @AuthenticationPrincipal User user) {
         MarginInvite invite = marginInviteService.findInviteDetails(code).orElseThrow(() ->
@@ -102,7 +103,7 @@ public class MarginInviteController {
     }
 
     @PostMapping("/{id}/accept")
-    public ResponseEntity<?> acceptDirectInvite(
+    public ResponseEntity<MarginDTO> acceptDirectInvite(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
         MarginInvite invite = marginInviteService.getById(id);

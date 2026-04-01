@@ -4,19 +4,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
-import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.models.payloads.EditMessagePayload;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class DeleteMessageProcessor implements WebSocketMessageProcessor<String>{
+public class DeleteMessageProcessor implements WebSocketMessageProcessor<String> {
     private final ConversationService conversationService;
     private final ConversationValidationService conversationValidationService;
     private final MessageService messageService;

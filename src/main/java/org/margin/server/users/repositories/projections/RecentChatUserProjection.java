@@ -4,7 +4,8 @@ import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
-public record RecentChatUserProjection(User user,
+public record RecentChatUserProjection(Long conversationId,
+                                       User user,
                                        String lastMessage,
                                        Instant lastMessageTime,
                                        boolean lastMessageIncoming) {

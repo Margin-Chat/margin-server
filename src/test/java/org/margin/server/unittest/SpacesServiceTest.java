@@ -21,7 +21,6 @@ import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.InjectMocks;
@@ -62,16 +61,10 @@ class SpacesServiceTest {
     @InjectMocks
     private SpacesService spacesService;
 
-    // --- Helpers ---
-
     private User testUser(long id) {
         User user = new User();
         user.setId(id);
         return user;
-    }
-
-    private UserDTO testUserDTO(long id) {
-        return new UserDTO(testUser(id), false);
     }
 
     private Margin testMargin(User... members) {

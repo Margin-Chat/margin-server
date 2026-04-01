@@ -36,9 +36,9 @@ public class FilesController {
                             : MediaType.APPLICATION_OCTET_STREAM)
                     .body(resource);
 
-        } catch (NoSuchFileException e) {
+        } catch (NoSuchFileException _) {
             return ResponseEntity.notFound().build();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -55,9 +55,9 @@ public class FilesController {
                             : MediaType.APPLICATION_OCTET_STREAM)
                     .body(resource);
 
-        } catch (NoSuchFileException e) {
+        } catch (NoSuchFileException _) {
             return ResponseEntity.notFound().build();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

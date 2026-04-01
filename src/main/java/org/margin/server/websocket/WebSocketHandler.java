@@ -119,9 +119,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        dbExecutor.execute(() -> {
-            processor.process(user, (WebSocketMessageIn<Object>) message);
-        });
+        dbExecutor.execute(() -> processor.process(user, (WebSocketMessageIn<Object>) message));
     }
 
     @Override

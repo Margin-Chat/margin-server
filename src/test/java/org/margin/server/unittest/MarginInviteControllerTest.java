@@ -57,7 +57,7 @@ class MarginInviteControllerTest {
     void setUp() {
         adminUser = testUser(1L, "admin");
         targetUser = testUser(2L, "targetUser");
-        margin = testMargin(1L, "Test Margin");
+        margin = testMargin();
     }
 
     @Test
@@ -98,8 +98,6 @@ class MarginInviteControllerTest {
         assertThatThrownBy(() -> marginInviteController.createLinkInvite(1L, -5, adminUser))
                 .isInstanceOf(ResponseStatusException.class);
     }
-
-    // --- createDirectInvite ---
 
     @Test
     void createDirectInvite_shouldReturnInvite() {
@@ -145,8 +143,6 @@ class MarginInviteControllerTest {
                 .isInstanceOf(ResponseStatusException.class);
     }
 
-    // --- getInviteDetails ---
-
     @Test
     void getInviteDetails_shouldReturnDetails() {
         MarginInvite invite = testLinkInvite(margin, adminUser);
@@ -169,8 +165,6 @@ class MarginInviteControllerTest {
         assertThatThrownBy(() -> marginInviteController.getInviteDetails("abc-123"))
                 .isInstanceOf(ResponseStatusException.class);
     }
-
-    // --- acceptLinkInvite ---
 
     @Test
     void acceptLinkInvite_shouldSucceed() {
@@ -207,8 +201,6 @@ class MarginInviteControllerTest {
                 .isInstanceOf(ResponseStatusException.class);
     }
 
-    // --- acceptDirectInvite ---
-
     @Test
     void acceptDirectInvite_shouldReturnMargin() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
@@ -243,8 +235,6 @@ class MarginInviteControllerTest {
                 .isInstanceOf(ResponseStatusException.class);
     }
 
-    // --- declineDirectInvite ---
-
     @Test
     void declineDirectInvite_shouldReturn200() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
@@ -277,8 +267,6 @@ class MarginInviteControllerTest {
                 .isInstanceOf(ResponseStatusException.class);
     }
 
-    // --- getPendingInvites ---
-
     @Test
     void getPendingInvites_shouldReturnList() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
@@ -293,8 +281,6 @@ class MarginInviteControllerTest {
         assertThat(body.get(0).marginName()).isEqualTo("Test Margin");
     }
 
-    // --- Helpers ---
-
     private User testUser(Long id, String username) {
         User user = new User();
         user.setId(id);
@@ -302,11 +288,11 @@ class MarginInviteControllerTest {
         return user;
     }
 
-    private Margin testMargin(Long id, String name) {
-        Margin margin = new Margin();
-        margin.setId(id);
-        margin.setName(name);
-        return margin;
+    private Margin testMargin() {
+        Margin newMargin = new Margin();
+        newMargin.setId(1L);
+        newMargin.setName("Test Margin");
+        return newMargin;
     }
 
     private MarginInvite testLinkInvite(Margin margin, User invitedBy) {

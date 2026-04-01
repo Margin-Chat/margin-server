@@ -21,7 +21,6 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -42,7 +41,6 @@ public class MarginService {
     private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
-    private final WebSocketDeliveryService webSocketDeliveryService;
     private final NotificationService notificationService;
 
     public MarginService(MarginRepository marginRepository,
@@ -51,7 +49,8 @@ public class MarginService {
                          ConnectionManager connectionManager,
                          UserService userService,
                          SpacesService spacesService,
-                         MarginMapper marginMapper, WebSocketDeliveryService webSocketDeliveryService, NotificationService notificationService) {
+                         MarginMapper marginMapper,
+                         NotificationService notificationService) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
@@ -59,7 +58,6 @@ public class MarginService {
         this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
-        this.webSocketDeliveryService = webSocketDeliveryService;
         this.notificationService = notificationService;
     }
 
