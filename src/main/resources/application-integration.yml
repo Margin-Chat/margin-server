@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/margin_test
+    username: sysuser
+    password: admin123
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+
+margin:
+  websocket:
+    port: 8081
+  jwt:
+    secret: integration-test-secret-that-is-long-enough
+
+storage:
+  type: local
