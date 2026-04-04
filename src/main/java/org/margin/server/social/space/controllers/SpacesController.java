@@ -72,11 +72,10 @@ public class SpacesController {
     @PostMapping("add_space_member")
     public ResponseEntity<SpaceMemberDTO> addSpaceMember(@AuthenticationPrincipal User user,
                                                          @RequestBody SpaceMemberDTO spaceMemberDTO) {
-        Long marginId = spacesService.getById(spaceMemberDTO.spaceId()).getMargin().getId();
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceMemberDTO.spaceId(), marginId);
+        Space space = spacesService.getById(spaceMemberDTO.spaceId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceMemberDTO.spaceId());
 
         User userToAdd = userService.getById(spaceMemberDTO.user().id());
-        Space space = spacesService.getById(spaceMemberDTO.spaceId());
 
         SpaceMember member = spacesService.addNewUserToSpace(userToAdd, space, spaceMemberDTO.role());
         return ResponseEntity.ok(new SpaceMemberDTO(
@@ -90,15 +89,29 @@ public class SpacesController {
     @PostMapping("update_space_info")
     public ResponseEntity<SpaceDTO> updateSpaceInfo(@AuthenticationPrincipal User user,
                                                     @RequestBody SpaceDTO spaceDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.marginId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId());
         return ResponseEntity.ok(marginMapper.spaceToDto(spacesService.updateSpace(spaceDTO)));
     }
 
     @DeleteMapping("delete_space")
     public ResponseEntity<Void> deleteSpace(@AuthenticationPrincipal User user,
                                             @RequestBody SpaceDTO spaceDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId(), spaceDTO.marginId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), spaceDTO.spaceId());
         spacesService.deleteSpace(spaceDTO.spaceId());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("update_space_member_role")
+    public ResponseEntity<SpaceMemberDTO> updateSpaceMemberRole(@AuthenticationPrincipal User user,
+                                                                @RequestBody SpaceMemberDTO spaceMemberDTO) {
+        Space space = spacesService.getById(spaceMemberDTO.spaceId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId());
+        SpaceMember member = spacesService.updateSpaceMemberRole(space, spaceMemberDTO);
+        return ResponseEntity.ok(new SpaceMemberDTO(
+                new UserDTO(member.getUser(), connectionManager.isUserOnline(member.getUser().getId())),
+                member.getSpace().getId(),
+                member.getRole(),
+                member.getJoinedAt()
+        ));
     }
 }

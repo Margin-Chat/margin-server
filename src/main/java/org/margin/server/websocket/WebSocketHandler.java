@@ -64,7 +64,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
         Optional<User> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
         if (optionalUser.isEmpty()) {
-            ctx.close();
+            var response = new io.netty.handler.codec.http.DefaultFullHttpResponse(
+                    io.netty.handler.codec.http.HttpVersion.HTTP_1_1,
+                    io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED
+            );
+            ctx.writeAndFlush(response).addListener(io.netty.channel.ChannelFutureListener.CLOSE);
             return;
         }
 

@@ -80,10 +80,17 @@ public class UserController {
         return conversationService.getRecentChatUsers(user.getId());
     }
 
-    @GetMapping("/search")
-    public List<UserSearchResultDTO> searchForUser(@AuthenticationPrincipal User user,
-                                                   @RequestParam String query) {
-        return userService.searchUsers(user.getId(), query);
+    @GetMapping("/search_shared_margin")
+    public List<UserSearchResultDTO> searchForUserWithSharedMargin(@AuthenticationPrincipal User user,
+                                                                   @RequestParam String query) {
+        return userService.searchUsersWithSharedMargins(user.getId(), query);
+    }
+
+    @GetMapping("/search_by_margin")
+    public List<UserDTO> searchForUserByMargin(@AuthenticationPrincipal User user,
+                                               @RequestParam Long marginId,
+                                               @RequestParam String query) {
+        return userService.searchUsersByMarginId(user.getId(), marginId, query);
     }
 
     @GetMapping("/lookup")

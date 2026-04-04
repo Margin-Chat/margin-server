@@ -88,8 +88,6 @@ public class MarginService {
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
 
-        log.info("Added user {} as Admin to margin with id {}", user.getId(), margin.getId());
-
         spacesService.createNewSpace(new CreateSpaceDTO(
                 "General Space",
                 "A space for general organization",
@@ -140,6 +138,8 @@ public class MarginService {
             return marginMember;
         }
 
+        log.info("Added user {} as {} to margin with id {}", user.getId(), role, margin.getId());
+
         notificationService.createForUsers(
                 Collections.singletonList(user),
                 addingUser,
@@ -157,13 +157,17 @@ public class MarginService {
             String iconUrl = storageService.saveMarginIcon(icon);
             margin.setIconUrl(iconUrl);
         }
-        return marginRepository.save(margin);
+        Margin save = marginRepository.save(margin);
+        log.info("Updated margin with id {}", save.getId());
+        return save;
     }
 
     public void deleteMargin(Long marginId) {
         Margin margin = getById(marginId);
         marginMemberRepository.deleteAll(margin.getMembers());
         marginRepository.deleteById(marginId);
+
+        log.info("Deleted margin with id {}", marginId);
     }
 
     public MarginMemberDTO memberToDto(MarginMember marginMember) {
@@ -175,7 +179,7 @@ public class MarginService {
                 marginMember.getJoinedAt());
     }
 
-    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO, User user) {
+    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO) {
         Margin margin = getById(marginId);
         List<MarginMember> members = margin.getMembers();
 

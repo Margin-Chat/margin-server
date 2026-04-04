@@ -45,13 +45,7 @@ public class MarginAuthorizationService {
         }
     }
 
-    public void requireSpaceAdmin(Long userId, Long spaceId, Long marginId) {
-        boolean isMarginAdmin = marginService.findMember(userId, marginId)
-                .map(m -> MARGIN_ADMIN_ROLES.contains(m.getRole()))
-                .orElse(false);
-
-        if (isMarginAdmin) return;
-
+    public void requireSpaceAdmin(Long userId, Long spaceId) {
         SpaceMember spaceMember = spaceMemberRepository
                 .findByUser_IdAndSpace_Id(userId, spaceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,

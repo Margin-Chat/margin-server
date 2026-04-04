@@ -16,7 +16,11 @@ public class ConnectionManager {
     private final Map<Long, ClientConnection> connections = new ConcurrentHashMap<>();
 
     public void addConnection(User user, ClientConnection connection) {
-        connections.put(user.getId(), connection);
+        ClientConnection old = connections.put(user.getId(), connection);
+        if (old != null && old.isActive()) {
+            log.info("Replacing existing connection for user {}, closing old channel", user.getId());
+            old.close();
+        }
     }
 
     public void removeConnection(User user) {

@@ -76,7 +76,7 @@ class UserServiceTest {
 
     @Test
     @DisplayName("searchUsers should return grouped results with shared margins")
-    void searchUsers_ReturnsGroupedResults() {
+    void searchUsers_WithSharedMargins_ReturnsGroupedResults() {
         User user = new User();
         user.setId(2L);
         user.setUsername("bob");
@@ -85,14 +85,14 @@ class UserServiceTest {
 
         Long searcherId = 1L;
 
-        when(userRepository.findUsersInSharedMargins(searcherId, "bo"))
+        when(userRepository.findUsersWithSharedMargins(searcherId, "bo"))
                 .thenReturn(List.of(
                         new UserWithSharedMarginProjection(user, "Team Alpha"),
                         new UserWithSharedMarginProjection(user, "Team Beta")
                 ));
         when(connectionManager.isUserOnline(2L)).thenReturn(true);
 
-        List<UserSearchResultDTO> result = userService.searchUsers(searcherId, "bo");
+        List<UserSearchResultDTO> result = userService.searchUsersWithSharedMargins(searcherId, "bo");
 
         assertEquals(1, result.size());
         assertEquals("bob", result.getFirst().user().username());

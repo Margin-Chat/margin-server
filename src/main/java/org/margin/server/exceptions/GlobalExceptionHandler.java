@@ -3,6 +3,8 @@ package org.margin.server.exceptions;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
+import org.margin.server.users.exceptions.UserNotFoundException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -16,6 +18,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MarginNotFoundException.class)
     public ProblemDetail handleMarginNotFound(MarginNotFoundException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ProblemDetail handleUserNotFound(UserNotFoundException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         detail.setDetail(ex.getMessage());
         return detail;
@@ -38,6 +47,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CallValidationException.class)
     public ProblemDetail handleCallValidation(CallValidationException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ProblemDetail handleDuplicateKey(DuplicateKeyException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail(ex.getMessage());
         return detail;
     }

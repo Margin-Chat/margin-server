@@ -44,7 +44,7 @@ public class ChannelController {
     @PostMapping("/create_channel")
     public ChannelDTO createChannel(@AuthenticationPrincipal User user, @RequestBody ChannelDTO channelDTO) {
         Space space = spacesService.getById(channelDTO.spaceId());
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId(), space.getMargin().getId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId());
         return marginMapper.channelToDto(channelService.createChannel(
                 space,
                 channelDTO.name(),
@@ -55,7 +55,7 @@ public class ChannelController {
     public ChannelDTO updateChannel(@AuthenticationPrincipal User user,
                                     @RequestBody ChannelDTO channelDTO) {
         Space space = spacesService.getById(channelDTO.spaceId());
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId(), space.getMargin().getId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId());
         return marginMapper.channelToDto(channelService.updateChannel(channelDTO));
     }
 
@@ -64,7 +64,7 @@ public class ChannelController {
                                               @RequestBody Long channelId) {
         Channel channel = channelService.getById(channelId);
         Space space = channel.getSpace();
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId(), space.getMargin().getId());
+        marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId());
         channelService.deleteChannel(channelId);
         return ResponseEntity.ok().build();
     }

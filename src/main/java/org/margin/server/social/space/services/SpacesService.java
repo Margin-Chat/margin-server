@@ -20,8 +20,10 @@ import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
+import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
+import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.dao.DuplicateKeyException;
@@ -95,12 +97,14 @@ public class SpacesService {
         Space space = spacesRepository.save(newSpace);
 
         log.info("Created space {}", space.getId());
+
         space = spacesRepository.findById(space.getId()).orElseThrow();
         channelService.createChannel(space, "General Chat", "A channel for general conversation");
-        entityManager.flush();
-        entityManager.refresh(space);
 
         addNewUserToSpace(user, space, SpaceRole.ADMIN);
+
+        entityManager.flush();
+        entityManager.refresh(space);
         return space;
     }
 
@@ -185,5 +189,14 @@ public class SpacesService {
         channelRepository.deleteAll(channelBySpace);
 
         spacesRepository.deleteById(spaceId);
+    }
+
+    @Transactional
+    public SpaceMember updateSpaceMemberRole(Space space, SpaceMemberDTO spaceMemberDTO) {
+        SpaceMember spaceMember = spaceMemberRepository.findByUser_IdAndSpace_Id(spaceMemberDTO.user().id(),
+                space.getId()).orElseThrow(UserNotFoundException::new);
+
+        spaceMember.setRole(spaceMemberDTO.role());
+        return spaceMemberRepository.save(spaceMember);
     }
 }

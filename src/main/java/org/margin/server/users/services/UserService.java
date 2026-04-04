@@ -1,6 +1,7 @@
 package org.margin.server.users.services;
 
 import org.margin.server.storage.StorageService;
+import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.models.dtos.UserSearchResultDTO;
@@ -35,7 +36,7 @@ public class UserService {
     }
 
     public User getByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        return userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
     }
 
     public void savePublicPrivateKeysForUser(Long userId, String publicKey, String encryptedPrivateKey) {
@@ -45,8 +46,8 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public List<UserSearchResultDTO> searchUsers(Long searcherId, String query) {
-        return userRepository.findUsersInSharedMargins(searcherId, query).stream()
+    public List<UserSearchResultDTO> searchUsersWithSharedMargins(Long searcherId, String query) {
+        return userRepository.findUsersWithSharedMargins(searcherId, query).stream()
                 .collect(Collectors.groupingBy(
                         UserWithSharedMarginProjection::user,
                         LinkedHashMap::new,
@@ -58,6 +59,12 @@ public class UserService {
                         new UserDTO(entry.getKey(), connectionManager.isUserOnline(entry.getKey().getId())),
                         entry.getValue()
                 ))
+                .toList();
+    }
+
+    public List<UserDTO> searchUsersByMarginId(Long searcherId, Long marginId, String query) {
+        return userRepository.findUsersByMarginId(searcherId, marginId, query).stream()
+                .map(this::toDTO)
                 .toList();
     }
 
