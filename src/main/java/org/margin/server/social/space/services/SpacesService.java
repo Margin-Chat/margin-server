@@ -101,10 +101,14 @@ public class SpacesService {
         space = spacesRepository.findById(space.getId()).orElseThrow();
         channelService.createChannel(space, "General Chat", "A channel for general conversation");
 
+        entityManager.flush();
+        entityManager.refresh(space);
+
         addNewUserToSpace(user, space, SpaceRole.ADMIN);
 
         entityManager.flush();
         entityManager.refresh(space);
+
         return space;
     }
 

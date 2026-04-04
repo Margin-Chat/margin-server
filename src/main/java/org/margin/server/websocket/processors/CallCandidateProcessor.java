@@ -25,11 +25,6 @@ public class CallCandidateProcessor implements WebSocketMessageProcessor<Incomin
 
     @Override
     public void process(User user, WebSocketMessageIn<IncomingCallCandidatePayload> message) {
-        log.info("CallCandidateProcessor: from={} to={} candidate={}",
-                user.getId(),
-                message.getRecipientId(),
-                message.getPayload());
-
         webSocketDeliveryService.notifyCallCandidate(
                 message.getRecipientId(),
                 message.getPayload()

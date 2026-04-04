@@ -6,6 +6,8 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class ConversationValidationService {
@@ -16,7 +18,11 @@ public class ConversationValidationService {
     }
 
     public void validateUserIsInConversation(User user, Conversation conversation) {
-        if (!conversationService.getConversationMembers(conversation.getId()).contains(user)) {
+        List<Long> list = conversationService.getConversationMembers(conversation.getId()).stream()
+                .map(User::getId)
+                .toList();
+
+        if (!list.contains(user.getId())) {
             throw new ConversationValidationException("User is not a part of the conversation");
         }
     }

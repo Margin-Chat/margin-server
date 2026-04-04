@@ -5,6 +5,7 @@ import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
+import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
@@ -77,7 +78,8 @@ public class SpacesController {
 
         User userToAdd = userService.getById(spaceMemberDTO.user().id());
 
-        SpaceMember member = spacesService.addNewUserToSpace(userToAdd, space, spaceMemberDTO.role());
+        SpaceRole role = spaceMemberDTO.role() == null ? SpaceRole.MEMBER : SpaceRole.valueOf(spaceMemberDTO.role().name());
+        SpaceMember member = spacesService.addNewUserToSpace(userToAdd, space, role);
         return ResponseEntity.ok(new SpaceMemberDTO(
                 new UserDTO(member.getUser(), connectionManager.isUserOnline(member.getUser().getId())),
                 member.getSpace().getId(),
