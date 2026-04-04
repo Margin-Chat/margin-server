@@ -36,16 +36,6 @@ public class IntegrationTestHelper {
         IntegrationTestHelper.conversationMemberRepository = conversationMemberRepository;
     }
 
-    public static User createUser(String username, String email) {
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setDisplayName(username);
-        user.setPassword("hashed-password");
-        user.setCreatedAt(Instant.now());
-        return userRepository.save(user);
-    }
-
     public static Conversation createDirectConversation(User userA, User userB) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.DIRECT);

@@ -3,6 +3,7 @@ package org.margin.server.integrationtest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
+import org.margin.server.integrationtest.utils.UserUtils;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.repositories.MessageRepository;
@@ -32,8 +33,8 @@ class SendMessageIntegrationTest extends MarginTestRunner {
 
     @Test
     void sendMessage_persistsAndDeliversToRecipient() throws Exception {
-        User sender = IntegrationTestHelper.createUser("sender", "sender@margin.chat");
-        User receiver = IntegrationTestHelper.createUser("receiver", "receiver@margin.chat");
+        User sender = UserUtils.createUser("sender", "sender@margin.chat");
+        User receiver = UserUtils.createUser("receiver", "receiver@margin.chat");
         Conversation conversation = IntegrationTestHelper.createDirectConversation(sender, receiver);
 
         CompletableFuture<String> received = new CompletableFuture<>();
@@ -57,8 +58,8 @@ class SendMessageIntegrationTest extends MarginTestRunner {
 
     @Test
     void sendMessage_senderReceivesEcho() throws Exception {
-        User sender = IntegrationTestHelper.createUser("sender", "sender@margin.chat");
-        User receiver = IntegrationTestHelper.createUser("receiver", "receiver@margin.chat");
+        User sender = UserUtils.createUser("sender", "sender@margin.chat");
+        User receiver = UserUtils.createUser("receiver", "receiver@margin.chat");
         Conversation conversation = IntegrationTestHelper.createDirectConversation(sender, receiver);
 
         CompletableFuture<String> echo = new CompletableFuture<>();
@@ -74,7 +75,7 @@ class SendMessageIntegrationTest extends MarginTestRunner {
 
     @Test
     void sendMessage_toNonExistentConversation_doesNotPersist() throws Exception {
-        User sender = IntegrationTestHelper.createUser("sender", "sender@margin.chat");
+        User sender = UserUtils.createUser("sender", "sender@margin.chat");
 
         senderWs = connectWebSocket(WS_PORT, jwtService.generateToken(sender.getEmail(), sender.getId()),
                 new WebSocket.Listener() {});
