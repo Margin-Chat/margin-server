@@ -11,7 +11,7 @@ spring:
 
 margin:
   websocket:
-    port: 8081
+    port: 8082
   jwt:
     secret: integration-test-secret-that-is-long-enough
 

@@ -241,10 +241,10 @@ class MarginInviteServiceTest {
                 .isInstanceOf(RuntimeException.class);
     }
 
-    private User testUser(Long id, String username) {
+    private User testUser(Long id, String handle) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
+        user.setHandle(handle);
         return user;
     }
 

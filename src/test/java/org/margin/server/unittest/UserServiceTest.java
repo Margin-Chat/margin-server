@@ -37,23 +37,23 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    @DisplayName("getByUsername should return user when found")
-    void getByUsername_Found() {
+    @DisplayName("getByHandle should return user when found")
+    void getByHandle_Found() {
         User user = new User();
-        user.setUsername("alice");
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        user.setHandle("alice");
+        when(userRepository.findByHandle("alice")).thenReturn(Optional.of(user));
 
-        User result = userService.getByUsername("alice");
+        User result = userService.getByHandle("alice");
 
-        assertEquals("alice", result.getUsername());
+        assertEquals("alice", result.getHandle());
     }
 
     @Test
-    @DisplayName("getByUsername should throw exception when not found")
-    void getByUsername_NotFound() {
-        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+    @DisplayName("getByHandle should throw exception when not found")
+    void getByHandle_NotFound() {
+        when(userRepository.findByHandle("unknown")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> userService.getByUsername("unknown"));
+        assertThrows(RuntimeException.class, () -> userService.getByHandle("unknown"));
     }
 
     @Test
@@ -79,7 +79,7 @@ class UserServiceTest {
     void searchUsers_WithSharedMargins_ReturnsGroupedResults() {
         User user = new User();
         user.setId(2L);
-        user.setUsername("bob");
+        user.setHandle("bob");
         user.setEmail("bob@margin.org");
         user.setCreatedAt(Instant.now());
 
@@ -95,7 +95,7 @@ class UserServiceTest {
         List<UserSearchResultDTO> result = userService.searchUsersWithSharedMargins(searcherId, "bo");
 
         assertEquals(1, result.size());
-        assertEquals("bob", result.getFirst().user().username());
+        assertEquals("bob", result.getFirst().user().handle());
         assertTrue(result.getFirst().user().isOnline());
         assertEquals(List.of("Team Alpha", "Team Beta"), result.getFirst().sharedMargins());
     }

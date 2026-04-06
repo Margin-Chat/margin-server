@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -53,11 +54,14 @@ public class ConversationController {
         }
 
         if (!conversationService.isUserMember(conversation.getId(), user.getId())) {
-            throw new RuntimeException("User is not a member of this conversation");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this conversation");
         }
 
+        Instant otherUserLastReadAt = conversationService.getOtherUserLastReadAt(
+                conversation.getId(), user.getId());
+
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation, limit, before),
+                messageService.getConversationMessages(conversation, limit, before, user.getId(), otherUserLastReadAt),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }
@@ -81,14 +85,8 @@ public class ConversationController {
     public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
                                                        @AuthenticationPrincipal User user) {
         User recipientUser = userService.getById(request.recipientUserId());
-        Conversation directConversation =
-                conversationService.createDirectConversation(user, recipientUser);
-
-        messageService.sendMessage(
-                user,
-                request.encryptedContent(),
-                directConversation
-        );
+        Conversation directConversation = conversationService.createNewDirectConversation(user, recipientUser);
+        messageService.sendMessage(user, request.encryptedContent(), directConversation);
         return conversationService.getConversationDTO(directConversation, user.getId());
     }
 
@@ -98,7 +96,6 @@ public class ConversationController {
             @AuthenticationPrincipal User user) {
 
         Conversation conversation = conversationService.createGroupConversation(
-                user,
                 request.userIds(),
                 request.name()
         );
@@ -112,7 +109,6 @@ public class ConversationController {
             @AuthenticationPrincipal User user) {
 
         conversationAuthorizationService.requireConversationMember(conversationId, user.getId());
-
         conversationService.updateLastRead(conversationId, user.getId());
         return ResponseEntity.ok().build();
     }
@@ -121,7 +117,7 @@ public class ConversationController {
     public UnreadConversationsDTO getUnreadConversations(@AuthenticationPrincipal User user) {
         return conversationService.getUnreadConversations(user.getId());
     }
-    
+
     @PostMapping("/conversations/{conversationId}/members")
     public ResponseEntity<Void> addMemberToConversation(
             @PathVariable Long conversationId,

@@ -6,9 +6,10 @@ public record DirectConversationDTO(
         Long id,
         String type,
         Instant createdAt,
-        Long otherUserId
+        Long otherUserId,
+        Instant otherUserReadAt
 ) implements ConversationDTO {
-    public DirectConversationDTO(Long id, Instant createdAt, Long otherUserId) {
-        this(id, "DIRECT", createdAt, otherUserId);
+    public DirectConversationDTO(Long id, Instant createdAt, Long otherUserId, Instant otherUserReadAt) {
+        this(id, "DIRECT", createdAt, otherUserId, otherUserReadAt);
     }
 }

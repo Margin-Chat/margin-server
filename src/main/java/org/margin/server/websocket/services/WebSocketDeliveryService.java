@@ -12,13 +12,11 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.models.payloads.CallMediaStatePayload;
-import org.margin.server.websocket.models.payloads.CallOfferPayload;
-import org.margin.server.websocket.models.payloads.CallResponsePayload;
-import org.margin.server.websocket.models.payloads.CallSessionDescription;
+import org.margin.server.websocket.models.payloads.*;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -103,8 +101,7 @@ public class WebSocketDeliveryService {
         connectionManager.sendToUser(recipientId, json);
     }
 
-    public void notifyCallCandidate(Long recipientId,
-                                    org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload payload) {
+    public void notifyCallCandidate(Long recipientId, IncomingCallCandidatePayload payload) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.CALL_CANDIDATE, recipientId, payload);
         connectionManager.sendToUser(recipientId, json);
     }
@@ -146,6 +143,12 @@ public class WebSocketDeliveryService {
     public void notifyMarginInvite(String inviteCode,
                                    Long recipientId) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.MARGIN_INVITE, recipientId, inviteCode);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifyConversationRead(Long conversationId, Long recipientId, Instant readAt) {
+        ConversationReadPayload payload = new ConversationReadPayload(conversationId, readAt);
+        String json = messageBuilder.buildMessage(WebSocketMessageType.CONVERSATION_READ, recipientId, payload);
         connectionManager.sendToUser(recipientId, json);
     }
 

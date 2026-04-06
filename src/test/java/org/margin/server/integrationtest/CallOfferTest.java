@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
+import org.margin.server.integrationtest.utils.UserUtils;
 import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.repositories.CallRepository;
@@ -15,13 +16,16 @@ import java.net.http.WebSocket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.margin.server.integrationtest.IntegrationTestHelper.*;
 
 class CallOfferTest extends MarginTestRunner {
 
-    @Autowired private JwtService jwtService;
-    @Autowired private CallRepository callRepository;
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private CallRepository callRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -35,8 +39,8 @@ class CallOfferTest extends MarginTestRunner {
 
     @Test
     void callOffer_persistsCallAndNotifiesBothParties() throws Exception {
-        User caller = createUser("caller", "caller@margin.chat");
-        User receiver = createUser("receiver", "receiver@margin.chat");
+        User caller = UserUtils.createUser("caller", "caller@margin.chat");
+        User receiver = UserUtils.createUser("receiver", "receiver@margin.chat");
 
         CompletableFuture<String> callerReceived = new CompletableFuture<>();
         CompletableFuture<String> receiverReceived = new CompletableFuture<>();
@@ -63,7 +67,7 @@ class CallOfferTest extends MarginTestRunner {
 
         String receiverMsg = receiverReceived.get(5, TimeUnit.SECONDS);
         assertTrue(receiverMsg.contains("CALL_OFFER"));
-        assertTrue(receiverMsg.contains(caller.getUsername()));
+        assertTrue(receiverMsg.contains(caller.getHandle()));
 
         JsonNode callerJson = objectMapper.readTree(callerMsg);
         long callId = callerJson.path("payload").path("callId").asLong();
@@ -76,8 +80,8 @@ class CallOfferTest extends MarginTestRunner {
 
     @Test
     void callOffer_toOfflineUser_stillPersistsCall() throws Exception {
-        User caller = createUser("caller", "caller@margin.chat");
-        User offlineReceiver = createUser("offline", "offline@margin.chat");
+        User caller = UserUtils.createUser("caller", "caller@margin.chat");
+        User offlineReceiver = UserUtils.createUser("offline", "offline@margin.chat");
 
         CompletableFuture<String> callerReceived = new CompletableFuture<>();
 

@@ -3,6 +3,7 @@ package org.margin.server.integrationtest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
+import org.margin.server.integrationtest.utils.UserUtils;
 import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
@@ -20,9 +21,12 @@ import static org.margin.server.integrationtest.IntegrationTestHelper.*;
 
 class CallEndTest extends MarginTestRunner {
 
-    @Autowired private JwtService jwtService;
-    @Autowired private CallService callService;
-    @Autowired private CallRepository callRepository;
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private CallService callService;
+    @Autowired
+    private CallRepository callRepository;
 
     private WebSocket callerWs;
     private WebSocket receiverWs;
@@ -34,27 +38,28 @@ class CallEndTest extends MarginTestRunner {
 
     @Test
     void callEnd_persistsDurationAndNotifiesOtherParty() throws Exception {
-        User caller = createUser("caller", "caller@margin.chat");
-        User receiver = createUser("receiver", "receiver@margin.chat");
+        User caller = UserUtils.createUser("caller", "caller@margin.chat");
+        User receiver = UserUtils.createUser("receiver", "receiver@margin.chat");
         Call call = callService.createCall(caller, receiver, CallStatus.OFFERED, CallType.AUDIO);
 
         CompletableFuture<String> receiverReceived = new CompletableFuture<>();
 
         callerWs = connectWebSocket(WS_PORT, jwtService.generateToken(caller.getEmail(), caller.getId()),
-                new WebSocket.Listener() {});
+                new WebSocket.Listener() {
+                });
         receiverWs = connectWebSocket(WS_PORT, jwtService.generateToken(receiver.getEmail(), receiver.getId()),
                 listenerThatCompletes(receiverReceived, "CALL_END"));
 
         String endFrame = """
-        {
-          "type": "CALL_END",
-          "recipientId": %d,
-          "payload": {
-            "callId": %d,
-            "callDuration": 45
-          }
-        }
-        """.formatted(receiver.getId(), call.getId());
+                {
+                  "type": "CALL_END",
+                  "recipientId": %d,
+                  "payload": {
+                    "callId": %d,
+                    "callDuration": 45
+                  }
+                }
+                """.formatted(receiver.getId(), call.getId());
 
         callerWs.sendText(endFrame, true).get(5, TimeUnit.SECONDS);
 

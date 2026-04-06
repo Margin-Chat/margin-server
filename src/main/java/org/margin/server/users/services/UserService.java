@@ -35,8 +35,8 @@ public class UserService {
         return userCacheService.getById(id);
     }
 
-    public User getByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
+    public User getByHandle(String handle) {
+        return userRepository.findByHandle(handle).orElseThrow(UserNotFoundException::new);
     }
 
     public void savePublicPrivateKeysForUser(Long userId, String publicKey, String encryptedPrivateKey) {

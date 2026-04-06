@@ -11,8 +11,6 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -24,13 +22,11 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   UserDetailsService userDetailsService, UserRepository userRepository) {
+                                   UserRepository userRepository) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
     }
 
@@ -49,20 +45,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String jwt = authHeader.substring(7);
-            String email = jwtService.extractUsername(jwt).toLowerCase();
+            String email = jwtService.extractEmail(jwt).toLowerCase();
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                User user = userRepository.findByEmail(email)
+                        .orElse(null);
 
-                if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
-                    User user = userRepository.findByEmail(email)
-                            .orElseThrow(() -> new RuntimeException("User not found"));
-
+                if (user != null && jwtService.isTokenValid(jwt, user.getEmail())) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     user,
                                     null,
-                                    userDetails.getAuthorities()
+                                    user.getAuthorities()
                             );
 
                     authToken.setDetails(

@@ -46,30 +46,29 @@ public class MessageService {
 
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
 
-        return new MessageResult(new MessageDTO(
-                message,
-                conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId()),
-                getMarginId(conversation)),
+        return new MessageResult(
+                MessageDTO.from(message)
+                        .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                        .withMarginId(getMarginId(conversation))
+                        .build(),
                 recipients);
     }
 
     @Transactional
     public MessageResult editMessage(Conversation conversation, Long messageId, String content) {
-        Message message = getMessage(messageId);
+        Message message = getById(messageId);
         message.setMessage(content);
         message.setIsEdited(true);
         messageRepository.save(message);
 
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
 
-        return new MessageResult(new MessageDTO(
-                message,
-                conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId()),
-                getMarginId(conversation)),
+        return new MessageResult(
+                MessageDTO.from(message)
+                        .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                        .withMarginId(getMarginId(conversation))
+                        .build(),
                 recipients);
-
     }
 
     @Transactional
@@ -77,12 +76,10 @@ public class MessageService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        MessageDTO messageDTO = new MessageDTO(
-                message,
-                conversation.getType(),
-                connectionManager.isUserOnline(message.getFromUser().getId()),
-                getMarginId(conversation)
-        );
+        MessageDTO messageDTO = MessageDTO.from(message)
+                .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                .withMarginId(getMarginId(conversation))
+                .build();
 
         messageRepository.delete(message);
 
@@ -102,24 +99,30 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
+    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before,
+                                                    Long currentUserId, Instant otherUserLastReadAt) {
         List<Message> messages = before != null
                 ? messageRepository.findMessagesBefore(conversation.getId(), before, PageRequest.of(0, limit))
                 : messageRepository.findRecentMessages(conversation.getId(), PageRequest.of(0, limit));
 
         return messages.stream()
-                .map(msg -> new MessageDTO(
-                        msg,
-                        msg.getConversation().getType(),
-                        connectionManager.isUserOnline(msg.getFromUser().getId()),
-                        getMarginId(conversation)))
+                .map(msg ->
+                        MessageDTO.from(msg)
+                                .withOnline(connectionManager.isUserOnline(msg.getFromUser().getId()))
+                                .withMarginId(getMarginId(conversation))
+                                .build())
                 .collect(Collectors.collectingAndThen(Collectors.toList(), l -> {
                     java.util.Collections.reverse(l);
                     return l;
                 }));
     }
 
-    public Message getMessage(Long messageId) {
+    @Transactional(readOnly = true)
+    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
+        return getConversationMessages(conversation, limit, before, null, Instant.EPOCH);
+    }
+
+    public Message getById(Long messageId) {
         return messageRepository.findById(messageId).orElseThrow();
     }
 

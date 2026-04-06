@@ -1,7 +1,6 @@
 spring:
   application:
     name: margin-server
-
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/margindb}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -22,6 +21,10 @@ spring:
 
   flyway:
     clean-disabled: true
+
+margin:
+  cors:
+    allowed-origins: https://margin.chat,://file
 
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-not-for-production-use-only}

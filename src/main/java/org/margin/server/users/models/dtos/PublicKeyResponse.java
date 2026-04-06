@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PublicKeyResponse {
     private Long userId;
-    private String username;
+    private String handle;
     private String publicKey;
 
     public PublicKeyResponse(Long userId, String publicKey) {

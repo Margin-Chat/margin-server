@@ -16,16 +16,41 @@ public record MessageDTO(
         Instant createdAt,
         Long marginId
 ) {
-    public MessageDTO(Message message, ConversationType conversationType, boolean isUserOnline, Long marginId) {
-        this(
-                message.getId(),
-                message.getConversation().getId(),
-                conversationType,
-                new UserDTO(message.getFromUser(), isUserOnline),
-                message.getMessage(),
-                message.getIsEdited(),
-                message.getCreatedAt(),
-                marginId
-        );
+
+    public static Builder from(Message message) {
+        return new Builder(message);
+    }
+
+    public static class Builder {
+        private final Message message;
+        private boolean isUserOnline = false;
+        private Long marginId = null;
+
+        private Builder(Message message) {
+            this.message = message;
+        }
+
+        public Builder withOnline(boolean isUserOnline) {
+            this.isUserOnline = isUserOnline;
+            return this;
+        }
+
+        public Builder withMarginId(Long marginId) {
+            this.marginId = marginId;
+            return this;
+        }
+
+        public MessageDTO build() {
+            return new MessageDTO(
+                    message.getId(),
+                    message.getConversation().getId(),
+                    message.getConversation().getType(),
+                    new UserDTO(message.getFromUser(), isUserOnline),
+                    message.getMessage(),
+                    message.getIsEdited(),
+                    message.getCreatedAt(),
+                    marginId
+            );
+        }
     }
 }

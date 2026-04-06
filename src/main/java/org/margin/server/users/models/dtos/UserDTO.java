@@ -6,7 +6,7 @@ import java.time.Instant;
 
 public record UserDTO(
         Long id,
-        String username,
+        String handle,
         String displayName,
         String email,
         String profilePictureUrl,
@@ -16,7 +16,7 @@ public record UserDTO(
     public UserDTO(User user, boolean online) {
         this(
                 user.getId(),
-                user.getUsername(),
+                user.getHandle(),
                 user.getDisplayName(),
                 user.getEmail(),
                 user.getProfilePictureUrl(),

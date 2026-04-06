@@ -3,13 +3,17 @@ package org.margin.server.social.conversation.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.margin.server.social.channel.entities.Channel;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -35,6 +39,9 @@ public class Conversation {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "channel_id")
     private Channel channel;
+
+    @OneToMany(mappedBy = "conversation", fetch = FetchType.LAZY)
+    private List<ConversationMember> members = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

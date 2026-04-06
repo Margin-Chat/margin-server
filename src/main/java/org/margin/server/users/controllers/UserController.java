@@ -94,8 +94,8 @@ public class UserController {
     }
 
     @GetMapping("/lookup")
-    public ResponseEntity<UserDTO> lookupByUsername(@RequestParam String username) {
-        User user = userService.getByUsername(username);
+    public ResponseEntity<UserDTO> lookupByHandle(@RequestParam String handle) {
+        User user = userService.getByHandle(handle);
         return ResponseEntity.ok(userService.toDTO(user));
     }
 

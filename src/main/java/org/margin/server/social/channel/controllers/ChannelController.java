@@ -45,7 +45,7 @@ public class ChannelController {
     public ChannelDTO createChannel(@AuthenticationPrincipal User user, @RequestBody ChannelDTO channelDTO) {
         Space space = spacesService.getById(channelDTO.spaceId());
         marginAuthorizationService.requireSpaceAdmin(user.getId(), space.getId());
-        return marginMapper.channelToDto(channelService.createChannel(
+        return marginMapper.channelToDto(channelService.createNewChannel(
                 space,
                 channelDTO.name(),
                 channelDTO.description()));

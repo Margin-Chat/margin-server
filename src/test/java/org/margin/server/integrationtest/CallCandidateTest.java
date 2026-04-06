@@ -3,6 +3,7 @@ package org.margin.server.integrationtest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
+import org.margin.server.integrationtest.utils.UserUtils;
 import org.margin.server.users.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -10,12 +11,13 @@ import java.net.http.WebSocket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.margin.server.integrationtest.IntegrationTestHelper.*;
 
 class CallCandidateTest extends MarginTestRunner {
 
-    @Autowired private JwtService jwtService;
+    @Autowired
+    private JwtService jwtService;
 
     private WebSocket callerWs;
     private WebSocket receiverWs;
@@ -27,13 +29,14 @@ class CallCandidateTest extends MarginTestRunner {
 
     @Test
     void callCandidate_forwardsToRecipient() throws Exception {
-        User caller = createUser("caller", "caller@margin.chat");
-        User receiver = createUser("receiver", "receiver@margin.chat");
+        User caller = UserUtils.createUser("caller", "caller@margin.chat");
+        User receiver = UserUtils.createUser("receiver", "receiver@margin.chat");
 
         CompletableFuture<String> receiverReceived = new CompletableFuture<>();
 
         callerWs = connectWebSocket(WS_PORT, jwtService.generateToken(caller.getEmail(), caller.getId()),
-                new WebSocket.Listener() {});
+                new WebSocket.Listener() {
+                });
         receiverWs = connectWebSocket(WS_PORT, jwtService.generateToken(receiver.getEmail(), receiver.getId()),
                 listenerThatCompletes(receiverReceived, "CALL_CANDIDATE"));
 

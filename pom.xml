@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.margin</groupId>
     <artifactId>server</artifactId>
-    <version>0.0.9-SNAPSHOT</version>
+    <version>0.0.10-SNAPSHOT</version>
     <name>margin</name>
     <description>Backend server for margin</description>
     <url>https://margin.chat</url>
@@ -190,9 +190,9 @@
                 <configuration>
                     <url>jdbc:postgresql://localhost:5433/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
-                    <user>${flyway.user}</user>
+                    <user>sysuser</user>
                     <!--suppress UnresolvedMavenProperty -->
-                    <password>${flyway.password}</password>
+                    <password>admin123</password>
                     <cleanDisabled>false</cleanDisabled>
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>

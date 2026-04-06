@@ -5,6 +5,6 @@ public record IncomingCallCandidatePayload(
         String candidate,
         String sdpMid,
         Integer sdpMLineIndex,
-        String usernameFragment
+        String handleFragment
 ) {
 }

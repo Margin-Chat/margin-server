@@ -56,7 +56,7 @@ class MarginServiceTest {
     private User testUser() {
         User user = new User();
         user.setId(1L);
-        user.setUsername("testuser");
+        user.setHandle("testuser");
         return user;
     }
 

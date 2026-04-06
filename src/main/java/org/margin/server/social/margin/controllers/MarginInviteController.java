@@ -44,17 +44,17 @@ public class MarginInviteController {
         return ResponseEntity.ok(MarginInviteDTO.from(invite));
     }
 
-    @PostMapping("/margins/{marginId}/username")
+    @PostMapping("/margins/{marginId}/handle")
     public ResponseEntity<MarginInviteDTO> createDirectInvite(
             @PathVariable Long marginId,
-            @RequestParam String username,
+            @RequestParam String handle,
             @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
-        if (username.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username is empty");
+        if (handle.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Handle is empty");
         }
 
-        User targetUser = userService.getByUsername(username);
+        User targetUser = userService.getByHandle(handle);
 
         if (marginService.isUserMember(marginId, targetUser)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");

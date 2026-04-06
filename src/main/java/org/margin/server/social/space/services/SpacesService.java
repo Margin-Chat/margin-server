@@ -1,16 +1,12 @@
 package org.margin.server.social.space.services;
 
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
-import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.exceptions.SpaceNotFoundException;
@@ -29,7 +25,6 @@ import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,28 +36,26 @@ public class SpacesService {
     private final ChannelRepository channelRepository;
     private final ChannelService channelService;
     private final MarginMemberRepository marginMemberRepository;
-    private final ConversationRepository conversationRepository;
-    private final ConversationMemberRepository conversationMemberRepository;
-    private final EntityManager entityManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
+    private final SpacesCreationService spacesCreationService;
+    private final ConversationService conversationService;
 
     public SpacesService(SpacesRepository spacesRepository,
                          SpaceMemberRepository spaceMemberRepository,
                          ChannelRepository channelRepository,
                          ChannelService channelService,
                          MarginMemberRepository marginMemberRepository,
-                         ConversationRepository conversationRepository,
-                         ConversationMemberRepository conversationMemberRepository,
-                         EntityManager entityManager, WebSocketDeliveryService webSocketDeliveryService) {
+                         WebSocketDeliveryService webSocketDeliveryService,
+                         SpacesCreationService spacesCreationService,
+                         ConversationService conversationService) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
         this.channelRepository = channelRepository;
         this.channelService = channelService;
         this.marginMemberRepository = marginMemberRepository;
-        this.conversationRepository = conversationRepository;
-        this.conversationMemberRepository = conversationMemberRepository;
-        this.entityManager = entityManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
+        this.spacesCreationService = spacesCreationService;
+        this.conversationService = conversationService;
     }
 
     public List<Space> getSpaces() {
@@ -88,26 +81,9 @@ public class SpacesService {
             throw new DuplicateKeyException("Space name already exists");
         }
 
-        Space newSpace = new Space();
-        newSpace.setName(dto.name());
-        newSpace.setDescription(dto.description());
-        newSpace.setVisibility(dto.visibility());
-        newSpace.setMargin(margin);
-        newSpace.setDefault(isDefault);
-        Space space = spacesRepository.save(newSpace);
-
-        log.info("Created space {}", space.getId());
-
-        space = spacesRepository.findById(space.getId()).orElseThrow();
-        channelService.createChannel(space, "General Chat", "A channel for general conversation");
-
-        entityManager.flush();
-        entityManager.refresh(space);
-
+        Space space = spacesCreationService.create(dto.name(), dto.description(), dto.visibility(), margin, isDefault);
+        channelService.createNewChannel(space, "General Chat", "A channel for general conversation");
         addNewUserToSpace(user, space, SpaceRole.ADMIN);
-
-        entityManager.flush();
-        entityManager.refresh(space);
 
         return space;
     }
@@ -130,7 +106,6 @@ public class SpacesService {
         }
     }
 
-    @Transactional
     public SpaceMember addNewUserToSpace(User user, Space space, SpaceRole role) {
         if (!marginMemberRepository
                 .existsByUser_IdAndMargin_Id(user.getId(), space.getMargin().getId())) {
@@ -141,34 +116,14 @@ public class SpacesService {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
 
-        SpaceMember spaceMember = createSpaceMember(user, space, role);
-        for (Channel channel : space.getChannels()) {
-            Conversation conversation = conversationRepository.findByChannel(channel)
-                    .orElseThrow(() -> new RuntimeException("No conversation for channel " + channel.getId()));
-            ConversationMember conversationMember = new ConversationMember();
-            conversationMember.setUser(user);
-            conversationMember.setConversation(conversation);
-            conversationMember.setJoinedAt(Instant.now());
-            conversationMemberRepository.save(conversationMember);
-        }
+        SpaceMember spaceMember = spacesCreationService.createMember(user, space, role);
+        space.getChannels().forEach(c -> conversationService.createNewConversationMember(c.getConversation(), user));
 
         webSocketDeliveryService.notifyUserJoinedSpace(
-                spaceMemberRepository.findSpaceMemberBySpace(space).stream()
-                        .map(SpaceMember::getUser)
-                        .toList(),
+                space.getMembers().stream().map(SpaceMember::getUser).toList(),
                 user,
                 space.getId());
 
-        return spaceMemberRepository.save(spaceMember);
-    }
-
-    @Transactional
-    protected SpaceMember createSpaceMember(User u, Space space, SpaceRole role) {
-        SpaceMember spaceMember = new SpaceMember();
-        spaceMember.setSpace(space);
-        spaceMember.setUser(u);
-        spaceMember.setRole(role);
-        spaceMember.setJoinedAt(Instant.now());
         return spaceMember;
     }
 

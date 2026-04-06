@@ -45,11 +45,11 @@ public class AuthenticationController {
     public ResponseEntity<AuthResponse> register(
             @RequestPart("data") RegisterRequest request,
             @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) {
-        log.info("Registration attempt for username: {}", request.username());
+        log.info("Registration attempt for handle: {}", request.handle());
 
         try {
             authenticationService.registerUser(
-                    request.username(),
+                    request.handle(),
                     request.displayName(),
                     request.email(),
                     request.password(),
@@ -64,15 +64,15 @@ public class AuthenticationController {
                     request.email(),
                     request.password());
 
-            log.info("Successfully registered user {}", request.username());
+            log.info("Successfully registered user {}", request.handle());
             return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
 
         } catch (IllegalArgumentException e) {
-            log.warn("Registration failed for username {}: {}", request.username(), e.getMessage());
+            log.warn("Registration failed for handle {}: {}", request.handle(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
         } catch (Exception e) {
-            log.error("Unexpected error during registration for username {}: {}", request.username(), e.getMessage(), e);
+            log.error("Unexpected error during registration for handle {}: {}", request.handle(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
         }

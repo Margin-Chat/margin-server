@@ -87,7 +87,7 @@ public class AuthenticationService {
         }
     }
 
-    public void registerUser(String username,
+    public void registerUser(String handle,
                              String displayName,
                              String email,
                              String password,
@@ -108,8 +108,8 @@ public class AuthenticationService {
             throw new IllegalArgumentException("Email already in use");
         }
 
-        if (userRepository.findByUsername(username.toLowerCase()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
+        if (userRepository.findByHandle(handle.toLowerCase()).isPresent()) {
+            throw new IllegalArgumentException("Handle already exists");
         }
 
         String profilePictureUrl = null;
@@ -118,7 +118,7 @@ public class AuthenticationService {
         }
 
         User user = new User();
-        user.setUsername(username.toLowerCase());
+        user.setHandle(handle.toLowerCase());
         user.setDisplayName(displayName);
         user.setEmail(email.toLowerCase());
         user.setPassword(passwordEncoder.encode(password));

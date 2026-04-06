@@ -16,11 +16,11 @@ public class UserUtils {
         UserUtils.userRepository = userRepository;
     }
 
-    public static User createUser(String username, String email) {
+    public static User createUser(String handle, String email) {
         User user = new User();
-        user.setUsername(username);
+        user.setHandle(handle);
         user.setEmail(email);
-        user.setDisplayName(username);
+        user.setDisplayName(handle);
         user.setPassword("hashed-password");
         user.setCreatedAt(Instant.now());
         return userRepository.save(user);

@@ -7,16 +7,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.channel.repositories.ChannelRepository;
+import org.margin.server.social.channel.services.ChannelCreationService;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
-import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,18 +36,21 @@ class ChannelServiceTest {
     @Mock
     private ConversationRepository conversationRepository;
     @Mock
-    private SpacesService spacesService;
-    @Mock
     private ConversationMemberRepository conversationMemberRepository;
+    @Mock
+    private ChannelCreationService channelCreationService;
+    @Mock
+    private ConversationService conversationService;
 
     @InjectMocks
     private ChannelService channelService;
 
     private Space testSpace;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
-        User testUser = new User();
+        testUser = new User();
         testUser.setId(1L);
 
         testSpace = new Space();
@@ -64,33 +67,37 @@ class ChannelServiceTest {
         String name = "General";
         String desc = "Main Chat";
 
+        Channel channel = new Channel();
+        channel.setName(name);
+        channel.setChannelType(ChannelType.Communication);
+        channel.setSpace(testSpace);
+
+        Conversation conversation = new Conversation();
+        conversation.setId(1L);
+        conversation.setName(name);
+        conversation.setType(ConversationType.CHANNEL);
+
+        when(channelCreationService.createChannel(testSpace, name, desc)).thenReturn(channel);
+        when(conversationService.createNewConversationForUsers(
+                eq(ConversationType.CHANNEL), eq(channel), anyList())).thenReturn(conversation);
         when(channelRepository.save(any(Channel.class))).thenAnswer(i -> i.getArgument(0));
 
-        Channel result = channelService.createChannel(testSpace, name, desc);
+        Channel result = channelService.createNewChannel(testSpace, name, desc);
 
         assertNotNull(result);
         assertEquals(name, result.getName());
-        assertEquals(ChannelType.Communication, result.getChannelType());
+        assertEquals(conversation, result.getConversation());
         assertEquals(testSpace, result.getSpace());
 
-        ArgumentCaptor<Conversation> convCaptor = ArgumentCaptor.forClass(Conversation.class);
-        verify(conversationRepository).save(convCaptor.capture());
-        Conversation savedConv = convCaptor.getValue();
-
-        assertEquals(name, savedConv.getName());
-        assertEquals(ConversationType.CHANNEL, savedConv.getType());
-        assertEquals(result, savedConv.getChannel());
-
-        verify(conversationMemberRepository).saveAll(argThat(members -> {
-            var list = (List<?>) members;
-            return list.size() == 1;
-        }));
+        verify(channelCreationService).createChannel(testSpace, name, desc);
+        verify(conversationService).createNewConversationForUsers(
+                eq(ConversationType.CHANNEL), eq(channel), argThat(users -> users.size() == 1 && users.contains(testUser)));
+        verify(channelRepository).save(channel);
     }
 
     @Test
     @DisplayName("Should delete channel and its associated conversation and members")
     void deleteChannel_Success() {
-        // Arrange
         Long channelId = 1L;
         Channel channel = new Channel();
         Conversation conversation = new Conversation();
@@ -99,10 +106,8 @@ class ChannelServiceTest {
         when(channelRepository.findById(channelId)).thenReturn(java.util.Optional.of(channel));
         when(conversationMemberRepository.findByConversation(conversation)).thenReturn(List.of());
 
-        // Act
         channelService.deleteChannel(channelId);
 
-        // Assert
         verify(conversationMemberRepository).deleteAll(any());
         verify(conversationRepository).delete(conversation);
         verify(channelRepository).delete(channel);

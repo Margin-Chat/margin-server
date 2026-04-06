@@ -6,29 +6,33 @@ import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
+import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class ChannelService {
+    private final ChannelCreationService channelCreationService;
+    private final ConversationService conversationService;
     private final ChannelRepository channelRepository;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
 
-    public ChannelService(ChannelRepository channelRepository,
+    public ChannelService(ChannelCreationService channelCreationService,
+                          ConversationService conversationService,
+                          ChannelRepository channelRepository,
                           ConversationRepository conversationRepository,
                           ConversationMemberRepository conversationMemberRepository) {
+        this.channelCreationService = channelCreationService;
+        this.conversationService = conversationService;
         this.channelRepository = channelRepository;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
@@ -38,38 +42,15 @@ public class ChannelService {
         return channelRepository.getChannelsBySpaceId(spaceId);
     }
 
-    @Transactional
-    public Channel createChannel(Space space, String name, String description) {
-        Channel channel = new Channel();
-        channel.setSpace(space);
-        channel.setName(name);
-        channel.setDescription(description);
-        channel.setChannelType(ChannelType.Communication);
-        channel = channelRepository.save(channel);
-
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.CHANNEL);
-        conversation.setChannel(channel);
-        conversation.setName(name);
-        conversation.setCreatedAt(Instant.now());
-        conversationRepository.save(conversation);
-
-        List<SpaceMember> members = space.getMembers();
-        var conversationMembers = new ArrayList<ConversationMember>();
-        for (SpaceMember member : members) {
-            var conversationMember = new ConversationMember();
-            conversationMember.setConversation(conversation);
-            conversationMember.setUser(member.getUser());
-            conversationMember.setJoinedAt(Instant.now());
-            conversationMember.setId(new ConversationMemberId(
-                    conversation.getId(),
-                    member.getUser().getId()
-            ));
-            conversationMembers.add(conversationMember);
-        }
-        conversationMemberRepository.saveAll(conversationMembers);
-
+    public Channel createNewChannel(Space space, String name, String description) {
+        Channel channel = channelCreationService.createChannel(space, name, description);
+        List<User> users = space.getMembers().stream()
+                .map(SpaceMember::getUser)
+                .toList();
+        Conversation conversation =
+                conversationService.createNewConversationForUsers(ConversationType.CHANNEL, channel, users);
         channel.setConversation(conversation);
+        channelRepository.save(channel);
         return channel;
     }
 

@@ -81,7 +81,9 @@ public class SpacesController {
         SpaceRole role = spaceMemberDTO.role() == null ? SpaceRole.MEMBER : SpaceRole.valueOf(spaceMemberDTO.role().name());
         SpaceMember member = spacesService.addNewUserToSpace(userToAdd, space, role);
         return ResponseEntity.ok(new SpaceMemberDTO(
-                new UserDTO(member.getUser(), connectionManager.isUserOnline(member.getUser().getId())),
+                new UserDTO(
+                        member.getUser(),
+                        connectionManager.isUserOnline(member.getUser().getId())),
                 member.getSpace().getId(),
                 member.getRole(),
                 member.getJoinedAt()

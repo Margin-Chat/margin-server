@@ -5,25 +5,28 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.ConversationDTO;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.social.conversation.services.ConversationCreationService;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +40,10 @@ class ConversationServiceTest {
     private UserRepository userRepository;
     @Mock
     private ConnectionManager connectionManager;
+    @Mock
+    private WebSocketDeliveryService webSocketDeliveryService;
+    @Mock
+    private ConversationCreationService conversationCreationService;
 
     private ConversationService conversationService;
 
@@ -44,11 +51,13 @@ class ConversationServiceTest {
     void setUp() {
         // 1. Create the real instance
         ConversationService serviceImpl = new ConversationService(
+                conversationCreationService,
                 conversationRepository,
                 conversationMemberRepository,
                 userRepository,
                 null, // self placeholder
-                connectionManager
+                connectionManager,
+                webSocketDeliveryService
         );
 
         // 2. Wrap it in a spy so we can mock self-calls
@@ -65,7 +74,15 @@ class ConversationServiceTest {
         User user2 = createUser(2L);
         Conversation conv = createConversation(10L, ConversationType.DIRECT);
 
-        when(conversationMemberRepository.findUsersByConversationId(10L)).thenReturn(List.of(user1, user2));
+        ConversationMember member1 = new ConversationMember();
+        member1.setUser(user1);
+        member1.setLastReadAt(Instant.now());
+
+        ConversationMember member2 = new ConversationMember();
+        member2.setUser(user2);
+        member2.setLastReadAt(Instant.now());
+
+        conv.setMembers(List.of(member1, member2));
 
         ConversationDTO result = conversationService.getConversationDTO(conv, 1L);
 
@@ -92,20 +109,23 @@ class ConversationServiceTest {
     @Test
     @DisplayName("Should create group and add both creator and invited members")
     void createGroupConversation_Success() {
-        User creator = createUser(1L);
-        User member = createUser(2L);
+        User user1 = createUser(1L);
+        User user2 = createUser(2L);
 
-        when(conversationRepository.save(any(Conversation.class))).thenAnswer(i -> {
-            Conversation c = i.getArgument(0);
-            c.setId(99L);
-            return c;
-        });
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
+        Conversation conversation = createConversation(99L, ConversationType.GROUP);
+        conversation.setName("New Group");
 
-        Conversation result = conversationService.createGroupConversation(creator, List.of(2L), "New Group");
+        when(conversationCreationService.createGroupConversation("New Group")).thenReturn(conversation);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user2));
+
+        Conversation result = conversationService.createGroupConversation(List.of(1L, 2L), "New Group");
 
         assertNotNull(result);
-        verify(conversationMemberRepository, times(2)).save(any());
+        assertEquals(99L, result.getId());
+        verify(conversationCreationService).createGroupConversation("New Group");
+        verify(conversationCreationService).createConversationMember(conversation, user1);
+        verify(conversationCreationService).createConversationMember(conversation, user2);
     }
 
     @Test
@@ -119,7 +139,7 @@ class ConversationServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
 
         assertDoesNotThrow(() -> conversationService.addMember(1L, 2L));
-        verify(conversationMemberRepository).save(any());
+        verify(conversationCreationService).createConversationMember(conv, user);
     }
 
     @Test

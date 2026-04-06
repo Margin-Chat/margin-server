@@ -9,13 +9,13 @@ import org.margin.server.social.space.models.Space;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "margins")
 @ToString(exclude = {"spaces", "members"})
-@EqualsAndHashCode(exclude = {"spaces", "members"})
 public class Margin {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

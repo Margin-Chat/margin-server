@@ -72,7 +72,7 @@ class MarginInviteControllerTest {
         MarginInviteDTO body = (MarginInviteDTO) response.getBody();
         assertThat(body.inviteCode()).isEqualTo("abc-123");
         assertThat(body.marginName()).isEqualTo("Test Margin");
-        assertThat(body.invitedByUsername()).isEqualTo("admin");
+        assertThat(body.invitedByUser()).isEqualTo("admin");
         verify(marginAuthorizationService).requireMarginAdmin(adminUser.getId(), 1L);
     }
 
@@ -102,7 +102,7 @@ class MarginInviteControllerTest {
     @Test
     void createDirectInvite_shouldReturnInvite() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
-        when(userService.getByUsername("targetUser")).thenReturn(targetUser);
+        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
@@ -113,20 +113,20 @@ class MarginInviteControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         MarginInviteDTO body = (MarginInviteDTO) response.getBody();
         assertThat(body.inviteCode()).isEqualTo("direct-123");
-        assertThat(body.invitedUsername()).isEqualTo("targetUser");
+        assertThat(body.invitedUser()).isEqualTo("targetUser");
         assertThat(body.marginName()).isEqualTo("Test Margin");
         verify(marginAuthorizationService).requireMarginAdmin(adminUser.getId(), 1L);
     }
 
     @Test
-    void createDirectInvite_withEmptyUsername_shouldThrow400() {
+    void createDirectInvite_withEmptyHandle_shouldThrow400() {
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "", adminUser))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createDirectInvite_whenUserAlreadyMember_shouldThrow409() {
-        when(userService.getByUsername("targetUser")).thenReturn(targetUser);
+        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", adminUser))
@@ -135,7 +135,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_whenPendingInviteExists_shouldThrow409() {
-        when(userService.getByUsername("targetUser")).thenReturn(targetUser);
+        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(true);
 
@@ -281,10 +281,10 @@ class MarginInviteControllerTest {
         assertThat(body.get(0).marginName()).isEqualTo("Test Margin");
     }
 
-    private User testUser(Long id, String username) {
+    private User testUser(Long id, String handle) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
+        user.setHandle(handle);
         return user;
     }
 

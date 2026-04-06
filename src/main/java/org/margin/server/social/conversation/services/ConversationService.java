@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.services;
 
+import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
@@ -8,11 +9,13 @@ import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,26 +25,33 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ConversationService {
-
+    private final ConversationCreationService conversationCreationService;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
     private final UserRepository userRepository;
     private final ConversationService self;
     private final ConnectionManager connectionManager;
+    private final WebSocketDeliveryService webSocketDeliveryService;
 
     @Autowired
-    public ConversationService(ConversationRepository conversationRepository,
+    public ConversationService(ConversationCreationService conversationCreationService,
+                               ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
                                UserRepository userRepository,
-                               @Lazy ConversationService self, ConnectionManager connectionManager) {
+                               @Lazy ConversationService self,
+                               ConnectionManager connectionManager,
+                               WebSocketDeliveryService webSocketDeliveryService) {
+        this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.userRepository = userRepository;
         this.self = self;
         this.connectionManager = connectionManager;
+        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Cacheable(value = "conversations", key = "#id")
@@ -67,15 +77,15 @@ public class ConversationService {
     public ConversationDTO getConversationDTO(Conversation conversation, Long currentUserId) {
         return switch (conversation.getType()) {
             case DIRECT -> {
-                Long otherUserId = getConversationMembers(conversation.getId()).stream()
-                        .filter(u -> !u.getId().equals(currentUserId))
+                ConversationMember otherMember = conversation.getMembers().stream()
+                        .filter(member -> !member.getUser().getId().equals(currentUserId))
                         .findFirst()
-                        .map(User::getId)
-                        .orElse(null);
+                        .orElseThrow(UserNotFoundException::new);
                 yield new DirectConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
-                        otherUserId
+                        otherMember.getUser().getId(),
+                        otherMember.getLastReadAt()
                 );
             }
             case GROUP -> {
@@ -107,22 +117,13 @@ public class ConversationService {
                 .orElse(null);
     }
 
-    @Transactional
-    public Conversation createGroupConversation(User creator, List<Long> memberUserIds, String name) {
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.GROUP);
-        conversation.setName(name);
-        conversation.setCreatedAt(Instant.now());
-        conversation = conversationRepository.save(conversation);
-
-        addMemberInternal(conversation, creator);
+    public Conversation createGroupConversation(List<Long> memberUserIds, String name) {
+        Conversation conversation = conversationCreationService.createGroupConversation(name);
 
         for (Long userId : memberUserIds) {
-            if (!userId.equals(creator.getId())) {
-                User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-                addMemberInternal(conversation, user);
-            }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+            conversationCreationService.createConversationMember(conversation, user);
         }
 
         return conversation;
@@ -134,7 +135,7 @@ public class ConversationService {
         Conversation conversation = self.getById(conversationId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-        addMemberInternal(conversation, user);
+        conversationCreationService.createConversationMember(conversation, user);
     }
 
     @Transactional
@@ -147,10 +148,21 @@ public class ConversationService {
     @Transactional
     public void updateLastRead(Long conversationId, Long userId) {
         ConversationMemberId id = new ConversationMemberId(conversationId, userId);
+        Instant now = Instant.now();
         conversationMemberRepository.findById(id).ifPresent(member -> {
-            member.setLastReadAt(Instant.now());
+            member.setLastReadAt(now);
             conversationMemberRepository.save(member);
         });
+
+        Conversation conversation = getById(conversationId);
+        if (conversation.getType().equals(ConversationType.DIRECT)) {
+            Optional<ConversationMember> otherUser = conversation.getMembers().stream()
+                    .filter(member -> !member.getUser().getId().equals(userId))
+                    .findFirst();
+            otherUser.ifPresent(conversationMember ->
+                    webSocketDeliveryService.notifyConversationRead(conversationId, conversationMember.getUser().getId(), now));
+        }
+
     }
 
     public UnreadConversationsDTO getUnreadConversations(Long userId) {
@@ -183,29 +195,37 @@ public class ConversationService {
                 .toList();
     }
 
+    public Instant getOtherUserLastReadAt(Long conversationId, Long currentUserId) {
+        return getConversationMembers(conversationId).stream()
+                .filter(u -> !u.getId().equals(currentUserId))
+                .findFirst()
+                .map(u -> conversationMemberRepository
+                        .findById(new ConversationMemberId(conversationId, u.getId()))
+                        .map(ConversationMember::getLastReadAt)
+                        .orElse(Instant.EPOCH))
+                .orElse(Instant.EPOCH);
+    }
+
     public Conversation getByChannelId(Long channelId) {
         return conversationRepository.findByChannelId(channelId)
                 .orElseThrow(() -> new RuntimeException("No conversation found for channel: " + channelId));
     }
 
-    public Conversation createDirectConversation(User fromUser, User toUser) {
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.DIRECT);
-        conversation.setCreatedAt(Instant.now());
-        conversation = conversationRepository.save(conversation);
+    @Transactional
+    public Conversation createNewDirectConversation(User user, User recipientUser) {
+        Conversation directConversation = conversationCreationService.createDirectConversation();
+        conversationCreationService.createConversationMember(directConversation, user);
+        conversationCreationService.createConversationMember(directConversation, recipientUser);
+        return directConversation;
+    }
 
-        addMemberInternal(conversation, fromUser);
-        addMemberInternal(conversation, toUser);
-
+    public Conversation createNewConversationForUsers(ConversationType type, Channel channel, List<User> users) {
+        Conversation conversation = conversationCreationService.createChannelConversation(type, channel);
+        users.forEach(user -> conversationCreationService.createConversationMember(conversation, user));
         return conversation;
     }
 
-    private void addMemberInternal(Conversation conversation, User user) {
-        ConversationMember member = new ConversationMember();
-        member.setId(new ConversationMemberId(conversation.getId(), user.getId()));
-        member.setConversation(conversation);
-        member.setUser(user);
-        member.setJoinedAt(Instant.now());
-        conversationMemberRepository.save(member);
+    public void createNewConversationMember(Conversation conversation, User user) {
+        conversationCreationService.createConversationMember(conversation, user);
     }
 }
