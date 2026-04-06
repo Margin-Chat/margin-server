@@ -190,9 +190,9 @@
                 <configuration>
                     <url>jdbc:postgresql://localhost:5433/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
-                    <user>sysuser</user>
+                    <user>${flyway.user}</user>
                     <!--suppress UnresolvedMavenProperty -->
-                    <password>admin123</password>
+                    <password>${flyway.password}</password>
                     <cleanDisabled>false</cleanDisabled>
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>
