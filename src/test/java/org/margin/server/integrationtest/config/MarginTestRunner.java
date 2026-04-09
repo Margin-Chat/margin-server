@@ -1,4 +1,4 @@
-package org.margin.server.integrationtest;
+package org.margin.server.integrationtest.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;

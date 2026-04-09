@@ -1,8 +1,6 @@
 package org.margin.server.social.margin.controllers;
 
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.models.dtos.*;
-import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
@@ -21,14 +19,11 @@ public class MarginController {
 
     private final MarginService marginService;
     private final MarginAuthorizationService marginAuthorizationService;
-    private final MarginMapper marginMapper;
 
     public MarginController(MarginService marginService,
-                            MarginAuthorizationService marginAuthorizationService,
-                            MarginMapper marginMapper) {
+                            MarginAuthorizationService marginAuthorizationService) {
         this.marginService = marginService;
         this.marginAuthorizationService = marginAuthorizationService;
-        this.marginMapper = marginMapper;
     }
 
     @PostMapping(value = "/create_new_margin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -37,22 +32,21 @@ public class MarginController {
             @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
             @AuthenticationPrincipal User user) {
 
-        Margin created = marginService.createMargin(
+        MarginDTO created = marginService.createMargin(
                 request.marginName(),
                 request.marginDescription(),
                 Visibility.valueOf(request.visibility()),
                 marginIcon,
                 user);
 
-        return ResponseEntity.ok(marginMapper.marginToDto(created));
+        return ResponseEntity.ok(created);
     }
 
     @GetMapping("/get_margin/{marginId}")
     public MarginDTO getMargin(@PathVariable Long marginId,
                                @AuthenticationPrincipal User user) {
-        Margin margin = marginService.getById(marginId);
-        marginAuthorizationService.requireMarginMember(user.getId(), margin.getId());
-        return marginMapper.marginToDto(margin);
+        marginAuthorizationService.requireMarginMember(user.getId(), marginId);
+        return marginService.getMarginAsDto(marginId);
     }
 
     @GetMapping("/get_margins")
@@ -61,11 +55,35 @@ public class MarginController {
     }
 
     @PostMapping("/update_margin")
-    public ResponseEntity<MarginDTO> updateMargin(@RequestPart("data") UpdateMarginDTO updateMarginDTO,
-                                                  @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
-                                                  @AuthenticationPrincipal User user) {
+    public ResponseEntity<MarginDTO> updateMargin(
+            @RequestPart("data") UpdateMarginDTO updateMarginDTO,
+            @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
+            @AuthenticationPrincipal User user) {
+
         marginAuthorizationService.requireMarginAdmin(user.getId(), updateMarginDTO.marginId());
-        return ResponseEntity.ok(marginMapper.marginToDto(marginService.updateMargin(updateMarginDTO, marginIcon)));
+        MarginDTO updated = marginService.updateMarginAsDto(updateMarginDTO, marginIcon);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/update_member_role")
+    public ResponseEntity<MarginMemberDTO> updateMarginMemberRole(
+            @RequestBody UpdateMemberRoleRequest request,
+            @AuthenticationPrincipal User user) {
+
+        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
+        return ResponseEntity.ok(
+                marginService.updateMarginMemberRole(request.marginId(), request.member())
+        );
+    }
+
+    @PostMapping("/remove_margin_member")
+    public ResponseEntity<Void> removeMarginMember(
+            @RequestBody RemoveMarginMemberRequest request,
+            @AuthenticationPrincipal User user) {
+
+        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
+        marginService.removeMarginMember(request.marginId(), request.userIdToRemove());
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/delete_margin")
@@ -73,32 +91,6 @@ public class MarginController {
                                              @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
         marginService.deleteMargin(marginId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/add_margin_member")
-    public ResponseEntity<MarginMemberDTO> addMarginMember(
-            @RequestBody AddMarginMemberRequest request,
-            @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
-        return ResponseEntity.ok(marginService.memberToDto(
-                marginService.addUserToMargin(request.marginId(), request.userId(), request.role(), user, false)
-        ));
-    }
-
-    @PostMapping("/update_member_role")
-    public ResponseEntity<MarginMemberDTO> updateMarginMemberRole(
-            @RequestBody UpdateMemberRoleRequest request,
-            @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
-        return ResponseEntity.ok(marginService.updateMarginMemberRole(request.marginId(), request.member()));
-    }
-
-    @PostMapping("/remove_margin_member")
-    public ResponseEntity<Void> removeMarginMember(@RequestBody Long marginId,
-                                                   @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
-        marginService.removeMarginMember(marginId, user.getId());
         return ResponseEntity.ok().build();
     }
 }

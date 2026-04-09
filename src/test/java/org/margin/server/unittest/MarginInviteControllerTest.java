@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.margin.controllers.MarginInviteController;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.models.dtos.MarginInviteDTO;
 import org.margin.server.social.margin.service.MarginInviteService;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -204,14 +205,28 @@ class MarginInviteControllerTest {
     @Test
     void acceptDirectInvite_shouldReturnMargin() {
         MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+
         when(marginInviteService.getById(1L)).thenReturn(invite);
         when(marginInviteService.acceptDirectInvite(invite, targetUser)).thenReturn(margin);
-        when(marginMapper.marginToDto(margin)).thenReturn(null);
+
+        MarginDTO dto = new MarginDTO(
+                margin.getId(),
+                margin.getName(),
+                margin.getDescription(),
+                margin.getVisibility(),
+                margin.getIconUrl(),
+                List.of(),
+                List.of()
+        );
+
+        when(marginService.getMarginAsDto(margin.getId())).thenReturn(dto);
 
         ResponseEntity<?> response = marginInviteController.acceptDirectInvite(1L, targetUser);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(marginMapper).marginToDto(margin);
+        assertThat(response.getBody()).isEqualTo(dto);
+
+        verify(marginService).getMarginAsDto(margin.getId());
     }
 
     @Test

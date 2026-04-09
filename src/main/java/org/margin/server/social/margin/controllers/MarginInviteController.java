@@ -35,12 +35,16 @@ public class MarginInviteController {
             @PathVariable Long marginId,
             @RequestParam(required = false) Integer maxUses,
             @AuthenticationPrincipal User user) {
+
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
+
         if (maxUses != null && maxUses <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code can't be used more");
         }
+
         Margin margin = marginService.getById(marginId);
         MarginInvite invite = marginInviteService.createLinkInvite(margin, maxUses, user);
+
         return ResponseEntity.ok(MarginInviteDTO.from(invite));
     }
 
@@ -49,7 +53,9 @@ public class MarginInviteController {
             @PathVariable Long marginId,
             @RequestParam String handle,
             @AuthenticationPrincipal User user) {
+
         marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
+
         if (handle.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Handle is empty");
         }
@@ -67,14 +73,17 @@ public class MarginInviteController {
         MarginInvite invite = marginInviteService.createDirectInvite(
                 marginService.getById(marginId),
                 targetUser,
-                user);
+                user
+        );
+
         return ResponseEntity.ok(MarginInviteDTO.from(invite));
     }
 
     @GetMapping("/join/{code}")
     public ResponseEntity<MarginInviteDTO> getInviteDetails(@PathVariable String code) {
-        MarginInvite invite = marginInviteService.findInviteDetails(code).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
+
+        MarginInvite invite = marginInviteService.findInviteDetails(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
 
         if (!invite.isUsable()) {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
@@ -87,8 +96,9 @@ public class MarginInviteController {
     public ResponseEntity<MarginDTO> acceptLinkInvite(
             @PathVariable String code,
             @AuthenticationPrincipal User user) {
-        MarginInvite invite = marginInviteService.findInviteDetails(code).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
+
+        MarginInvite invite = marginInviteService.findInviteDetails(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
 
         if (!invite.isUsable()) {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
@@ -99,6 +109,7 @@ public class MarginInviteController {
         }
 
         Margin margin = marginInviteService.acceptLinkInvite(invite, user);
+
         return ResponseEntity.ok(marginMapper.marginToDto(margin));
     }
 
@@ -106,6 +117,7 @@ public class MarginInviteController {
     public ResponseEntity<MarginDTO> acceptDirectInvite(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
+
         MarginInvite invite = marginInviteService.getById(id);
 
         if (!invite.getInvitedUser().getId().equals(user.getId())) {
@@ -117,13 +129,15 @@ public class MarginInviteController {
         }
 
         Margin margin = marginInviteService.acceptDirectInvite(invite, user);
-        return ResponseEntity.ok(marginMapper.marginToDto(margin));
+
+        return ResponseEntity.ok(marginService.getMarginAsDto(margin.getId()));
     }
 
     @PostMapping("/{id}/decline")
     public ResponseEntity<Void> declineDirectInvite(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
+
         MarginInvite invite = marginInviteService.getById(id);
 
         if (!invite.getInvitedUser().getId().equals(user.getId())) {
@@ -135,6 +149,7 @@ public class MarginInviteController {
         }
 
         marginInviteService.declineDirectInvite(invite);
+
         return ResponseEntity.ok().build();
     }
 

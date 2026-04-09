@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.exceptions.GlobalExceptionHandler;
 import org.margin.server.social.margin.controllers.MarginController;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
@@ -100,15 +99,6 @@ class MarginControllerTest {
 
     @Test
     void shouldGetMargin() throws Exception {
-        Margin margin = new Margin();
-        margin.setId(1L);
-        margin.setName("Test Margin");
-        margin.setDescription("Test Description");
-        margin.setVisibility(Visibility.PUBLIC);
-        margin.setIconUrl(null);
-        margin.setMembers(List.of());
-        margin.setSpaces(List.of());
-
         MarginDTO marginDTO = new MarginDTO(
                 1L,
                 "Test Margin",
@@ -119,8 +109,7 @@ class MarginControllerTest {
                 List.of()
         );
 
-        when(marginService.getById(1L)).thenReturn(margin);
-        when(marginMapper.marginToDto(margin)).thenReturn(marginDTO);
+        when(marginService.getMarginAsDto(1L)).thenReturn(marginDTO);
 
         mockMvc().perform(get(API_MARGINS + "get_margin/1"))
                 .andExpect(status().isOk())
@@ -132,9 +121,11 @@ class MarginControllerTest {
                 .andExpect(jsonPath("$.spaces").isArray());
     }
 
+
     @Test
     void shouldReturnNotFoundWhenMarginDoesNotExist() throws Exception {
-        when(marginService.getById(99L)).thenThrow(new MarginNotFoundException(99L));
+        when(marginService.getMarginAsDto(99L))
+                .thenThrow(new MarginNotFoundException(99L));
 
         mockMvc().perform(get(API_MARGINS + "get_margin/99"))
                 .andExpect(status().isNotFound());

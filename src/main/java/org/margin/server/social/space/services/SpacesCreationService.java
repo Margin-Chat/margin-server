@@ -13,6 +13,7 @@ import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 
 @Service
 @Slf4j
@@ -42,13 +43,18 @@ public class SpacesCreationService {
     @Transactional
     public SpaceMember createMember(User user, Space space, SpaceRole role) {
         SpaceMember newSpaceMember = new SpaceMember();
-        newSpaceMember.setSpace(space);
+        newSpaceMember.setSpace(space); // This sets the FK
         newSpaceMember.setUser(user);
         newSpaceMember.setRole(role);
         newSpaceMember.setJoinedAt(Instant.now());
         SpaceMember spaceMember = spaceMemberRepository.save(newSpaceMember);
+
+        if (space.getMembers() == null) {
+            space.setMembers(new ArrayList<>());
+        }
         space.getMembers().add(spaceMember);
-        log.info("Created space member {}", spaceMember.getId());
+
+        log.info("Created space member {} with role {}", spaceMember.getId(), role);
         return spaceMember;
     }
 }

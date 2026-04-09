@@ -9,17 +9,21 @@ import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
+import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.models.Visibility;
+import org.margin.server.social.space.exceptions.SpaceNotFoundException;
 import org.margin.server.social.space.exceptions.UserNotInMargin;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
+import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesCreationService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -51,6 +55,10 @@ class SpacesServiceTest {
     private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private SpacesCreationService spacesCreationService;
+    @Mock
+    private MarginMapper marginMapper;
+    @Mock
+    private ConnectionManager connectionManager;
 
     @InjectMocks
     private SpacesService spacesService;
@@ -78,11 +86,14 @@ class SpacesServiceTest {
     void createNewSpace_DuplicateName_ThrowsException() {
         CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
         Margin margin = testMargin();
+        margin.setId(1L);
 
-        when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.of(new Space()));
+        when(spacesRepository.getSpaceByName("General", margin.getId()))
+                .thenReturn(Optional.of(new Space()));
 
+        User user = testUser(1L);
         assertThrows(DuplicateKeyException.class,
-                () -> spacesService.createNewSpace(dto, testUser(1L), margin, false));
+                () -> spacesService.createNewSpace(dto, user, margin, false));
     }
 
     @Test
@@ -100,22 +111,33 @@ class SpacesServiceTest {
         space.setChannels(new ArrayList<>());
         space.setMembers(new ArrayList<>());
 
-        when(spacesRepository.getSpaceByName("General", margin.getId())).thenReturn(Optional.empty());
-        when(spacesCreationService.create("General", "Desc", Visibility.PUBLIC, margin, false)).thenReturn(space);
+        when(spacesRepository.getSpaceByName("General", margin.getId()))
+                .thenReturn(Optional.empty());
+        when(spacesCreationService.create("General", "Desc", Visibility.PUBLIC, margin, false))
+                .thenReturn(space);
         when(channelService.createNewChannel(any(Space.class), eq("General Chat"), anyString()))
                 .thenReturn(new Channel());
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(1L, 5L)).thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any())).thenReturn(false);
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(1L, 5L))
+                .thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any()))
+                .thenReturn(false);
 
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setUser(user);
         spaceMember.setRole(SpaceRole.ADMIN);
-        when(spacesCreationService.createMember(user, space, SpaceRole.ADMIN)).thenReturn(spaceMember);
+        when(spacesCreationService.createMember(user, space, SpaceRole.ADMIN))
+                .thenReturn(spaceMember);
 
-        Space result = spacesService.createNewSpace(dto, user, margin, false);
+        SpaceDTO mappedDto = new SpaceDTO(
+                10L, "General", "Desc", margin.getId(), Visibility.PUBLIC,
+                List.of(), List.of(), false
+        );
+        when(marginMapper.spaceToDto(space)).thenReturn(mappedDto);
+
+        SpaceDTO result = spacesService.createNewSpace(dto, user, margin, false);
 
         assertNotNull(result);
-        assertEquals(10L, result.getId());
+        assertEquals(10L, result.spaceId());
         verify(spacesCreationService).create("General", "Desc", Visibility.PUBLIC, margin, false);
         verify(channelService).createNewChannel(any(Space.class), eq("General Chat"), anyString());
         verify(spacesCreationService).createMember(user, space, SpaceRole.ADMIN);
@@ -137,12 +159,18 @@ class SpacesServiceTest {
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setUser(newUser);
         spaceMember.setRole(SpaceRole.MEMBER);
+        spaceMember.setSpace(space);
 
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(newUser.getId(), margin.getId())).thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser.getId(), space.getId())).thenReturn(false);
-        when(spacesCreationService.createMember(newUser, space, SpaceRole.MEMBER)).thenReturn(spaceMember);
+        when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(newUser.getId(), margin.getId()))
+                .thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser.getId(), space.getId()))
+                .thenReturn(false);
+        when(spacesCreationService.createMember(newUser, space, SpaceRole.MEMBER))
+                .thenReturn(spaceMember);
+        when(connectionManager.isUserOnline(newUser.getId())).thenReturn(false);
 
-        spacesService.addNewUserToSpace(newUser, space, SpaceRole.MEMBER);
+        spacesService.addNewUserToSpace(newUser, space.getId(), SpaceRole.MEMBER);
 
         verify(spacesCreationService).createMember(newUser, space, SpaceRole.MEMBER);
     }
@@ -158,11 +186,15 @@ class SpacesServiceTest {
 
         User existingUser = testUser(1L);
 
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(existingUser.getId(), margin.getId())).thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser.getId(), space.getId())).thenReturn(true);
+        Long spaceId = space.getId();
+        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(existingUser.getId(), margin.getId()))
+                .thenReturn(true);
+        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser.getId(), spaceId))
+                .thenReturn(true);
 
         assertThrows(DuplicateKeyException.class, () ->
-                spacesService.addNewUserToSpace(existingUser, space, SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(existingUser, spaceId, SpaceRole.MEMBER)
         );
 
         verify(spacesCreationService, never()).createMember(any(), any(), any());
@@ -179,10 +211,13 @@ class SpacesServiceTest {
 
         User outsider = testUser(3L);
 
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(outsider.getId(), margin.getId())).thenReturn(false);
+        Long spaceId = space.getId();
+        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
+        when(marginMemberRepository.existsByUser_IdAndMargin_Id(outsider.getId(), margin.getId()))
+                .thenReturn(false);
 
         assertThrows(UserNotInMargin.class, () ->
-                spacesService.addNewUserToSpace(outsider, space, SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(outsider, spaceId, SpaceRole.MEMBER)
         );
 
         verify(spacesCreationService, never()).createMember(any(), any(), any());
@@ -195,8 +230,10 @@ class SpacesServiceTest {
         Space space = new Space();
 
         when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
-        when(spaceMemberRepository.findSpaceMemberBySpace(space)).thenReturn(List.of(new SpaceMember()));
-        when(channelRepository.findChannelBySpace(space)).thenReturn(List.of(new Channel()));
+        when(spaceMemberRepository.findSpaceMemberBySpace(space))
+                .thenReturn(List.of(new SpaceMember()));
+        when(channelRepository.findChannelBySpace(space))
+                .thenReturn(List.of(new Channel()));
 
         spacesService.deleteSpace(spaceId);
 
@@ -210,6 +247,6 @@ class SpacesServiceTest {
     void getById_NotFound() {
         when(spacesRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> spacesService.getById(99L));
+        assertThrows(SpaceNotFoundException.class, () -> spacesService.getById(99L));
     }
 }

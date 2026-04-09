@@ -25,7 +25,7 @@ public class MarginMember {
     @JoinColumn(name = "margin_id", nullable = false)
     private Margin margin;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

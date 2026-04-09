@@ -1,6 +1,8 @@
 package org.margin.server.users.controllers;
 
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.margin.models.dtos.MarginDTO;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.*;
 import org.margin.server.users.services.UserService;
@@ -20,13 +22,15 @@ public class UserController {
     private final ConnectionManager connectionManager;
     private final UserService userService;
     private final ConversationService conversationService;
+    private final MarginService marginService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          ConversationService conversationService) {
+                          ConversationService conversationService, MarginService marginService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
+        this.marginService = marginService;
     }
 
     @GetMapping("get_all_users")
@@ -75,7 +79,7 @@ public class UserController {
         return ResponseEntity.ok(new PrivateKeyResponse(user.getEncryption().getEncryptedPrivateKey()));
     }
 
-    @GetMapping("/{userId}/recent_chat_users")
+    @GetMapping("/recent_chat_users")
     public List<RecentChatUsersDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
         return conversationService.getRecentChatUsers(user.getId());
     }
@@ -108,5 +112,14 @@ public class UserController {
     ) {
         User updatedUser = userService.updateUser(displayName, email, user, file);
         return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal User user) {
+        List<Long> marginIds = marginService.getMarginsForUser(user).stream()
+                .map(MarginDTO::marginId)
+                .toList();
+        userService.deleteUser(marginIds, user);
+        return ResponseEntity.ok().build();
     }
 }

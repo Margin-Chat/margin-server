@@ -61,15 +61,19 @@ public class MarginInviteService {
         marginInvite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         marginInvite.setMaxUses(1);
         marginInvite.setType(MarginInvite.InviteType.DIRECT);
-        MarginInvite savedInvited = marginInviteRepository.save(marginInvite);
 
-        webSocketDeliveryService.notifyMarginInvite(savedInvited.getInviteCode(), targetUser.getId());
+        MarginInvite saved = marginInviteRepository.save(marginInvite);
+
+        webSocketDeliveryService.notifyMarginInvite(saved.getInviteCode(), targetUser.getId());
         notificationService.createForUsers(
                 Collections.singletonList(targetUser),
                 invitedBy,
                 NotificationType.INVITED_TO_MARGIN,
-                marginInvite.getId(), margin.getId());
-        return savedInvited;
+                saved.getId(),
+                margin.getId()
+        );
+
+        return saved;
     }
 
     public Optional<MarginInvite> findInviteDetails(String code) {
@@ -83,7 +87,8 @@ public class MarginInviteService {
                 user.getId(),
                 MarginRole.MEMBER,
                 invite.getInvitedBy(),
-                false);
+                false
+        );
 
         spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user);
 
@@ -100,7 +105,8 @@ public class MarginInviteService {
                 user.getId(),
                 MarginRole.MEMBER,
                 invite.getInvitedBy(),
-                false);
+                false
+        );
 
         spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user);
 
@@ -119,12 +125,16 @@ public class MarginInviteService {
         return marginInviteRepository.findInvitesForUserByStatus(
                 user.getId(),
                 MarginInvite.InviteStatus.PENDING,
-                Instant.now());
+                Instant.now()
+        );
     }
 
     public boolean hasPendingInviteForMargin(Long marginId, Long userId) {
         return marginInviteRepository.existsPendingInvite(
-                marginId, userId, MarginInvite.InviteStatus.PENDING);
+                marginId,
+                userId,
+                MarginInvite.InviteStatus.PENDING
+        );
     }
 
     public MarginInvite getById(Long id) {
