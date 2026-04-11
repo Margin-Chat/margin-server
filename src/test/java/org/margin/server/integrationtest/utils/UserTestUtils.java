@@ -49,7 +49,7 @@ public class UserTestUtils {
     }
 
     public static UserDTO updateUser(String displayName, String email, User user) {
-        return userController.getCurrentUser(displayName, email, null, user);
+        return userController.updateUserInfo(displayName, email, null, user);
     }
 
     public static ResponseEntity<UserDTO> lookupByHandle(String handle) {

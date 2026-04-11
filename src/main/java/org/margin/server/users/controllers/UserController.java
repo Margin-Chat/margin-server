@@ -1,5 +1,8 @@
 package org.margin.server.users.controllers;
 
+import org.margin.server.config.ratelimit.RateLimitConfig;
+import org.margin.server.config.ratelimit.RateLimitService;
+import org.margin.server.exceptions.TooManyRequestsException;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.service.MarginService;
@@ -23,14 +26,16 @@ public class UserController {
     private final UserService userService;
     private final ConversationService conversationService;
     private final MarginService marginService;
+    private final RateLimitService rateLimitService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          ConversationService conversationService, MarginService marginService) {
+                          ConversationService conversationService, MarginService marginService, RateLimitService rateLimitService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
         this.marginService = marginService;
+        this.rateLimitService = rateLimitService;
     }
 
     @GetMapping("get_all_users")
@@ -104,12 +109,18 @@ public class UserController {
     }
 
     @PatchMapping("/update_user_info")
-    public UserDTO getCurrentUser(
+    public UserDTO updateUserInfo(
             @RequestParam(required = false) String displayName,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) MultipartFile file,
             @AuthenticationPrincipal User user
     ) {
+        if (file != null && !file.isEmpty()) {
+            String key = "update_user_avatar:" + user.getId();
+            if (!rateLimitService.tryConsume(key, RateLimitConfig.createMargin())) {
+                throw new TooManyRequestsException("You can only update user avatar three times an hour.");
+            }
+        }
         User updatedUser = userService.updateUser(displayName, email, user, file);
         return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
     }

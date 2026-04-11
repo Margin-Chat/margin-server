@@ -1,5 +1,8 @@
 package org.margin.server.social.margin.controllers;
 
+import org.margin.server.config.ratelimit.RateLimitConfig;
+import org.margin.server.config.ratelimit.RateLimitService;
+import org.margin.server.exceptions.TooManyRequestsException;
 import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
@@ -19,11 +22,14 @@ public class MarginController {
 
     private final MarginService marginService;
     private final MarginAuthorizationService marginAuthorizationService;
+    private final RateLimitService rateLimitService;
 
     public MarginController(MarginService marginService,
-                            MarginAuthorizationService marginAuthorizationService) {
+                            MarginAuthorizationService marginAuthorizationService,
+                            RateLimitService rateLimitService) {
         this.marginService = marginService;
         this.marginAuthorizationService = marginAuthorizationService;
+        this.rateLimitService = rateLimitService;
     }
 
     @PostMapping(value = "/create_new_margin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -31,6 +37,10 @@ public class MarginController {
             @RequestPart("data") CreateNewMarginRequest request,
             @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
             @AuthenticationPrincipal User user) {
+        String key = "create_margin:" + user.getId();
+        if (!rateLimitService.tryConsume(key, RateLimitConfig.createMargin())) {
+            throw new TooManyRequestsException("You can only create 5 margins per hour.");
+        }
 
         MarginDTO created = marginService.createMargin(
                 request.marginName(),
@@ -59,7 +69,12 @@ public class MarginController {
             @RequestPart("data") UpdateMarginDTO updateMarginDTO,
             @RequestPart(value = "marginIcon", required = false) MultipartFile marginIcon,
             @AuthenticationPrincipal User user) {
-
+        if (marginIcon != null && !marginIcon.isEmpty()) {
+            String key = "update_margin_avatar:" + user.getId();
+            if (!rateLimitService.tryConsume(key, RateLimitConfig.uploadImage())) {
+                throw new TooManyRequestsException("You can only update user avatar three times an hour.");
+            }
+        }
         marginAuthorizationService.requireMarginAdmin(user.getId(), updateMarginDTO.marginId());
         MarginDTO updated = marginService.updateMarginAsDto(updateMarginDTO, marginIcon);
         return ResponseEntity.ok(updated);

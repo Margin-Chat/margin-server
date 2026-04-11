@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.config.ratelimit.RateLimitService;
 import org.margin.server.exceptions.GlobalExceptionHandler;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
@@ -41,6 +42,8 @@ class MarginControllerTest {
     private MarginAuthorizationService authenticationService;
     @Mock
     private MarginMapper marginMapper;
+    @Mock
+    private RateLimitService rateLimitService;
     @InjectMocks
     private MarginController marginController;
 
@@ -59,6 +62,7 @@ class MarginControllerTest {
                 "data", "", "application/json",
                 objectMapper.writeValueAsBytes(request)
         );
+        when(rateLimitService.tryConsume(any(), any())).thenReturn(true);
 
         mockMvc().perform(multipart(API_MARGINS + "create_new_margin")
                         .file(data))
@@ -83,6 +87,7 @@ class MarginControllerTest {
                 "marginIcon", "icon.jpg", "image/jpeg",
                 "image content".getBytes()
         );
+        when(rateLimitService.tryConsume(any(), any())).thenReturn(true);
 
         mockMvc().perform(multipart(API_MARGINS + "create_new_margin")
                         .file(data)
