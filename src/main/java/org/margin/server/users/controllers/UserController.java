@@ -38,7 +38,13 @@ public class UserController {
         this.rateLimitService = rateLimitService;
     }
 
-    @GetMapping("get_all_users")
+    @GetMapping("/{userId}")
+    public UserDTO getUser(@PathVariable Long userId) {
+        User user = userService.getById(userId);
+        return userService.toDTO(user);
+    }
+
+    @GetMapping("/get_all_users")
     public List<UserDTO> getAllOnlineUsersOnServer(@AuthenticationPrincipal User user) {
         return connectionManager.getOnlineUserIds()
                 .stream()

@@ -23,6 +23,14 @@ public class ChannelController {
         this.marginAuthorizationService = marginAuthorizationService;
     }
 
+    @GetMapping("/{channelId}")
+    public ResponseEntity<ChannelDTO> getChannel(@PathVariable Long channelId,
+                                                 @AuthenticationPrincipal User user) {
+        Channel channel = channelService.getById(channelId);
+        marginAuthorizationService.requireMarginMember(user.getId(), channel.getSpace().getMargin().getId());
+        return ResponseEntity.ok(new ChannelDTO(channel));
+    }
+
     @GetMapping("/{spaceId}/get_channels_for_space")
     public List<ChannelDTO> getChannelsForSpace(@AuthenticationPrincipal User user,
                                                 @PathVariable Long spaceId) {
