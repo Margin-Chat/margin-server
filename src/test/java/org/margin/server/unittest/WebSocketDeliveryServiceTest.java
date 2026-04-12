@@ -55,7 +55,8 @@ class WebSocketDeliveryServiceTest {
                 "Testing message notification",
                 false,
                 Instant.now(),
-                1L
+                1L,
+                "Test"
         );
     }
 
