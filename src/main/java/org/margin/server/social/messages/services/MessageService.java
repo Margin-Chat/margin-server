@@ -50,6 +50,7 @@ public class MessageService {
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
+                        .withChannelName(conversation.getChannel() == null ? null : conversation.getChannel().getName())
                         .build(),
                 recipients);
     }

@@ -14,7 +14,8 @@ public record MessageDTO(
         String content,
         boolean isEdited,
         Instant createdAt,
-        Long marginId
+        Long marginId,
+        String channelName
 ) {
 
     public static Builder from(Message message) {
@@ -25,6 +26,7 @@ public record MessageDTO(
         private final Message message;
         private boolean isUserOnline = false;
         private Long marginId = null;
+        private String channelName = null;
 
         private Builder(Message message) {
             this.message = message;
@@ -40,6 +42,11 @@ public record MessageDTO(
             return this;
         }
 
+        public Builder withChannelName(String channelName) {
+            this.channelName = channelName;
+            return this;
+        }
+
         public MessageDTO build() {
             return new MessageDTO(
                     message.getId(),
@@ -49,7 +56,8 @@ public record MessageDTO(
                     message.getMessage(),
                     message.getIsEdited(),
                     message.getCreatedAt(),
-                    marginId
+                    marginId,
+                    channelName
             );
         }
     }
