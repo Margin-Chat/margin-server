@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.margin</groupId>
     <artifactId>server</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.1-SNAPSHOT</version>
     <name>margin</name>
     <description>Backend server for margin</description>
     <url>https://margin.chat</url>
