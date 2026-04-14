@@ -1,5 +1,6 @@
 package org.margin.server.websocket.connection;
 
+import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
@@ -60,5 +61,14 @@ public class ConnectionManager {
 
     public Set<Long> getOnlineUserIds() {
         return new HashSet<>(connections.keySet());
+    }
+
+    public boolean removeConnectionIfMatch(User user, Channel channel) {
+        ClientConnection conn = connections.get(user.getId());
+        if (conn != null && conn.getChannel() == channel) {
+            connections.remove(user.getId());
+            return true;
+        }
+        return false;
     }
 }

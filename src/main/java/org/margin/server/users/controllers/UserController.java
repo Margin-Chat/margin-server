@@ -1,5 +1,6 @@
 package org.margin.server.users.controllers;
 
+import org.margin.server.bugs.services.BugReportService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
 import org.margin.server.exceptions.TooManyRequestsException;
@@ -27,15 +28,17 @@ public class UserController {
     private final ConversationService conversationService;
     private final MarginService marginService;
     private final RateLimitService rateLimitService;
+    private final BugReportService bugReportService;
 
     public UserController(ConnectionManager connectionManager,
                           UserService userService,
-                          ConversationService conversationService, MarginService marginService, RateLimitService rateLimitService) {
+                          ConversationService conversationService, MarginService marginService, RateLimitService rateLimitService, BugReportService bugReportService) {
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.conversationService = conversationService;
         this.marginService = marginService;
         this.rateLimitService = rateLimitService;
+        this.bugReportService = bugReportService;
     }
 
     @GetMapping("/{userId}")
@@ -129,6 +132,13 @@ public class UserController {
         }
         User updatedUser = userService.updateUser(displayName, email, user, file);
         return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
+    }
+
+    @PostMapping("/report_bug")
+    public ResponseEntity<Void> reportBug(@RequestBody BugReportRequest request,
+                                          @AuthenticationPrincipal User user) {
+        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/delete")

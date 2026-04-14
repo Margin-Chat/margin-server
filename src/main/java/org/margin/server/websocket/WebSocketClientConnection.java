@@ -3,8 +3,8 @@ package org.margin.server.websocket;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.connection.ClientConnection;
 
 @Slf4j
 public class WebSocketClientConnection implements ClientConnection {
@@ -41,5 +41,10 @@ public class WebSocketClientConnection implements ClientConnection {
         if (channel != null) {
             channel.close();
         }
+    }
+
+    @Override
+    public Channel getChannel() {
+        return channel;
     }
 }
