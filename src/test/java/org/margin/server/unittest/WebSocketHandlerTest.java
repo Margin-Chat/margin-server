@@ -118,11 +118,24 @@ class WebSocketHandlerTest {
     void channelInactive_removesConnectionAndNotifiesOffline() {
         User user = createUser(1L, "sender");
         when(userAttribute.get()).thenReturn(user);
+        when(connectionManager.removeConnectionIfMatch(user, channel)).thenReturn(true);
 
         handler.channelInactive(ctx);
 
-        verify(connectionManager).removeConnection(user);
+        verify(connectionManager).removeConnectionIfMatch(user, channel);
         verify(presenceService).userDisconnected(user);
+    }
+
+    @Test
+    void channelInactive_doesNotNotifyWhenChannelMismatch() {
+        User user = createUser(1L, "sender");
+        when(userAttribute.get()).thenReturn(user);
+        when(connectionManager.removeConnectionIfMatch(user, channel)).thenReturn(false);
+
+        handler.channelInactive(ctx);
+
+        verify(connectionManager).removeConnectionIfMatch(user, channel);
+        verifyNoInteractions(presenceService);
     }
 
     @Test

@@ -49,7 +49,8 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     @Query("""
             SELECT cm.conversation.id AS conversationId,
-                   cm.conversation.type AS type
+                   cm.conversation.type AS type,
+                   cm.conversation.channel.space.margin.id as marginId
             FROM ConversationMember cm
             WHERE cm.user.id = :userId
               AND EXISTS (
