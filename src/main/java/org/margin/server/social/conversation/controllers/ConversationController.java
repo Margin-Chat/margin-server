@@ -3,6 +3,8 @@ package org.margin.server.social.conversation.controllers;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
+import org.margin.server.social.conversation.models.dtos.SendConversationInviteRequest;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
@@ -123,6 +125,35 @@ public class ConversationController {
     @GetMapping("/conversations/unread")
     public UnreadConversationsDTO getUnreadConversations(@AuthenticationPrincipal User user) {
         return conversationService.getUnreadConversations(user.getId());
+    }
+
+    @PostMapping("/conversations/invite")
+    public DirectConversationDTO sendConversationInvite(
+            @RequestBody SendConversationInviteRequest request,
+            @AuthenticationPrincipal User user) {
+        User recipient = userService.getByHandle(request.handle());
+        return conversationService.sendConversationInvite(user, recipient);
+    }
+
+    @GetMapping("/conversations/pending_invites")
+    public List<DirectConversationDTO> getPendingInvites(@AuthenticationPrincipal User user) {
+        return conversationService.getPendingInvites(user.getId());
+    }
+
+    @PostMapping("/conversations/{conversationId}/invite/accept")
+    public ResponseEntity<Void> acceptConversationInvite(
+            @PathVariable Long conversationId,
+            @AuthenticationPrincipal User user) {
+        conversationService.acceptConversationInvite(conversationId, user);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/conversations/{conversationId}/invite/decline")
+    public ResponseEntity<Void> declineConversationInvite(
+            @PathVariable Long conversationId,
+            @AuthenticationPrincipal User user) {
+        conversationService.declineConversationInvite(conversationId, user);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/conversations/{conversationId}/members")

@@ -1,6 +1,9 @@
 package org.margin.server.social.messages.services;
 
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationInviteStatus;
+import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -23,13 +26,18 @@ import java.util.stream.Collectors;
 public class MessageService {
     private final MessageRepository messageRepository;
     private final ConversationService conversationService;
+    private final ConversationMemberRepository conversationMemberRepository;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
 
     public MessageService(MessageRepository messageRepository,
-                          ConversationService conversationService, ConnectionManager connectionManager, WebSocketDeliveryService webSocketDeliveryService) {
+                          ConversationService conversationService,
+                          ConversationMemberRepository conversationMemberRepository,
+                          ConnectionManager connectionManager,
+                          WebSocketDeliveryService webSocketDeliveryService) {
         this.messageRepository = messageRepository;
         this.conversationService = conversationService;
+        this.conversationMemberRepository = conversationMemberRepository;
         this.connectionManager = connectionManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
     }
@@ -91,6 +99,15 @@ public class MessageService {
 
     @Transactional
     public void sendMessage(User fromUser, String content, Conversation conversation) {
+        if (conversation.getType() == ConversationType.DIRECT) {
+            boolean anyPending = conversationMemberRepository.findByConversation(conversation).stream()
+                    .anyMatch(m -> !m.getUser().getId().equals(fromUser.getId())
+                            && m.getInviteStatus() == ConversationInviteStatus.PENDING);
+            if (anyPending) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Cannot send messages until the invite is accepted");
+            }
+        }
         MessageResult result = createMessage(fromUser, conversation, content);
         webSocketDeliveryService.notifyMessage(
                 result.message(),

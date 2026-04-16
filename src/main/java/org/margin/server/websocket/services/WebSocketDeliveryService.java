@@ -12,7 +12,9 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.websocket.models.payloads.*;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.springframework.stereotype.Service;
 
@@ -143,6 +145,12 @@ public class WebSocketDeliveryService {
     public void notifyMarginInvite(String inviteCode,
                                    Long recipientId) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.MARGIN_INVITE, recipientId, inviteCode);
+        connectionManager.sendToUser(recipientId, json);
+    }
+
+    public void notifyConversationInvite(DirectConversationDTO conversation, User sender, Long recipientId) {
+        ConversationInvitePayload payload = new ConversationInvitePayload(conversation, userService.toDTO(sender));
+        String json = messageBuilder.buildMessage(WebSocketMessageType.CONVERSATION_INVITE, recipientId, payload);
         connectionManager.sendToUser(recipientId, json);
     }
 

@@ -3,6 +3,7 @@ package org.margin.server.social.conversation.services;
 import lombok.extern.log4j.Log4j2;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
@@ -61,13 +62,23 @@ public class ConversationCreationService {
 
     @Transactional
     public void createConversationMember(Conversation conversation, User user) {
+        createConversationMemberWithStatus(conversation, user, ConversationInviteStatus.ACCEPTED);
+    }
+
+    @Transactional
+    public void createConversationMemberWithStatus(Conversation conversation, User user,
+                                                   ConversationInviteStatus status) {
         ConversationMember member = new ConversationMember();
         member.setId(new ConversationMemberId(conversation.getId(), user.getId()));
         member.setConversation(conversation);
         member.setUser(user);
         member.setJoinedAt(Instant.now());
-        log.info("Creation Conversation Member: {}, for Conversation {}",
-                member.getUser().getId(), conversation.getId());
+        member.setInviteStatus(status);
+        if (status == ConversationInviteStatus.PENDING) {
+            member.setInvitedAt(Instant.now());
+        }
+        log.info("Creation Conversation Member: {}, status: {}, for Conversation {}",
+                member.getUser().getId(), status, conversation.getId());
         conversationMemberRepository.save(member);
         conversation.getMembers().add(member);
     }
