@@ -1,8 +1,10 @@
 package org.margin.server.integrationtest.utils;
 
+import org.margin.server.social.conversation.controllers.ConversationController;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.dtos.GetConversationMessagesResponse;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.models.User;
@@ -16,12 +18,15 @@ public class ConversationTestUtils {
 
     private static ConversationRepository conversationRepository;
     private static ConversationMemberRepository conversationMemberRepository;
+    private static ConversationController conversationController;
 
     @Autowired
     public ConversationTestUtils(ConversationRepository conversationRepository,
-                                 ConversationMemberRepository conversationMemberRepository) {
+                                 ConversationMemberRepository conversationMemberRepository,
+                                 ConversationController conversationController) {
         ConversationTestUtils.conversationRepository = conversationRepository;
         ConversationTestUtils.conversationMemberRepository = conversationMemberRepository;
+        ConversationTestUtils.conversationController = conversationController;
     }
 
     public static Conversation createDirectConversation(User userA, User userB) {
@@ -31,6 +36,10 @@ public class ConversationTestUtils {
         createConversationMember(conversation, userA);
         createConversationMember(conversation, userB);
         return conversation;
+    }
+
+    public static GetConversationMessagesResponse getChannelMessages(Long channelId, User user) {
+        return conversationController.getConversationMessagesForChannel(channelId, user, 50, null);
     }
 
     private static void createConversationMember(Conversation conversation, User user) {

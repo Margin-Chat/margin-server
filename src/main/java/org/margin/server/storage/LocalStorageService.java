@@ -72,7 +72,12 @@ public class LocalStorageService implements StorageService {
     @Override
     public Resource getFile(String url) throws IOException {
         String fileName = url.substring(url.lastIndexOf('/') + 1);
-        Path filePath = Paths.get(storageProperties.getLocal().getUploadDir()).resolve(fileName);
+        Path uploadDir = Paths.get(storageProperties.getLocal().getUploadDir()).toAbsolutePath().normalize();
+        Path filePath = uploadDir.resolve(fileName).normalize();
+
+        if (!filePath.startsWith(uploadDir)) {
+            throw new NoSuchFileException("File not found: " + fileName);
+        }
 
         Resource resource = new UrlResource(filePath.toUri());
         if (!resource.exists() || !resource.isReadable()) {

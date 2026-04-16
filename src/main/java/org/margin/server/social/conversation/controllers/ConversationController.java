@@ -4,6 +4,7 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
+import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -24,13 +25,17 @@ public class ConversationController {
     private final ConversationService conversationService;
     private final UserService userService;
     private final ConversationAuthorizationService conversationAuthorizationService;
+    private final MarginAuthorizationService marginAuthorizationService;
 
     public ConversationController(MessageService messageService,
-                                  ConversationService conversationService, UserService userService, ConversationAuthorizationService conversationAuthorizationService) {
+                                  ConversationService conversationService, UserService userService,
+                                  ConversationAuthorizationService conversationAuthorizationService,
+                                  MarginAuthorizationService marginAuthorizationService) {
         this.messageService = messageService;
         this.conversationService = conversationService;
         this.userService = userService;
         this.conversationAuthorizationService = conversationAuthorizationService;
+        this.marginAuthorizationService = marginAuthorizationService;
     }
 
     @GetMapping("/conversations")
@@ -72,6 +77,8 @@ public class ConversationController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false, defaultValue = "50") int limit,
             @RequestParam(required = false) Long before) {
+
+        marginAuthorizationService.requireChannelMember(user.getId(), channelId);
 
         Conversation conversation = conversationService.getByChannelId(channelId);
 
