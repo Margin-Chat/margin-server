@@ -10,8 +10,12 @@ import lombok.NoArgsConstructor;
 public class PrivateKeyResponse {
     private Long userId;
     private String encryptedPrivateKey;
+    private String salt;
+    private String iv;
 
-    public PrivateKeyResponse(String encryptedPrivateKey) {
+    public PrivateKeyResponse(String encryptedPrivateKey, String salt, String iv) {
         this.encryptedPrivateKey = encryptedPrivateKey;
+        this.salt = salt;
+        this.iv = iv;
     }
 }

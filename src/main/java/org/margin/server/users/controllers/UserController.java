@@ -90,7 +90,11 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(new PrivateKeyResponse(user.getEncryption().getEncryptedPrivateKey()));
+        return ResponseEntity.ok(new PrivateKeyResponse(
+                user.getEncryption().getEncryptedPrivateKey(),
+                user.getEncryption().getSalt(),
+                user.getEncryption().getIv()
+        ));
     }
 
     @GetMapping("/recent_chat_users")
@@ -138,6 +142,21 @@ public class UserController {
     public ResponseEntity<Void> reportBug(@RequestBody BugReportRequest request,
                                           @AuthenticationPrincipal User user) {
         bugReportService.createBug(request.bugTitle(), request.bugDescription(), user);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/password")
+    public ResponseEntity<Void> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal User user) {
+        userService.changePassword(
+                user,
+                request.currentPassword(),
+                request.newPassword(),
+                request.encryptedPrivateKey(),
+                request.salt(),
+                request.iv()
+        );
         return ResponseEntity.ok().build();
     }
 
