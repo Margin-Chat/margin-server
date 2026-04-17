@@ -12,7 +12,6 @@ public record SpaceDTO(
         Long marginId,
         Visibility visibility,
         List<ChannelDTO> channels,
-        List<SpaceMemberDTO> members,
-        boolean isDefault
+        List<SpaceMemberDTO> members
 ) {
 }

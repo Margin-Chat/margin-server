@@ -7,6 +7,7 @@ import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.SpaceTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
@@ -58,18 +59,22 @@ class SpaceTest extends MarginTestRunner {
 
     @Test
     void adminCanAddMemberToSpace() {
-        SpaceDTO space = SpaceTestUtils.createSpace("Members Space", marginId, admin);
+        // Use a private space so member is not auto-added on creation
+        User newMember = UserTestUtils.createUser("newmember", "newmember@margin.chat");
+        MarginTestUtils.addUserToMargin(marginId, admin, newMember);
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("Members Space", marginId, admin);
 
-        SpaceMemberDTO added = SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
+        SpaceMemberDTO added = SpaceTestUtils.addMember(space.spaceId(), newMember, SpaceRole.MEMBER, admin);
 
         assertNotNull(added);
-        assertEquals(member.getId(), added.user().id());
+        assertEquals(newMember.getId(), added.user().id());
         assertEquals(SpaceRole.MEMBER, added.role());
     }
 
     @Test
     void nonAdminCannotAddMember() {
-        SpaceDTO space = SpaceTestUtils.createSpace("Restricted Space", marginId, admin);
+        // Private space so auto-add doesn't interfere; member is admin-added, newUser is not
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("Restricted Space", marginId, admin);
         User newUser = UserTestUtils.createUser("newuser", "new@margin.chat");
         MarginTestUtils.addUserToMargin(marginId, admin, newUser);
         Long spaceId = space.spaceId();
@@ -82,7 +87,8 @@ class SpaceTest extends MarginTestRunner {
 
     @Test
     void cannotAddDuplicateMember() {
-        SpaceDTO space = SpaceTestUtils.createSpace("No Dupes", marginId, admin);
+        // Private space so member is not auto-added; first add succeeds, second throws
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("No Dupes", marginId, admin);
         Long spaceId = space.spaceId();
         SpaceTestUtils.addMember(spaceId, member, SpaceRole.MEMBER, admin);
 
@@ -115,7 +121,7 @@ class SpaceTest extends MarginTestRunner {
     void nonAdminCannotUpdateSpace() {
         SpaceDTO space = SpaceTestUtils.createSpace("Protected", marginId, admin);
         Long spaceId = space.spaceId();
-        SpaceTestUtils.addMember(spaceId, member, SpaceRole.MEMBER, admin);
+        // member is auto-added to PUBLIC space
 
         assertThrows(ResponseStatusException.class, () ->
                 SpaceTestUtils.updateSpace(spaceId, "Hacked", "Hacked Desc", member)
@@ -135,7 +141,7 @@ class SpaceTest extends MarginTestRunner {
     @Test
     void nonAdminCannotDeleteSpace() {
         SpaceDTO space = SpaceTestUtils.createSpace("Protected", marginId, admin);
-        SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
+        // member is auto-added to PUBLIC space
 
         Long spaceId = space.spaceId();
         assertThrows(ResponseStatusException.class, () ->
@@ -145,7 +151,8 @@ class SpaceTest extends MarginTestRunner {
 
     @Test
     void adminCanRemoveMember() {
-        SpaceDTO space = SpaceTestUtils.createSpace("Removal Test", marginId, admin);
+        // Use private space — after removal member should no longer see it
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("Removal Test", marginId, admin);
         SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
 
         SpaceTestUtils.removeMember(space.spaceId(), member, admin);
@@ -162,8 +169,7 @@ class SpaceTest extends MarginTestRunner {
         User otherMember = UserTestUtils.createUser("other", "other@margin.chat");
         MarginTestUtils.addUserToMargin(marginId, admin, otherMember);
         Long spaceId = space.spaceId();
-        SpaceTestUtils.addMember(spaceId, member, SpaceRole.MEMBER, admin);
-        SpaceTestUtils.addMember(spaceId, otherMember, SpaceRole.MEMBER, admin);
+        // member and otherMember are auto-added to PUBLIC space when they join margin
 
         assertThrows(ResponseStatusException.class, () ->
                 SpaceTestUtils.removeMember(spaceId, otherMember, member)
@@ -173,7 +179,7 @@ class SpaceTest extends MarginTestRunner {
     @Test
     void adminCanUpdateMemberRole() {
         SpaceDTO space = SpaceTestUtils.createSpace("Role Test", marginId, admin);
-        SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
+        // member is auto-added to PUBLIC space
 
         SpaceMemberDTO updated = SpaceTestUtils.updateMemberRole(
                 space.spaceId(), member, SpaceRole.ADMIN, admin);
@@ -187,8 +193,7 @@ class SpaceTest extends MarginTestRunner {
         User otherMember = UserTestUtils.createUser("other", "other@margin.chat");
         MarginTestUtils.addUserToMargin(marginId, admin, otherMember);
         Long spaceId = space.spaceId();
-        SpaceTestUtils.addMember(spaceId, member, SpaceRole.MEMBER, admin);
-        SpaceTestUtils.addMember(spaceId, otherMember, SpaceRole.MEMBER, admin);
+        // member and otherMember are auto-added to PUBLIC space
 
         assertThrows(ResponseStatusException.class, () ->
                 SpaceTestUtils.updateMemberRole(spaceId, otherMember, SpaceRole.ADMIN, member)
@@ -197,7 +202,8 @@ class SpaceTest extends MarginTestRunner {
 
     @Test
     void getSpacesForUser_onlyReturnsUserSpaces() {
-        SpaceTestUtils.createSpace("Admin Only", marginId, admin);
+        // Private space — member is not auto-added and is not explicitly added
+        SpaceTestUtils.createPrivateSpace("Admin Only", marginId, admin);
 
         List<SpaceDTO> memberSpaces = SpaceTestUtils.getSpacesForUser(marginId, member);
 
@@ -221,5 +227,20 @@ class SpaceTest extends MarginTestRunner {
         boolean inDefault = memberSpaces.stream()
                 .anyMatch(s -> s.spaceName().equals("General Space"));
         assertTrue(inDefault);
+    }
+
+    @Test
+    void switchingPrivateToPublic_addsAllExistingMarginMembers() {
+        User lateJoiner = UserTestUtils.createUser("latejoiner", "late@margin.chat");
+        MarginTestUtils.addUserToMargin(marginId, admin, lateJoiner);
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("Private Space", marginId, admin);
+
+        SpaceTestUtils.updateSpaceVisibility(space.spaceId(), Visibility.PUBLIC, admin);
+
+        List<SpaceDTO> memberSpaces = SpaceTestUtils.getSpacesForUser(marginId, member);
+        List<SpaceDTO> lateJoinerSpaces = SpaceTestUtils.getSpacesForUser(marginId, lateJoiner);
+
+        assertTrue(memberSpaces.stream().anyMatch(s -> s.spaceId().equals(space.spaceId())));
+        assertTrue(lateJoinerSpaces.stream().anyMatch(s -> s.spaceId().equals(space.spaceId())));
     }
 }

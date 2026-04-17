@@ -7,7 +7,6 @@ import org.margin.server.integrationtest.utils.*;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.conversation.models.dtos.GetConversationMessagesResponse;
 import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
@@ -24,6 +23,7 @@ class ConversationTest extends MarginTestRunner {
     private User member;
     private User outsider;
     private ChannelDTO channel;
+    private Long channelId;
 
     @BeforeEach
     void setUp() {
@@ -35,15 +35,14 @@ class ConversationTest extends MarginTestRunner {
         MarginTestUtils.addUserToMargin(margin.getId(), admin, member);
 
         SpaceDTO space = SpaceTestUtils.createSpace("Test Space", margin.getId(), admin);
-        SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
-
         channel = ChannelTestUtils.createChannel(space.spaceId(), "Test Channel", admin);
+        channelId = channel.id();
     }
 
     @Test
     void spaceMemberCanGetChannelMessages() {
         GetConversationMessagesResponse response =
-                ConversationTestUtils.getChannelMessages(channel.id(), member);
+                ConversationTestUtils.getChannelMessages(channelId, member);
 
         assertNotNull(response);
         assertNotNull(response.messages());
@@ -52,7 +51,7 @@ class ConversationTest extends MarginTestRunner {
     @Test
     void channelCreatorCanGetChannelMessages() {
         GetConversationMessagesResponse response =
-                ConversationTestUtils.getChannelMessages(channel.id(), admin);
+                ConversationTestUtils.getChannelMessages(channelId, admin);
 
         assertNotNull(response);
         assertNotNull(response.messages());
@@ -61,7 +60,7 @@ class ConversationTest extends MarginTestRunner {
     @Test
     void nonSpaceMemberCannotGetChannelMessages() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> ConversationTestUtils.getChannelMessages(channel.id(), outsider));
+                () -> ConversationTestUtils.getChannelMessages(channelId, outsider));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
@@ -73,8 +72,9 @@ class ConversationTest extends MarginTestRunner {
         SpaceDTO space = SpaceTestUtils.createSpace("Private Space", margin.getId(), admin);
         ChannelDTO privateChannel = ChannelTestUtils.createChannel(space.spaceId(), "Private Channel", admin);
 
+        Long privateChannelId = privateChannel.id();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> ConversationTestUtils.getChannelMessages(privateChannel.id(), marginMember));
+                () -> ConversationTestUtils.getChannelMessages(privateChannelId, marginMember));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }

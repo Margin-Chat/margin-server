@@ -9,7 +9,6 @@ import org.margin.server.integrationtest.utils.SpaceTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.users.models.User;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,7 +36,7 @@ class ChannelTest extends MarginTestRunner {
         MarginTestUtils.addUserToMargin(margin.getId(), admin, member);
         space = SpaceTestUtils.createSpace("Test Space", margin.getId(), admin);
         spaceId = space.spaceId();
-        SpaceTestUtils.addMember(space.spaceId(), member, SpaceRole.MEMBER, admin);
+        // member is auto-added because the space is PUBLIC
     }
 
     @Test
@@ -69,8 +68,10 @@ class ChannelTest extends MarginTestRunner {
     void nonSpaceMemberCannotGetChannels() {
         User outsider = UserTestUtils.createUser("outsider", "outsider@margin.chat");
         MarginTestUtils.addUserToMargin(margin.getId(), admin, outsider);
+        // Use a private space — outsider joined margin but was never added to this space
+        SpaceDTO privateSpace = SpaceTestUtils.createPrivateSpace("Private Space", margin.getId(), admin);
         assertThrows(ResponseStatusException.class, () ->
-                ChannelTestUtils.getChannelsForSpace(spaceId, outsider)
+                ChannelTestUtils.getChannelsForSpace(privateSpace.spaceId(), outsider)
         );
     }
 

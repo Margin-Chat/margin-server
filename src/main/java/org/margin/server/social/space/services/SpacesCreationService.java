@@ -28,13 +28,12 @@ public class SpacesCreationService {
     }
 
     @Transactional
-    public Space create(String name, String description, Visibility visibility, Margin margin, boolean isDefault) {
+    public Space create(String name, String description, Visibility visibility, Margin margin) {
         Space newSpace = new Space();
         newSpace.setName(name);
         newSpace.setDescription(description);
         newSpace.setVisibility(visibility);
         newSpace.setMargin(margin);
-        newSpace.setDefault(isDefault);
         Space space = spacesRepository.save(newSpace);
         log.info("Created space {}", space.getId());
         return space;

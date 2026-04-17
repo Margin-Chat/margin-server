@@ -64,8 +64,7 @@ public class MarginMapper {
                 space.getMargin().getId(),
                 space.getVisibility(),
                 channels,
-                members,
-                space.isDefault());
+                members);
     }
 
     public ChannelDTO channelToDto(Channel channel) {
