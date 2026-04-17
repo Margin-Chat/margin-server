@@ -98,8 +98,7 @@ public class MarginService {
                         margin.getId()
                 ),
                 user,
-                margin,
-                true
+                margin
         );
 
         return marginMapper.marginToDto(margin);

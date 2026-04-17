@@ -46,6 +46,5 @@ public class Space {
     @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SpaceMember> members = new ArrayList<>();
 
-    @Column(nullable = false, name = "is_default")
-    private boolean isDefault;
+
 }

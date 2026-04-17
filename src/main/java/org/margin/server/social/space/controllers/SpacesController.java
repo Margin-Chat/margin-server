@@ -55,7 +55,7 @@ public class SpacesController {
                                                 @RequestBody CreateSpaceDTO dto) {
         marginAuthorizationService.requireMarginAdmin(user.getId(), dto.marginId());
         Margin margin = marginService.getById(dto.marginId());
-        SpaceDTO created = spacesService.createNewSpace(dto, user, margin, false);
+        SpaceDTO created = spacesService.createNewSpace(dto, user, margin);
         return ResponseEntity.ok(created);
     }
 
