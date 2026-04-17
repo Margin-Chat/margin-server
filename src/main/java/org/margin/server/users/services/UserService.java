@@ -13,9 +13,12 @@ import org.margin.server.websocket.connection.ConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -31,18 +34,20 @@ public class UserService {
     private final ConnectionManager connectionManager;
     private final StorageService storageService;
     private final ApplicationEventPublisher applicationEventPublisher;
-
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        UserCacheService userCacheService,
                        ConnectionManager connectionManager,
                        StorageService storageService,
-                       ApplicationEventPublisher applicationEventPublisher) {
+                       ApplicationEventPublisher applicationEventPublisher,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
         this.connectionManager = connectionManager;
         this.storageService = storageService;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public User getById(Long id) {
@@ -103,6 +108,26 @@ public class UserService {
 
         user = userRepository.save(user);
         return user;
+    }
+
+    @Transactional
+    public void changePassword(User user, String currentPassword, String newPassword,
+                               String encryptedPrivateKey, String salt, String iv) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        UserEncryption encryption = user.getEncryption();
+        encryption.setEncryptedPrivateKey(encryptedPrivateKey);
+        encryption.setSalt(salt);
+        encryption.setIv(iv);
+
+        userRepository.save(user);
+        userCacheService.evictUserCache(user.getId());
+
+        log.info("Password changed for user {}", user.getId());
     }
 
     @Transactional

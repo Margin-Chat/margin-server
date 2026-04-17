@@ -144,7 +144,7 @@ class UserTest extends MarginTestRunner {
         Margin margin = MarginTestUtils.createMargin("TestMargin", admin);
         MarginTestUtils.addUserToMargin(margin.getId(), admin, user);
 
-        SpaceDTO space = SpaceTestUtils.createSpace("TestSpace", margin.getId(), admin);
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("TestSpace", margin.getId(), admin);
         SpaceTestUtils.addMember(space.spaceId(), user, SpaceRole.MEMBER, admin);
 
         ChannelTestUtils.createChannel(space.spaceId(), "TestChannel", admin);

@@ -1,5 +1,7 @@
 package org.margin.server.social.space.repositories;
 
+import org.margin.server.social.models.Visibility;
+
 import org.margin.server.social.space.models.Space;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -28,6 +30,19 @@ public interface SpacesRepository extends JpaRepository<Space, Long> {
 
     List<Space> findByMargin_Id(Long marginId);
 
-    @Query("SELECT s FROM Space s WHERE s.margin.id = :marginId AND s.isDefault = true")
-    List<Space> findDefaultSpacesByMarginId(Long marginId);
+    @Query("SELECT s FROM Space s WHERE s.margin.id = :marginId AND s.visibility = :visibility")
+    List<Space> findByMarginIdAndVisibility(Long marginId, Visibility visibility);
+
+    @Query("""
+            SELECT sp FROM Space sp
+            WHERE sp.margin.id = :marginId
+            AND (
+                sp.visibility = org.margin.server.social.models.Visibility.PUBLIC
+                OR EXISTS (
+                    SELECT sm FROM SpaceMember sm
+                    WHERE sm.space = sp AND sm.user.id = :userId
+                )
+            )
+            """)
+    List<Space> findVisibleSpacesForUser(Long userId, Long marginId);
 }

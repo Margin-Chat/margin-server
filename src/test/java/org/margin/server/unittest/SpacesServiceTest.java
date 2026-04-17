@@ -20,6 +20,7 @@ import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
+import org.margin.server.social.space.services.SpacesActions;
 import org.margin.server.social.space.services.SpacesCreationService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
@@ -59,6 +60,8 @@ class SpacesServiceTest {
     private MarginMapper marginMapper;
     @Mock
     private ConnectionManager connectionManager;
+    @Mock
+    private SpacesActions spacesActions;
 
     @InjectMocks
     private SpacesService spacesService;
@@ -93,7 +96,7 @@ class SpacesServiceTest {
 
         User user = testUser(1L);
         assertThrows(DuplicateKeyException.class,
-                () -> spacesService.createNewSpace(dto, user, margin, false));
+                () -> spacesService.createNewSpace(dto, user, margin));
     }
 
     @Test
@@ -113,47 +116,37 @@ class SpacesServiceTest {
 
         when(spacesRepository.getSpaceByName("General", margin.getId()))
                 .thenReturn(Optional.empty());
-        when(spacesCreationService.create("General", "Desc", Visibility.PUBLIC, margin, false))
+        when(spacesCreationService.create("General", "Desc", Visibility.PUBLIC, margin))
                 .thenReturn(space);
         when(channelService.createNewChannel(any(Space.class), eq("General Chat"), anyString()))
                 .thenReturn(new Channel());
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(1L, 5L))
-                .thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(any(), any()))
-                .thenReturn(false);
 
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setUser(user);
         spaceMember.setRole(SpaceRole.ADMIN);
-        when(spacesCreationService.createMember(user, space, SpaceRole.ADMIN))
-                .thenReturn(spaceMember);
+        when(spacesActions.addUserToSpace(user, space, SpaceRole.ADMIN)).thenReturn(spaceMember);
+        when(marginMemberRepository.findByMargin_Id(margin.getId())).thenReturn(List.of());
 
         SpaceDTO mappedDto = new SpaceDTO(
                 10L, "General", "Desc", margin.getId(), Visibility.PUBLIC,
-                List.of(), List.of(), false
+                List.of(), List.of()
         );
         when(marginMapper.spaceToDto(space)).thenReturn(mappedDto);
 
-        SpaceDTO result = spacesService.createNewSpace(dto, user, margin, false);
+        SpaceDTO result = spacesService.createNewSpace(dto, user, margin);
 
         assertNotNull(result);
         assertEquals(10L, result.spaceId());
-        verify(spacesCreationService).create("General", "Desc", Visibility.PUBLIC, margin, false);
+        verify(spacesCreationService).create("General", "Desc", Visibility.PUBLIC, margin);
         verify(channelService).createNewChannel(any(Space.class), eq("General Chat"), anyString());
-        verify(spacesCreationService).createMember(user, space, SpaceRole.ADMIN);
+        verify(spacesActions).addUserToSpace(user, space, SpaceRole.ADMIN);
     }
 
     @Test
-    @DisplayName("addNewUserToSpace should add a valid new user")
+    @DisplayName("addNewUserToSpace should delegate to SpacesActions")
     void addNewUserToSpace_Success() {
         Space space = new Space();
         space.setId(1L);
-        Margin margin = new Margin();
-        margin.setId(1L);
-        space.setMargin(margin);
-        space.setChannels(List.of());
-        space.setMembers(new ArrayList<>());
-
         User newUser = testUser(2L);
 
         SpaceMember spaceMember = new SpaceMember();
@@ -162,84 +155,52 @@ class SpacesServiceTest {
         spaceMember.setSpace(space);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(newUser.getId(), margin.getId()))
-                .thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(newUser.getId(), space.getId()))
-                .thenReturn(false);
-        when(spacesCreationService.createMember(newUser, space, SpaceRole.MEMBER))
-                .thenReturn(spaceMember);
+        when(spacesActions.addUserToSpace(newUser, space, SpaceRole.MEMBER)).thenReturn(spaceMember);
         when(connectionManager.isUserOnline(newUser.getId())).thenReturn(false);
 
         spacesService.addNewUserToSpace(newUser, space.getId(), SpaceRole.MEMBER);
 
-        verify(spacesCreationService).createMember(newUser, space, SpaceRole.MEMBER);
+        verify(spacesActions).addUserToSpace(newUser, space, SpaceRole.MEMBER);
     }
 
     @Test
-    @DisplayName("addNewUserToSpace should throw on duplicate user")
+    @DisplayName("addNewUserToSpace should propagate DuplicateKeyException from SpacesActions")
     void addNewUserToSpace_RejectsDuplicate() {
         Space space = new Space();
         space.setId(1L);
-        Margin margin = new Margin();
-        margin.setId(1L);
-        space.setMargin(margin);
-
         User existingUser = testUser(1L);
 
-        Long spaceId = space.getId();
-        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(existingUser.getId(), margin.getId()))
-                .thenReturn(true);
-        when(spaceMemberRepository.existsSpaceMemberByUserAndSpace(existingUser.getId(), spaceId))
-                .thenReturn(true);
+        when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
+        when(spacesActions.addUserToSpace(existingUser, space, SpaceRole.MEMBER))
+                .thenThrow(new DuplicateKeyException("Can't add duplicate space member"));
 
         assertThrows(DuplicateKeyException.class, () ->
-                spacesService.addNewUserToSpace(existingUser, spaceId, SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(existingUser, space.getId(), SpaceRole.MEMBER)
         );
-
-        verify(spacesCreationService, never()).createMember(any(), any(), any());
     }
 
     @Test
-    @DisplayName("addNewUserToSpace should reject user not in margin")
+    @DisplayName("addNewUserToSpace should propagate UserNotInMargin from SpacesActions")
     void addNewUserToSpace_RejectsNonMarginMember() {
         Space space = new Space();
         space.setId(1L);
-        Margin margin = new Margin();
-        margin.setId(1L);
-        space.setMargin(margin);
-
         User outsider = testUser(3L);
 
-        Long spaceId = space.getId();
-        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
-        when(marginMemberRepository.existsByUser_IdAndMargin_Id(outsider.getId(), margin.getId()))
-                .thenReturn(false);
+        when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
+        when(spacesActions.addUserToSpace(outsider, space, SpaceRole.MEMBER))
+                .thenThrow(new UserNotInMargin(outsider.getId()));
 
         assertThrows(UserNotInMargin.class, () ->
-                spacesService.addNewUserToSpace(outsider, spaceId, SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(outsider, space.getId(), SpaceRole.MEMBER)
         );
-
-        verify(spacesCreationService, never()).createMember(any(), any(), any());
     }
 
     @Test
-    @DisplayName("deleteSpace should delete members, channels, and the space itself")
+    @DisplayName("deleteSpace should delegate to SpacesActions")
     void deleteSpace_Success() {
-        Long spaceId = 1L;
-        Space space = new Space();
+        spacesService.deleteSpace(1L);
 
-        when(spacesRepository.findById(spaceId)).thenReturn(Optional.of(space));
-        when(spaceMemberRepository.findSpaceMemberBySpace(space))
-                .thenReturn(List.of(new SpaceMember()));
-        when(channelRepository.findChannelBySpace(space))
-                .thenReturn(List.of(new Channel()));
-
-        spacesService.deleteSpace(spaceId);
-
-        verify(spaceMemberRepository).deleteAll(anyList());
-        verify(channelRepository).deleteAll(anyList());
-        verify(spacesRepository).deleteById(spaceId);
+        verify(spacesActions).deleteSpace(1L);
     }
 
     @Test
