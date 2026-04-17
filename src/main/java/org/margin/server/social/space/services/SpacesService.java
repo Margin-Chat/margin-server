@@ -134,7 +134,20 @@ public class SpacesService {
 
     @Transactional
     public SpaceDTO updateSpace(SpaceDTO spaceDTO) {
+        Space existing = spacesRepository.findById(spaceDTO.spaceId())
+                .orElseThrow(() -> new SpaceNotFoundException(spaceDTO.spaceId()));
+        boolean switchingToPublic = existing.getVisibility() == Visibility.PRIVATE
+                && spaceDTO.visibility() == Visibility.PUBLIC;
+
         Space saved = spacesRepository.save(spacesActions.updateSpace(spaceDTO));
+
+        if (switchingToPublic) {
+            marginMemberRepository.findByMargin_Id(saved.getMargin().getId()).stream()
+                    .map(MarginMember::getUser)
+                    .filter(user -> !spaceMemberRepository.existsSpaceMemberByUserAndSpace(user.getId(), saved.getId()))
+                    .forEach(user -> spacesActions.addUserToSpace(user, saved, SpaceRole.MEMBER));
+        }
+
         return marginMapper.spaceToDto(saved);
     }
 

@@ -7,6 +7,7 @@ import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.SpaceTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
@@ -226,5 +227,20 @@ class SpaceTest extends MarginTestRunner {
         boolean inDefault = memberSpaces.stream()
                 .anyMatch(s -> s.spaceName().equals("General Space"));
         assertTrue(inDefault);
+    }
+
+    @Test
+    void switchingPrivateToPublic_addsAllExistingMarginMembers() {
+        User lateJoiner = UserTestUtils.createUser("latejoiner", "late@margin.chat");
+        MarginTestUtils.addUserToMargin(marginId, admin, lateJoiner);
+        SpaceDTO space = SpaceTestUtils.createPrivateSpace("Private Space", marginId, admin);
+
+        SpaceTestUtils.updateSpaceVisibility(space.spaceId(), Visibility.PUBLIC, admin);
+
+        List<SpaceDTO> memberSpaces = SpaceTestUtils.getSpacesForUser(marginId, member);
+        List<SpaceDTO> lateJoinerSpaces = SpaceTestUtils.getSpacesForUser(marginId, lateJoiner);
+
+        assertTrue(memberSpaces.stream().anyMatch(s -> s.spaceId().equals(space.spaceId())));
+        assertTrue(lateJoinerSpaces.stream().anyMatch(s -> s.spaceId().equals(space.spaceId())));
     }
 }

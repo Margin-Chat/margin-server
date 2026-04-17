@@ -2,7 +2,6 @@ package org.margin.server.integrationtest.utils;
 
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.controllers.SpacesController;
-
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
@@ -65,6 +64,11 @@ public class SpaceTestUtils {
     public static SpaceDTO updateSpace(Long spaceId, String name, String description, User user) {
         var dto = new SpaceDTO(spaceId, name, description, null, null, null, null);
         return spacesController.updateSpaceInfo(user, dto).getBody();
+    }
+
+    public static void updateSpaceVisibility(Long spaceId, Visibility visibility, User user) {
+        var dto = new SpaceDTO(spaceId, null, null, null, visibility, null, null);
+        spacesController.updateSpaceInfo(user, dto);
     }
 
     public static void deleteSpace(Long spaceId, User user) {

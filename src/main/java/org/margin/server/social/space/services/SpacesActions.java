@@ -78,8 +78,12 @@ public class SpacesActions {
         Space space = spacesRepository.findById(spaceDTO.spaceId())
                 .orElseThrow(() -> new SpaceNotFoundException(spaceDTO.spaceId()));
 
-        space.setName(spaceDTO.spaceName());
-        space.setDescription(spaceDTO.spaceDescription());
+        if (spaceDTO.spaceName() != null) {
+            space.setName(spaceDTO.spaceName());
+        }
+        if (spaceDTO.spaceDescription() != null) {
+            space.setDescription(spaceDTO.spaceDescription());
+        }
         if (spaceDTO.visibility() != null) {
             space.setVisibility(spaceDTO.visibility());
         }
