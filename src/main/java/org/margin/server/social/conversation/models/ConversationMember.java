@@ -39,4 +39,12 @@ public class ConversationMember {
 
     @Column(name = "last_read_at")
     private Instant lastReadAt;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invite_status", nullable = false, length = 10)
+    private ConversationInviteStatus inviteStatus = ConversationInviteStatus.ACCEPTED;
+
+    @Column(name = "invited_at")
+    private Instant invitedAt;
 }

@@ -2,10 +2,13 @@ package org.margin.server.social.conversation.services;
 
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
@@ -81,11 +84,16 @@ public class ConversationService {
                         .filter(member -> !member.getUser().getId().equals(currentUserId))
                         .findFirst()
                         .orElseThrow(UserNotFoundException::new);
+                ConversationMember currentMember = conversation.getMembers().stream()
+                        .filter(member -> member.getUser().getId().equals(currentUserId))
+                        .findFirst()
+                        .orElseThrow(UserNotFoundException::new);
                 yield new DirectConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
                         otherMember.getUser().getId(),
-                        otherMember.getLastReadAt()
+                        otherMember.getLastReadAt(),
+                        currentMember.getInviteStatus()
                 );
             }
             case GROUP -> {
@@ -217,6 +225,92 @@ public class ConversationService {
         conversationCreationService.createConversationMember(directConversation, user);
         conversationCreationService.createConversationMember(directConversation, recipientUser);
         return directConversation;
+    }
+
+    @Transactional
+    public DirectConversationDTO sendConversationInvite(User sender, User recipient) {
+        Conversation existing = findDirectConversationBetweenUsers(sender.getId(), recipient.getId());
+        if (existing != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Conversation already exists");
+        }
+
+        Conversation conversation = conversationCreationService.createDirectConversation();
+        conversationCreationService.createConversationMember(conversation, sender);
+        conversationCreationService.createConversationMemberWithStatus(conversation, recipient,
+                ConversationInviteStatus.PENDING);
+
+        DirectConversationDTO dto = new DirectConversationDTO(
+                conversation.getId(),
+                conversation.getCreatedAt(),
+                recipient.getId(),
+                null,
+                ConversationInviteStatus.ACCEPTED
+        );
+
+        webSocketDeliveryService.notifyConversationInvite(
+                new DirectConversationDTO(
+                        conversation.getId(),
+                        conversation.getCreatedAt(),
+                        sender.getId(),
+                        null,
+                        ConversationInviteStatus.PENDING
+                ),
+                sender,
+                recipient.getId()
+        );
+
+        return dto;
+    }
+
+    @Transactional
+    public void acceptConversationInvite(Long conversationId, User user) {
+        ConversationMember member = conversationMemberRepository
+                .findByConversationIdAndUserId(conversationId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
+
+        if (member.getInviteStatus() != ConversationInviteStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No pending invite for this conversation");
+        }
+
+        member.setInviteStatus(ConversationInviteStatus.ACCEPTED);
+        conversationMemberRepository.save(member);
+    }
+
+    @Transactional
+    public void declineConversationInvite(Long conversationId, User user) {
+        ConversationMember member = conversationMemberRepository
+                .findByConversationIdAndUserId(conversationId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
+
+        if (member.getInviteStatus() != ConversationInviteStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No pending invite for this conversation");
+        }
+
+        member.setInviteStatus(ConversationInviteStatus.DECLINED);
+        conversationMemberRepository.save(member);
+    }
+
+    public List<DirectConversationDTO> getPendingInvites(Long userId) {
+        return conversationMemberRepository
+                .findByUserIdAndInviteStatus(userId, ConversationInviteStatus.PENDING)
+                .stream()
+                .map(member -> {
+                    Conversation conv = member.getConversation();
+                    User sender = conversationMemberRepository
+                            .findUsersByConversationId(conv.getId())
+                            .stream()
+                            .filter(u -> !u.getId().equals(userId))
+                            .findFirst()
+                            .orElseThrow();
+                    return new DirectConversationDTO(
+                            conv.getId(),
+                            conv.getCreatedAt(),
+                            sender.getId(),
+                            null,
+                            ConversationInviteStatus.PENDING
+                    );
+                })
+                .toList();
     }
 
     public Conversation createNewConversationForUsers(ConversationType type, Channel channel, List<User> users) {

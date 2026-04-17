@@ -1,6 +1,7 @@
 package org.margin.server.social.conversation.repositories;
 
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
@@ -63,4 +64,12 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     List<UnreadConversationProjection> getUnreadConversations(@Param("userId") Long userId);
 
     List<ConversationMember> findByConversation(Conversation conversation);
+
+    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user WHERE cm.user.id = :userId AND cm.inviteStatus = :status")
+    List<ConversationMember> findByUserIdAndInviteStatus(@Param("userId") Long userId,
+                                                         @Param("status") ConversationInviteStatus status);
+
+    @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
+    java.util.Optional<ConversationMember> findByConversationIdAndUserId(@Param("conversationId") Long conversationId,
+                                                                          @Param("userId") Long userId);
 }
