@@ -5,6 +5,7 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
+import java.util.List;
 
 public record MessageDTO(
         Long id,
@@ -15,7 +16,8 @@ public record MessageDTO(
         boolean isEdited,
         Instant createdAt,
         Long marginId,
-        String channelName
+        String channelName,
+        List<MessageReactionDTO> reactions
 ) {
 
     public static Builder from(Message message) {
@@ -27,6 +29,7 @@ public record MessageDTO(
         private boolean isUserOnline = false;
         private Long marginId = null;
         private String channelName = null;
+        private List<MessageReactionDTO> reactions = List.of();
 
         private Builder(Message message) {
             this.message = message;
@@ -47,6 +50,11 @@ public record MessageDTO(
             return this;
         }
 
+        public Builder withReactions(List<MessageReactionDTO> reactions) {
+            this.reactions = reactions != null ? reactions : List.of();
+            return this;
+        }
+
         public MessageDTO build() {
             return new MessageDTO(
                     message.getId(),
@@ -57,7 +65,8 @@ public record MessageDTO(
                     message.getIsEdited(),
                     message.getCreatedAt(),
                     marginId,
-                    channelName
+                    channelName,
+                    reactions
             );
         }
     }

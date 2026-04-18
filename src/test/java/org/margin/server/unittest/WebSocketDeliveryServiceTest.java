@@ -8,6 +8,7 @@ import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
@@ -30,6 +31,8 @@ class WebSocketDeliveryServiceTest {
     private WebSocketMessageBuilder messageBuilder;
     @Mock
     private SpaceMemberRepository spaceMemberRepository;
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private WebSocketDeliveryService webSocketDeliveryService;
@@ -56,7 +59,8 @@ class WebSocketDeliveryServiceTest {
                 false,
                 Instant.now(),
                 1L,
-                "Test"
+                "Test",
+                List.of()
         );
     }
 

@@ -1,0 +1,3 @@
+ALTER TABLE conversation_members
+    ADD COLUMN IF NOT EXISTS invite_status VARCHAR(10) NOT NULL DEFAULT 'ACCEPTED',
+    ADD COLUMN IF NOT EXISTS invited_at    TIMESTAMP;

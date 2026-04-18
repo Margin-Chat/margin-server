@@ -6,8 +6,11 @@ import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
+import org.margin.server.social.messages.models.MessageReaction;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
+import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
+import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -20,22 +23,25 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class MessageService {
     private final MessageRepository messageRepository;
+    private final MessageReactionRepository messageReactionRepository;
     private final ConversationService conversationService;
     private final ConversationMemberRepository conversationMemberRepository;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
 
     public MessageService(MessageRepository messageRepository,
+                          MessageReactionRepository messageReactionRepository,
                           ConversationService conversationService,
-                          ConversationMemberRepository conversationMemberRepository,
-                          ConnectionManager connectionManager,
+                         ConversationMemberRepository conversationMemberRepository, ConnectionManager connectionManager,
                           WebSocketDeliveryService webSocketDeliveryService) {
         this.messageRepository = messageRepository;
+        this.messageReactionRepository = messageReactionRepository;
         this.conversationService = conversationService;
         this.conversationMemberRepository = conversationMemberRepository;
         this.connectionManager = connectionManager;
@@ -123,11 +129,15 @@ public class MessageService {
                 ? messageRepository.findMessagesBefore(conversation.getId(), before, PageRequest.of(0, limit))
                 : messageRepository.findRecentMessages(conversation.getId(), PageRequest.of(0, limit));
 
+        List<Long> messageIds = messages.stream().map(Message::getId).toList();
+        Map<Long, List<MessageReactionDTO>> reactionsByMessageId = loadReactionsForMessages(messageIds, conversation.getId());
+
         return messages.stream()
                 .map(msg ->
                         MessageDTO.from(msg)
                                 .withOnline(connectionManager.isUserOnline(msg.getFromUser().getId()))
                                 .withMarginId(getMarginId(conversation))
+                                .withReactions(reactionsByMessageId.getOrDefault(msg.getId(), List.of()))
                                 .build())
                 .collect(Collectors.collectingAndThen(Collectors.toList(), l -> {
                     java.util.Collections.reverse(l);
@@ -138,6 +148,35 @@ public class MessageService {
     @Transactional(readOnly = true)
     public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
         return getConversationMessages(conversation, limit, before, null, Instant.EPOCH);
+    }
+
+    @Transactional
+    public MessageReactionDTO addReaction(User user, Long messageId, String emoji, Conversation conversation) {
+        if (messageReactionRepository.existsByMessageIdAndUserIdAndEmoji(messageId, user.getId(), emoji)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Reaction already exists");
+        }
+        Message message = getById(messageId);
+        MessageReaction reaction = messageReactionRepository.save(new MessageReaction(message, user, emoji));
+        return MessageReactionDTO.from(reaction, conversation.getId());
+    }
+
+    @Transactional
+    public MessageReactionDTO removeReaction(User user, Long messageId, String emoji, Conversation conversation) {
+        MessageReaction reaction = messageReactionRepository
+                .findByMessageIdAndUserIdAndEmoji(messageId, user.getId(), emoji)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        MessageReactionDTO dto = MessageReactionDTO.from(reaction, conversation.getId());
+        messageReactionRepository.delete(reaction);
+        return dto;
+    }
+
+    private Map<Long, List<MessageReactionDTO>> loadReactionsForMessages(List<Long> messageIds, Long conversationId) {
+        if (messageIds.isEmpty()) return Map.of();
+        return messageReactionRepository.findByMessageIdIn(messageIds).stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getMessage().getId(),
+                        Collectors.mapping(r -> MessageReactionDTO.from(r, conversationId), Collectors.toList())
+                ));
     }
 
     public Message getById(Long messageId) {

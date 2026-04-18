@@ -16,6 +16,10 @@ public enum WebSocketMessageType {
     RECEIVE_EDIT_MESSAGE(String.class),
     SEND_DELETE_MESSAGE(String.class),
     RECEIVE_DELETE_MESSAGE(String.class),
+    SEND_ADD_REACTION(MessageReactionPayload.class),
+    RECEIVE_ADD_REACTION(String.class),
+    SEND_REMOVE_REACTION(MessageReactionPayload.class),
+    RECEIVE_REMOVE_REACTION(String.class),
     CONVERSATION_READ(ConversationReadPayload.class),
 
     // Call

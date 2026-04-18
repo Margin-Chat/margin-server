@@ -5,6 +5,7 @@ import org.margin.server.notifications.Notification;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
+import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
@@ -61,6 +62,24 @@ public class WebSocketDeliveryService {
                 WebSocketMessageType.RECEIVE_EDIT_MESSAGE,
                 message.conversationId(),
                 message
+        );
+        sendMessageToUsers(recipients, conversationType, json);
+    }
+
+    public void notifyReactionAdded(MessageReactionDTO reaction, List<User> recipients, ConversationType conversationType) {
+        String json = messageBuilder.buildMessage(
+                WebSocketMessageType.RECEIVE_ADD_REACTION,
+                reaction.conversationId(),
+                reaction
+        );
+        sendMessageToUsers(recipients, conversationType, json);
+    }
+
+    public void notifyReactionRemoved(MessageReactionDTO reaction, List<User> recipients, ConversationType conversationType) {
+        String json = messageBuilder.buildMessage(
+                WebSocketMessageType.RECEIVE_REMOVE_REACTION,
+                reaction.conversationId(),
+                reaction
         );
         sendMessageToUsers(recipients, conversationType, json);
     }
