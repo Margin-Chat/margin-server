@@ -28,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ConversationService {
@@ -122,7 +124,7 @@ public class ConversationService {
 
     public Conversation findDirectConversationBetweenUsers(Long userId1, Long userId2) {
         return conversationRepository.findDirectConversationBetweenUsers(userId1, userId2)
-                .orElse(null);
+                .stream().findFirst().orElse(null);
     }
 
     public Conversation createGroupConversation(List<Long> memberUserIds, String name) {
@@ -192,6 +194,13 @@ public class ConversationService {
 
     public List<RecentChatUsersDTO> getRecentChatUsers(Long userId) {
         return conversationMemberRepository.findRecentChatUsers(userId)
+                .stream()
+                .collect(Collectors.toMap(
+                        p -> p.user().getId(),
+                        p -> p,
+                        (a, b) -> a.lastMessageTime().isAfter(b.lastMessageTime()) ? a : b
+                ))
+                .values()
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
                         p.conversationId(),

@@ -26,7 +26,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                     WHERE cm.conversation.id = c.id
                 ) = 2
             """)
-    Optional<Conversation> findDirectConversationBetweenUsers(
+    List<Conversation> findDirectConversationBetweenUsers(
             @Param("userId1") Long userId1,
             @Param("userId2") Long userId2
     );
