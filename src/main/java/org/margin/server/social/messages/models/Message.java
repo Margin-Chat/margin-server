@@ -42,6 +42,9 @@ public class Message {
     @Column(name = "is_edited", nullable = false)
     private Boolean isEdited = false;
 
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     @NotNull
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)

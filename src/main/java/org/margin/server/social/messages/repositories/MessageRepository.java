@@ -14,6 +14,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             JOIN FETCH m.conversation c
             JOIN FETCH m.fromUser u
             WHERE m.conversation.id = :conversationId
+              AND m.isDeleted = false
             ORDER BY m.createdAt DESC
             """)
     List<Message> findRecentMessages(@Param("conversationId") Long conversationId, Pageable pageable);
@@ -24,6 +25,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             JOIN FETCH m.fromUser u
             WHERE m.conversation.id = :conversationId
               AND m.id < :beforeId
+              AND m.isDeleted = false
             ORDER BY m.createdAt DESC
             """)
     List<Message> findMessagesBefore(
