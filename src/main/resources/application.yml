@@ -22,6 +22,18 @@ spring:
   flyway:
     clean-disabled: true
 
+  mail:
+    host: ${SMTP_HOST:smtp.example.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:user@example.com}
+    password: ${SMTP_PASSWORD:changeme}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 margin:
   cors:
     allowed-origins: https://margin.chat,app://

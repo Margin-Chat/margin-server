@@ -8,6 +8,7 @@ import org.margin.server.authentication.models.RegisterRequest;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
+import org.margin.server.email.services.EmailService;
 import org.margin.server.exceptions.TooManyRequestsException;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
@@ -23,10 +24,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final RateLimitService rateLimitService;
+    private final EmailService emailService;
 
-    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService) {
+    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService, EmailService emailService) {
         this.authenticationService = authenticationService;
         this.rateLimitService = rateLimitService;
+        this.emailService = emailService;
     }
 
     @PostMapping("/login")
@@ -69,12 +72,11 @@ public class AuthenticationController {
                     request.betaKey(),
                     profilePicture);
 
-            AuthResponse authResponse = authenticationService.authenticateUser(
-                    request.email(),
-                    request.password());
+            String registrationContent = emailService.buildRegistrationMail(request.displayName(), "123");
+            emailService.sendEmail(request.email(), "Email activation for margin", registrationContent);
 
-            log.info("Successfully registered user {}", request.handle());
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+            log.info("Email registration sent for user {}", request.handle());
+            return ResponseEntity.ok().build();
 
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for handle {}: {}", request.handle(), e.getMessage());
