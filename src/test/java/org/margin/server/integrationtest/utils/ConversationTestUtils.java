@@ -7,6 +7,7 @@ import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.conversation.models.dtos.GetConversationMessagesResponse;
 import org.margin.server.social.conversation.models.dtos.SendConversationInviteRequest;
+import org.margin.server.social.conversation.models.dtos.UnreadConversationsDTO;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.models.User;
@@ -52,6 +53,14 @@ public class ConversationTestUtils {
 
     public static List<DirectConversationDTO> getPendingInvites(User user) {
         return conversationController.getPendingInvites(user);
+    }
+
+    public static UnreadConversationsDTO getUnreadConversations(User user) {
+        return conversationController.getUnreadConversations(user);
+    }
+
+    public static Conversation getConversationById(Long conversationId) {
+        return conversationRepository.findById(conversationId).orElseThrow();
     }
 
     public static void acceptInvite(Long conversationId, User user) {
