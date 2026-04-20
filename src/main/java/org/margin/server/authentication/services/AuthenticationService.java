@@ -177,10 +177,6 @@ public class AuthenticationService {
     }
 
     public void logoutUser(User user) {
-        var connection = connectionManager.getConnection(user.getId());
-        if (connection != null) {
-            connection.close();
-            connectionManager.removeConnection(user);
-        }
+        connectionManager.closeAllSessions(user.getId());
     }
 }

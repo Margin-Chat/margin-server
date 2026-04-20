@@ -8,6 +8,7 @@ import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.conversation.models.dtos.GetConversationMessagesResponse;
 import org.margin.server.social.conversation.models.dtos.SendConversationInviteRequest;
 import org.margin.server.social.conversation.models.dtos.UnreadConversationsDTO;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.models.User;
@@ -51,7 +52,7 @@ public class ConversationTestUtils {
                 new SendConversationInviteRequest(recipientHandle), sender);
     }
 
-    public static List<DirectConversationDTO> getPendingInvites(User user) {
+    public static List<ConversationInvitePayload> getPendingInvites(User user) {
         return conversationController.getPendingInvites(user);
     }
 
