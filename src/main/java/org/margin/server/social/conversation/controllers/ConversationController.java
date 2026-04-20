@@ -94,7 +94,10 @@ public class ConversationController {
     public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
                                                        @AuthenticationPrincipal User user) {
         User recipientUser = userService.getById(request.recipientUserId());
-        Conversation directConversation = conversationService.createNewDirectConversation(user, recipientUser);
+        Conversation existing = conversationService.findDirectConversationBetweenUsers(user.getId(), recipientUser.getId());
+        Conversation directConversation = existing != null
+                ? existing
+                : conversationService.createNewDirectConversation(user, recipientUser);
         messageService.sendMessage(user, request.encryptedContent(), directConversation);
         return conversationService.getConversationDTO(directConversation, user.getId());
     }
