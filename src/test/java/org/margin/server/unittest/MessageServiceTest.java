@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.models.Message;
@@ -12,9 +13,9 @@ import org.margin.server.social.messages.models.MessageReaction;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
-import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
+import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
@@ -50,11 +51,13 @@ class MessageServiceTest {
     private ConnectionManager connectionManager;
     @Mock
     private WebSocketDeliveryService webSocketDeliveryService;
+    @Mock
+    private MessageActions messageActions;
     @InjectMocks
     private MessageService messageService;
 
     @Test
-    void createMessage_directConversation_savesMessage() {
+    void createMessage_directConversation_savesMessageForUsers() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "Hello!";
@@ -65,7 +68,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(content, result.message().content());
@@ -81,7 +84,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void createMessage_groupConversation_returnsAllMembers() {
+    void createMessage_ForUsers_groupConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Hello group!";
@@ -96,7 +99,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(3, result.recipients().size());
@@ -105,7 +108,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void createMessage_channelConversation_returnsAllMembers() {
+    void createMessage_ForUsers_channelConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
         Channel channel = createChannel(5L);
         Conversation conversation = createConversation(10L, ConversationType.CHANNEL);
@@ -118,7 +121,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals(2, result.recipients().size());
@@ -151,7 +154,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void createMessage_returnsAllMembersAsRecipients() {
+    void createMessage_ForUsers_returnsAllMembersAsRecipients() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
         String content = "Test message";
@@ -164,7 +167,7 @@ class MessageServiceTest {
         when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
 
         assertEquals(3, result.recipients().size());
         assertTrue(result.recipients().contains(fromUser));
@@ -173,7 +176,7 @@ class MessageServiceTest {
     }
 
     @Test
-    void createMessage_handlesEmptyContent() {
+    void createMessage_ForUsers_handlesEmptyContent() {
         User fromUser = createUser(1L, "sender");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         String content = "";
@@ -184,7 +187,7 @@ class MessageServiceTest {
         when(conversationService.getConversationMembers(conversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, createUser(2L, "recipient")));
 
-        MessageResult result = messageService.createMessage(fromUser, conversation, content);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
 
         assertNotNull(result);
         assertEquals("", result.message().content());
