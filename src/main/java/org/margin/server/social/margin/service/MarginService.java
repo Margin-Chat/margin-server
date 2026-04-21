@@ -86,6 +86,7 @@ public class MarginService {
         margin.setDescription(description);
         margin.setVisibility(visibility);
         margin.setIconUrl(iconUrl);
+        margin.setCreatedAt(Instant.now());
         margin = marginRepository.save(margin);
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
@@ -182,6 +183,7 @@ public class MarginService {
 
         margin.setName(updateMarginDTO.marginName());
         margin.setDescription(updateMarginDTO.description());
+        margin.setUpdatedAt(Instant.now());
 
         if (icon != null && !icon.isEmpty()) {
             margin.setIconUrl(storageService.saveMarginIcon(icon));

@@ -6,6 +6,7 @@ import lombok.*;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.Space;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,4 +44,10 @@ public class Margin {
 
     @OneToMany(mappedBy = "margin", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MarginMember> members = new ArrayList<>();
+
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }
