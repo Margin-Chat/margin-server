@@ -38,7 +38,7 @@ public class MessageService {
     public MessageService(MessageRepository messageRepository,
                           MessageReactionRepository messageReactionRepository,
                           ConversationService conversationService,
-                         ConversationMemberRepository conversationMemberRepository, ConnectionManager connectionManager,
+                          ConversationMemberRepository conversationMemberRepository, ConnectionManager connectionManager,
                           WebSocketDeliveryService webSocketDeliveryService) {
         this.messageRepository = messageRepository;
         this.messageReactionRepository = messageReactionRepository;
@@ -96,6 +96,7 @@ public class MessageService {
                 .withMarginId(getMarginId(conversation))
                 .build();
 
+        message.setIsDeleted(true);
         messageRepository.delete(message);
 
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());

@@ -25,6 +25,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                     SELECT COUNT(cm) FROM ConversationMember cm
                     WHERE cm.conversation.id = c.id
                 ) = 2
+                ORDER BY c.id ASC
             """)
     List<Conversation> findDirectConversationBetweenUsers(
             @Param("userId1") Long userId1,

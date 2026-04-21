@@ -10,6 +10,7 @@ import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -94,7 +95,10 @@ public class ConversationController {
     public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
                                                        @AuthenticationPrincipal User user) {
         User recipientUser = userService.getById(request.recipientUserId());
-        Conversation directConversation = conversationService.createNewDirectConversation(user, recipientUser);
+        Conversation existing = conversationService.findDirectConversationBetweenUsers(user.getId(), recipientUser.getId());
+        Conversation directConversation = existing != null
+                ? existing
+                : conversationService.createNewDirectConversation(user, recipientUser);
         messageService.sendMessage(user, request.encryptedContent(), directConversation);
         return conversationService.getConversationDTO(directConversation, user.getId());
     }
@@ -136,7 +140,7 @@ public class ConversationController {
     }
 
     @GetMapping("/conversations/pending_invites")
-    public List<DirectConversationDTO> getPendingInvites(@AuthenticationPrincipal User user) {
+    public List<ConversationInvitePayload> getPendingInvites(@AuthenticationPrincipal User user) {
         return conversationService.getPendingInvites(user.getId());
     }
 

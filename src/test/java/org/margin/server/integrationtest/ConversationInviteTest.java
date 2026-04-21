@@ -8,6 +8,7 @@ import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,18 +44,18 @@ class ConversationInviteTest extends MarginTestRunner {
     void sendInvite_recipientSeesPendingInvite() {
         ConversationTestUtils.sendInvite(sender, "recipient");
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(recipient);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
         assertEquals(1, pending.size());
-        assertEquals(ConversationInviteStatus.PENDING, pending.getFirst().inviteStatus());
-        assertEquals(sender.getId(), pending.getFirst().otherUserId());
+        assertEquals(ConversationInviteStatus.PENDING, pending.getFirst().conversation().inviteStatus());
+        assertEquals(sender.getId(), pending.getFirst().conversation().otherUserId());
     }
 
     @Test
     void sendInvite_senderHasNoPendingInvites() {
         ConversationTestUtils.sendInvite(sender, "recipient");
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(sender);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(sender);
 
         assertTrue(pending.isEmpty());
     }
@@ -81,7 +82,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
         ConversationTestUtils.acceptInvite(invite.id(), recipient);
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(recipient);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
         assertTrue(pending.isEmpty());
     }
 
@@ -111,7 +112,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
         ConversationTestUtils.declineInvite(invite.id(), recipient);
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(recipient);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
         assertTrue(pending.isEmpty());
     }
 
@@ -133,9 +134,6 @@ class ConversationInviteTest extends MarginTestRunner {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 ConversationTestUtils.getChannelMessages(invite.id(), sender));
 
-        // Channel messages endpoint is only for channel convs — use direct messages path instead.
-        // The block is in MessageService, verified via the WebSocket send path in SendMessageTest.
-        // Here we verify the pending invite appears correctly before acceptance.
         assertNotNull(invite.id());
     }
 
@@ -146,10 +144,10 @@ class ConversationInviteTest extends MarginTestRunner {
         ConversationTestUtils.sendInvite(sender, "recipient");
         ConversationTestUtils.sendInvite(sender2, "recipient");
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(recipient);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
         assertEquals(2, pending.size());
-        assertTrue(pending.stream().allMatch(d -> d.inviteStatus() == ConversationInviteStatus.PENDING));
+        assertTrue(pending.stream().allMatch(p -> p.conversation().inviteStatus() == ConversationInviteStatus.PENDING));
     }
 
     @Test
@@ -161,8 +159,22 @@ class ConversationInviteTest extends MarginTestRunner {
 
         ConversationTestUtils.acceptInvite(first.id(), recipient);
 
-        List<DirectConversationDTO> pending = ConversationTestUtils.getPendingInvites(recipient);
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
         assertEquals(1, pending.size());
-        assertEquals(sender2.getId(), pending.getFirst().otherUserId());
+        assertEquals(sender2.getId(), pending.getFirst().conversation().otherUserId());
+    }
+
+    @Test
+    void pendingInvite_includesConversationAndFromUser() {
+        ConversationTestUtils.sendInvite(sender, "recipient");
+
+        List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
+
+        assertEquals(1, pending.size());
+        ConversationInvitePayload invite = pending.getFirst();
+        assertNotNull(invite.conversation(), "conversation must not be null");
+        assertNotNull(invite.conversation().id(), "conversation.id must not be null");
+        assertNotNull(invite.fromUser(), "fromUser must not be null");
+        assertEquals(sender.getId(), invite.fromUser().id());
     }
 }

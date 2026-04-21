@@ -9,6 +9,7 @@ import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
+import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
@@ -187,6 +188,24 @@ class MessageServiceTest {
 
         assertNotNull(result);
         assertEquals("", result.message().content());
+    }
+
+    @Test
+    void getConversationMessages_doesNotReturnDeletedMessages() {
+        User user = createUser(1L, "sender");
+        Conversation conversation = createConversation(10L, ConversationType.DIRECT);
+
+        Message visible = createSavedMessage(1L, conversation, user, "visible");
+        Message deleted = createSavedMessage(2L, conversation, user, "deleted");
+        deleted.setIsDeleted(true);
+
+        when(messageRepository.findRecentMessages(eq(10L), any())).thenReturn(List.of(visible));
+
+        List<MessageDTO> result = messageService.getConversationMessages(conversation, 50, null);
+
+        assertEquals(1, result.size());
+        assertEquals("visible", result.get(0).content());
+        verify(messageRepository).findRecentMessages(eq(10L), any());
     }
 
     @Test
