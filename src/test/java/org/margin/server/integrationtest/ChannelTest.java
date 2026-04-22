@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.ChannelTestUtils;
 import org.margin.server.integrationtest.utils.MarginTestUtils;
+import org.margin.server.integrationtest.utils.SoftDeleteTestUtils;
 import org.margin.server.integrationtest.utils.SpaceTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.channel.models.ChannelDTO;
@@ -134,5 +135,34 @@ class ChannelTest extends MarginTestRunner {
         boolean hasPreExisting = memberChannels.stream()
                 .anyMatch(c -> c.name().equals("Pre-existing"));
         assertTrue(hasPreExisting);
+    }
+
+    @Test
+    void deletingChannelSetsDeletedAt() {
+        ChannelDTO channel = ChannelTestUtils.createChannel(spaceId, "Soft Delete Me", admin);
+
+        ChannelTestUtils.deleteChannel(channel.id(), admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("channels", "channel_id", channel.id()));
+    }
+
+    @Test
+    void deletingChannelSoftDeletesConversation() {
+        ChannelDTO channel = ChannelTestUtils.createChannel(spaceId, "Conversation Cascade", admin);
+        Long conversationId = SoftDeleteTestUtils.getConversationIdForChannel(channel.id());
+
+        ChannelTestUtils.deleteChannel(channel.id(), admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("conversations", "conversation_id", conversationId));
+    }
+
+    @Test
+    void deletedChannelDoesNotAppearInChannelList() {
+        ChannelDTO channel = ChannelTestUtils.createChannel(spaceId, "Invisible After Delete", admin);
+
+        ChannelTestUtils.deleteChannel(channel.id(), admin);
+
+        List<ChannelDTO> channels = ChannelTestUtils.getChannelsForSpace(spaceId, admin);
+        assertFalse(channels.stream().anyMatch(c -> c.id().equals(channel.id())));
     }
 }

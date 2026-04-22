@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -14,14 +15,12 @@ import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
-import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -91,34 +90,29 @@ class MarginServiceTest {
         assertThat(capturedMargin.getName()).isEqualTo(TEST_MARGIN);
         assertThat(capturedMargin.getDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
-        assertThat(capturedMargin.getCreatedAt()).isNotNull();
-        assertThat(capturedMargin.getUpdatedAt()).isNull();
 
         verify(storageService, never()).saveMarginIcon(any());
     }
 
     @Test
-    void shouldSetUpdatedAtOnUpdate() {
+    void shouldUpdateMarginNameAndDescription() {
         Margin existing = new Margin();
         existing.setId(1L);
         existing.setName("Old Name");
         existing.setDescription("Old Description");
-        existing.setCreatedAt(Instant.now().minusSeconds(60));
 
         when(marginRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UpdateMarginDTO dto = new UpdateMarginDTO(1L, "New Name", "New Description");
-        Instant before = Instant.now();
         marginService.updateMarginAsDto(dto, null);
-        Instant after = Instant.now();
 
         ArgumentCaptor<Margin> captor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository).save(captor.capture());
 
         Margin saved = captor.getValue();
-        assertThat(saved.getUpdatedAt()).isNotNull();
-        assertThat(saved.getUpdatedAt()).isBetween(before, after);
+        assertThat(saved.getName()).isEqualTo("New Name");
+        assertThat(saved.getDescription()).isEqualTo("New Description");
     }
 
     @Test

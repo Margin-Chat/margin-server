@@ -86,7 +86,6 @@ public class MarginService {
         margin.setDescription(description);
         margin.setVisibility(visibility);
         margin.setIconUrl(iconUrl);
-        margin.setCreatedAt(Instant.now());
         margin = marginRepository.save(margin);
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
@@ -183,7 +182,6 @@ public class MarginService {
 
         margin.setName(updateMarginDTO.marginName());
         margin.setDescription(updateMarginDTO.description());
-        margin.setUpdatedAt(Instant.now());
 
         if (icon != null && !icon.isEmpty()) {
             margin.setIconUrl(storageService.saveMarginIcon(icon));
@@ -216,10 +214,24 @@ public class MarginService {
     @Transactional
     public void deleteMargin(Long marginId) {
         Margin margin = getById(marginId);
-        marginMemberRepository.deleteAll(margin.getMembers());
-        marginRepository.deleteById(marginId);
+        Instant now = Instant.now();
 
-        log.info("Deleted margin with id {}", marginId);
+        margin.getSpaces().forEach(space -> {
+            space.getChannels().forEach(channel -> {
+                if (channel.getConversation() != null) {
+                    channel.getConversation().setDeletedAt(now);
+                }
+                channel.setDeletedAt(now);
+            });
+            space.setDeletedAt(now);
+        });
+
+        marginMemberRepository.deleteAll(margin.getMembers());
+        margin.getMembers().clear();
+        margin.setDeletedAt(now);
+        marginRepository.save(margin);
+
+        log.info("Soft deleted margin with id {}", marginId);
     }
 
     public boolean isUserMember(Long margin, User targetUser) {

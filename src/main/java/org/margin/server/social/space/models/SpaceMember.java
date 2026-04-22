@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.margin.server.users.models.User;
 
 import java.time.Instant;
@@ -37,4 +39,12 @@ public class SpaceMember {
 
     @Column(name = "joined_at")
     private Instant joinedAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }

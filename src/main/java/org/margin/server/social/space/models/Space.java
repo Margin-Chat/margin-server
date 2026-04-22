@@ -3,6 +3,11 @@ package org.margin.server.social.space.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.Instant;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.models.Visibility;
@@ -17,6 +22,7 @@ import java.util.List;
 @Entity
 @ToString(exclude = {"margin", "channels", "members"})
 @Table(name = "spaces")
+@SQLRestriction("deleted_at IS NULL")
 public class Space {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,5 +52,14 @@ public class Space {
     @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SpaceMember> members = new ArrayList<>();
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }

@@ -17,6 +17,7 @@ import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
+import org.margin.server.social.messages.services.MessageValidationService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -53,6 +54,8 @@ class MessageServiceTest {
     private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private MessageActions messageActions;
+    @Mock
+    private MessageValidationService messageValidationService;
     @InjectMocks
     private MessageService messageService;
 
@@ -65,7 +68,7 @@ class MessageServiceTest {
         Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
         List<User> members = List.of(fromUser, createUser(2L, "recipient"));
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
@@ -75,11 +78,7 @@ class MessageServiceTest {
         assertEquals(2, result.recipients().size());
         assertTrue(result.recipients().contains(fromUser));
 
-        verify(messageRepository).save(argThat(message ->
-                message.getMessage().equals(content) &&
-                        message.getConversation().equals(conversation) &&
-                        message.getFromUser().equals(fromUser)
-        ));
+        verify(messageActions).createMessage(fromUser, conversation, content);
         verify(conversationService).getConversationMembers(conversation.getId());
     }
 
@@ -96,7 +95,7 @@ class MessageServiceTest {
                 createUser(3L, "user3")
         );
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
@@ -118,7 +117,7 @@ class MessageServiceTest {
         Message savedMessage = createSavedMessage(200L, conversation, fromUser, content);
         List<User> members = Arrays.asList(fromUser, createUser(2L, "user2"));
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
@@ -126,7 +125,7 @@ class MessageServiceTest {
         assertNotNull(result);
         assertEquals(2, result.recipients().size());
         assertEquals(content, result.message().content());
-        verify(messageRepository).save(any(Message.class));
+        verify(messageActions).createMessage(fromUser, conversation, content);
         verify(conversationService).getConversationMembers(conversation.getId());
     }
 
@@ -139,13 +138,13 @@ class MessageServiceTest {
         Conversation dmConversation = createConversation(10L, ConversationType.DIRECT);
         Message savedMessage = createSavedMessage(100L, dmConversation, fromUser, content);
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, dmConversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(dmConversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, toUser));
 
         messageService.sendMessage(fromUser, content, dmConversation);
 
-        verify(messageRepository).save(any(Message.class));
+        verify(messageActions).createMessage(fromUser, dmConversation, content);
         verify(webSocketDeliveryService).notifyMessage(
                 argThat(msg -> msg.content().equals(content)),
                 argThat(recipients -> recipients.contains(toUser)),
@@ -164,7 +163,7 @@ class MessageServiceTest {
         User user3 = createUser(3L, "user3");
         List<User> allMembers = Arrays.asList(fromUser, user2, user3);
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content);
@@ -183,7 +182,7 @@ class MessageServiceTest {
 
         Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
 
-        when(messageRepository.save(any(Message.class))).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, createUser(2L, "recipient")));
 
@@ -221,9 +220,8 @@ class MessageServiceTest {
         MessageReaction saved = new MessageReaction(message, user, "👍");
         saved.setId(1L);
 
-        when(messageReactionRepository.existsByMessageIdAndUserIdAndEmoji(100L, 1L, "👍")).thenReturn(false);
         when(messageRepository.findById(100L)).thenReturn(Optional.of(message));
-        when(messageReactionRepository.save(any(MessageReaction.class))).thenReturn(saved);
+        when(messageActions.createMessageReaction(any(), any(), any())).thenReturn(saved);
 
         MessageReactionDTO dto = messageService.addReaction(user, 100L, "👍", conversation);
 
@@ -232,7 +230,7 @@ class MessageServiceTest {
         assertEquals(1L, dto.userId());
         assertEquals(100L, dto.messageId());
         assertEquals(10L, dto.conversationId());
-        verify(messageReactionRepository).save(any(MessageReaction.class));
+        verify(messageActions).createMessageReaction(any(), any(), any());
     }
 
     @Test
@@ -240,7 +238,8 @@ class MessageServiceTest {
         User user = createUser(1L, "reactor");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
-        when(messageReactionRepository.existsByMessageIdAndUserIdAndEmoji(100L, 1L, "👍")).thenReturn(true);
+        doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Reaction already exists"))
+                .when(messageValidationService).validateDuplicateEmojiForMessage(user, 100L, "👍");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> messageService.addReaction(user, 100L, "👍", conversation));

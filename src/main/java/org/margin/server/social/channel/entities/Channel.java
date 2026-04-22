@@ -3,9 +3,14 @@ package org.margin.server.social.channel.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.space.models.Space;
+
+import java.time.Instant;
 
 
 @NoArgsConstructor
@@ -14,6 +19,7 @@ import org.margin.server.social.space.models.Space;
 @Getter
 @Setter
 @Table(name = "channels")
+@SQLRestriction("deleted_at IS NULL")
 public class Channel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,4 +46,15 @@ public class Channel {
     @ToString.Exclude
     @OneToOne(mappedBy = "channel", cascade = CascadeType.ALL)
     private Conversation conversation;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }
