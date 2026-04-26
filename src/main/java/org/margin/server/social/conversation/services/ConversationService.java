@@ -47,7 +47,8 @@ public class ConversationService {
                                UserRepository userRepository,
                                @Lazy ConversationService self,
                                ConnectionManager connectionManager,
-                               WebSocketDeliveryService webSocketDeliveryService, UserService userService) {
+                               WebSocketDeliveryService webSocketDeliveryService,
+                               UserService userService) {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
