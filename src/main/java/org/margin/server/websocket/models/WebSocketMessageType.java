@@ -2,7 +2,6 @@ package org.margin.server.websocket.models;
 
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.websocket.models.payloads.*;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 
 public enum WebSocketMessageType {
     // User activity
@@ -21,6 +20,7 @@ public enum WebSocketMessageType {
     SEND_REMOVE_REACTION(MessageReactionPayload.class),
     RECEIVE_REMOVE_REACTION(String.class),
     CONVERSATION_READ(ConversationReadPayload.class),
+    CONVERSATION_INVITE_ACCEPTED(ConversationAcceptedPayload.class),
 
     // Call
     CALL_OFFER(IncomingCallOfferPayload.class),

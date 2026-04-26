@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.dtos.ConversationDTO;
+import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
@@ -13,9 +15,7 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.websocket.models.payloads.*;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.springframework.stereotype.Service;
 
@@ -187,6 +187,12 @@ public class WebSocketDeliveryService {
                 connectionManager.sendToUser(member.getId(), json);
             }
         }
+    }
+
+    public void notifyConversationInviteAccepted(ConversationDTO conversation, UserDTO acceptedBy, Long recipientId) {
+        ConversationAcceptedPayload payload = new ConversationAcceptedPayload(conversation, acceptedBy);
+        String json = messageBuilder.buildMessage(WebSocketMessageType.CONVERSATION_INVITE_ACCEPTED, recipientId, payload);
+        connectionManager.sendToUser(recipientId, json);
     }
 
     private void sendMessageToUsers(List<User> recipients, ConversationType conversationType, String json) {
