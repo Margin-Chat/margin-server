@@ -87,7 +87,7 @@ public class AuthenticationService {
         }
     }
 
-    public void registerUser(String handle,
+    public User registerUser(String handle,
                              String displayName,
                              String email,
                              String password,
@@ -143,6 +143,8 @@ public class AuthenticationService {
         key.setUsedBy(savedUser);
         key.setUsedAt(Instant.now());
         betaKeyRepository.save(key);
+
+        return user;
     }
 
     private boolean isAccountLocked(User user) {

@@ -2,9 +2,11 @@ package org.margin.server.authentication.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.models.LoginRequest;
 import org.margin.server.authentication.models.RegisterRequest;
+import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
@@ -25,11 +27,13 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final RateLimitService rateLimitService;
     private final EmailService emailService;
+    private final ActivationKeyService activationKeyService;
 
-    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService, EmailService emailService) {
+    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService, EmailService emailService, ActivationKeyService activationKeyService) {
         this.authenticationService = authenticationService;
         this.rateLimitService = rateLimitService;
         this.emailService = emailService;
+        this.activationKeyService = activationKeyService;
     }
 
     @PostMapping("/login")
@@ -60,7 +64,7 @@ public class AuthenticationController {
         log.info("Registration attempt for handle: {}", request.handle());
 
         try {
-            authenticationService.registerUser(
+            User user = authenticationService.registerUser(
                     request.handle(),
                     request.displayName(),
                     request.email(),
@@ -72,7 +76,8 @@ public class AuthenticationController {
                     request.betaKey(),
                     profilePicture);
 
-            String registrationContent = emailService.buildRegistrationMail(request.displayName(), "123");
+            ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+            String registrationContent = emailService.buildRegistrationMail(request.displayName(), activationKey.getToken());
             emailService.sendEmail(request.email(), "Email activation for margin", registrationContent);
 
             log.info("Email registration sent for user {}", request.handle());
@@ -87,6 +92,13 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
         }
+    }
+
+    @PostMapping(value = "/activate/{token}")
+    public ResponseEntity<Void> activate(@PathVariable String token) {
+        log.info("Activate attempt for token: {}", token);
+        activationKeyService.findAndConsumeActivationKey(token);
+        return ResponseEntity.ok().build();
     }
 
     private void rateLimitRegistration(HttpServletRequest httpServletRequest) {

@@ -1,3 +1,9 @@
+margin:
+  app:
+    base-url: https://margin.chat
+  cors:
+    allowed-origins: https://margin.chat,app://
+
 spring:
   application:
     name: margin-server
@@ -23,20 +29,16 @@ spring:
     clean-disabled: true
 
   mail:
-    host: ${SMTP_HOST:smtp.example.com}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:user@example.com}
-    password: ${SMTP_PASSWORD:changeme}
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:2525}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: true
-
-margin:
-  cors:
-    allowed-origins: https://margin.chat,app://
+            enable: false
 
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-not-for-production-use-only}

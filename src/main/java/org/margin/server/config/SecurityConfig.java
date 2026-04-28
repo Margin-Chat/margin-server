@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -40,14 +39,24 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+
+        CorsConfiguration activationConfig = new CorsConfiguration();
+        activationConfig.setAllowedOrigins(List.of("*"));
+        activationConfig.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
+        activationConfig.setAllowedHeaders(List.of("*"));
+        activationConfig.setAllowCredentials(false);
+
+        source.registerCorsConfiguration("/api/auth/activate/**", activationConfig);
+
+        CorsConfiguration defaultConfiguration = new CorsConfiguration();
+        defaultConfiguration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
+        defaultConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        defaultConfiguration.setAllowedHeaders(List.of("*"));
+        defaultConfiguration.setAllowCredentials(true);
+
+        source.registerCorsConfiguration("/**", defaultConfiguration);
+
         return source;
     }
 
@@ -69,7 +78,10 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**", "/api/auth/login", "/api/auth/register").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/activate/**").permitAll()
                         .requestMatchers("/api/sfu/peer_joined", "/api/sfu/peer_left").permitAll()
                         .anyRequest().authenticated()
                 )
