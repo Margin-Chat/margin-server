@@ -3,9 +3,12 @@ package org.margin.server.integrationtest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
+import org.margin.server.integrationtest.utils.ChannelTestUtils;
 import org.margin.server.integrationtest.utils.MarginTestUtils;
+import org.margin.server.integrationtest.utils.SoftDeleteTestUtils;
 import org.margin.server.integrationtest.utils.SpaceTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
+import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.SpaceRole;
@@ -227,6 +230,38 @@ class SpaceTest extends MarginTestRunner {
         boolean inDefault = memberSpaces.stream()
                 .anyMatch(s -> s.spaceName().equals("General Space"));
         assertTrue(inDefault);
+    }
+
+    @Test
+    void deletingSpaceSetsDeletedAt() {
+        SpaceDTO space = SpaceTestUtils.createSpace("To Soft Delete", marginId, admin);
+
+        SpaceTestUtils.deleteSpace(space.spaceId(), admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("spaces", "space_id", space.spaceId()));
+    }
+
+    @Test
+    void deletingSpaceSoftDeletesCascadesToChannelsAndConversations() {
+        SpaceDTO space = SpaceTestUtils.createSpace("Cascade Test", marginId, admin);
+        List<ChannelDTO> channels = ChannelTestUtils.getChannelsForSpace(space.spaceId(), admin);
+        Long channelId = channels.getFirst().id();
+        Long conversationId = SoftDeleteTestUtils.getConversationIdForChannel(channelId);
+
+        SpaceTestUtils.deleteSpace(space.spaceId(), admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("channels", "channel_id", channelId));
+        assertTrue(SoftDeleteTestUtils.isDeleted("conversations", "conversation_id", conversationId));
+    }
+
+    @Test
+    void deletedSpaceIsNotAccessible() {
+        SpaceDTO space = SpaceTestUtils.createSpace("Gone", marginId, admin);
+        Long spaceId = space.spaceId();
+
+        SpaceTestUtils.deleteSpace(spaceId, admin);
+
+        assertThrows(Exception.class, () -> SpaceTestUtils.getById(spaceId));
     }
 
     @Test

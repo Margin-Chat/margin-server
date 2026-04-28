@@ -95,8 +95,10 @@ public class MarginController {
     public ResponseEntity<Void> removeMarginMember(
             @RequestBody RemoveMarginMemberRequest request,
             @AuthenticationPrincipal User user) {
-
-        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
+        if (!user.getId().equals(request.userIdToRemove())) {
+            marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
+        }
+        
         marginService.removeMarginMember(request.marginId(), request.userIdToRemove());
         return ResponseEntity.ok().build();
     }

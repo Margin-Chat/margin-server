@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.margin.server.users.models.User;
 
 import java.time.Instant;
@@ -47,4 +48,8 @@ public class ConversationMember {
 
     @Column(name = "invited_at")
     private Instant invitedAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant acceptedAt;
 }

@@ -1,9 +1,6 @@
 package org.margin.server.social.messages.services;
 
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
-import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
@@ -21,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,35 +27,30 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final MessageReactionRepository messageReactionRepository;
     private final ConversationService conversationService;
-    private final ConversationMemberRepository conversationMemberRepository;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
+    private final MessageActions messageActions;
+    private final MessageValidationService messageValidationService;
 
     public MessageService(MessageRepository messageRepository,
                           MessageReactionRepository messageReactionRepository,
                           ConversationService conversationService,
-                         ConversationMemberRepository conversationMemberRepository, ConnectionManager connectionManager,
-                          WebSocketDeliveryService webSocketDeliveryService) {
+                          ConnectionManager connectionManager,
+                          WebSocketDeliveryService webSocketDeliveryService,
+                          MessageActions messageActions,
+                          MessageValidationService messageValidationService) {
         this.messageRepository = messageRepository;
         this.messageReactionRepository = messageReactionRepository;
         this.conversationService = conversationService;
-        this.conversationMemberRepository = conversationMemberRepository;
         this.connectionManager = connectionManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
+        this.messageActions = messageActions;
+        this.messageValidationService = messageValidationService;
     }
 
-    @Transactional
-    public MessageResult createMessage(User fromUser, Conversation conversation, String content) {
-        Message message = new Message();
-        message.setConversation(conversation);
-        message.setFromUser(fromUser);
-        message.setMessage(content);
-        message.setCreatedAt(Instant.now());
-
-        message = messageRepository.save(message);
-
+    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content) {
+        Message message = messageActions.createMessage(fromUser, conversation, content);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-
         return new MessageResult(
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
@@ -69,15 +60,10 @@ public class MessageService {
                 recipients);
     }
 
-    @Transactional
+
     public MessageResult editMessage(Conversation conversation, Long messageId, String content) {
-        Message message = getById(messageId);
-        message.setMessage(content);
-        message.setIsEdited(true);
-        messageRepository.save(message);
-
+        Message message = messageActions.editMessage(getById(messageId), content);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-
         return new MessageResult(
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
@@ -86,7 +72,6 @@ public class MessageService {
                 recipients);
     }
 
-    @Transactional
     public MessageResult deleteMessage(Long messageId, Conversation conversation) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -96,25 +81,14 @@ public class MessageService {
                 .withMarginId(getMarginId(conversation))
                 .build();
 
-        messageRepository.delete(message);
-
+        messageActions.deleteMessage(message);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-
         return new MessageResult(messageDTO, recipients);
     }
 
-    @Transactional
     public void sendMessage(User fromUser, String content, Conversation conversation) {
-        if (conversation.getType() == ConversationType.DIRECT) {
-            boolean anyPending = conversationMemberRepository.findByConversation(conversation).stream()
-                    .anyMatch(m -> !m.getUser().getId().equals(fromUser.getId())
-                            && m.getInviteStatus() == ConversationInviteStatus.PENDING);
-            if (anyPending) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Cannot send messages until the invite is accepted");
-            }
-        }
-        MessageResult result = createMessage(fromUser, conversation, content);
+        messageValidationService.validateConversationIsNotPending(fromUser, conversation);
+        MessageResult result = createMessageForUsers(fromUser, conversation, content);
         webSocketDeliveryService.notifyMessage(
                 result.message(),
                 result.recipients(),
@@ -123,8 +97,7 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before,
-                                                    Long currentUserId, Instant otherUserLastReadAt) {
+    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
         List<Message> messages = before != null
                 ? messageRepository.findMessagesBefore(conversation.getId(), before, PageRequest.of(0, limit))
                 : messageRepository.findRecentMessages(conversation.getId(), PageRequest.of(0, limit));
@@ -145,18 +118,9 @@ public class MessageService {
                 }));
     }
 
-    @Transactional(readOnly = true)
-    public List<MessageDTO> getConversationMessages(Conversation conversation, int limit, Long before) {
-        return getConversationMessages(conversation, limit, before, null, Instant.EPOCH);
-    }
-
-    @Transactional
     public MessageReactionDTO addReaction(User user, Long messageId, String emoji, Conversation conversation) {
-        if (messageReactionRepository.existsByMessageIdAndUserIdAndEmoji(messageId, user.getId(), emoji)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Reaction already exists");
-        }
-        Message message = getById(messageId);
-        MessageReaction reaction = messageReactionRepository.save(new MessageReaction(message, user, emoji));
+        messageValidationService.validateDuplicateEmojiForMessage(user, messageId, emoji);
+        MessageReaction reaction = messageActions.createMessageReaction(user, getById(messageId), emoji);
         return MessageReactionDTO.from(reaction, conversation.getId());
     }
 

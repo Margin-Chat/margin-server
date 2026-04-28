@@ -1,7 +1,5 @@
 package org.margin.server.social.space.services;
 
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
@@ -21,6 +19,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -32,7 +31,6 @@ public class SpacesActions {
     private final ConversationService conversationService;
     private final WebSocketDeliveryService webSocketDeliveryService;
     private final SpacesRepository spacesRepository;
-    private final ChannelRepository channelRepository;
     private final ChannelService channelService;
 
     public SpacesActions(SpaceMemberRepository spaceMemberRepository,
@@ -41,7 +39,6 @@ public class SpacesActions {
                          ConversationService conversationService,
                          WebSocketDeliveryService webSocketDeliveryService,
                          SpacesRepository spacesRepository,
-                         ChannelRepository channelRepository,
                          ChannelService channelService) {
         this.spaceMemberRepository = spaceMemberRepository;
         this.marginMemberRepository = marginMemberRepository;
@@ -49,7 +46,6 @@ public class SpacesActions {
         this.conversationService = conversationService;
         this.webSocketDeliveryService = webSocketDeliveryService;
         this.spacesRepository = spacesRepository;
-        this.channelRepository = channelRepository;
         this.channelService = channelService;
     }
 
@@ -95,12 +91,18 @@ public class SpacesActions {
         Space space = spacesRepository.findById(spaceId)
                 .orElseThrow(() -> new SpaceNotFoundException(spaceId));
 
+        Instant now = Instant.now();
+
+        space.getChannels().forEach(channel -> {
+            if (channel.getConversation() != null) {
+                channel.getConversation().setDeletedAt(now);
+            }
+            channel.setDeletedAt(now);
+        });
+
         spaceMemberRepository.deleteAll(spaceMemberRepository.findSpaceMemberBySpace(space));
-
-        List<Channel> channels = channelRepository.findChannelBySpace(space);
-        channelRepository.deleteAll(channels);
-
-        spacesRepository.deleteById(spaceId);
+        space.setDeletedAt(now);
+        spacesRepository.save(space);
     }
 
     public SpaceMember prepareRoleUpdate(Space space, SpaceMemberDTO dto) {

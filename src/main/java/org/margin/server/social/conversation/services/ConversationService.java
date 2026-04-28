@@ -1,14 +1,8 @@
 package org.margin.server.social.conversation.services;
 
 import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.models.ConversationMemberId;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.models.*;
 import org.margin.server.social.conversation.models.dtos.*;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
@@ -17,18 +11,21 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,6 +38,7 @@ public class ConversationService {
     private final ConversationService self;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
+    private final UserService userService;
 
     @Autowired
     public ConversationService(ConversationCreationService conversationCreationService,
@@ -49,7 +47,8 @@ public class ConversationService {
                                UserRepository userRepository,
                                @Lazy ConversationService self,
                                ConnectionManager connectionManager,
-                               WebSocketDeliveryService webSocketDeliveryService) {
+                               WebSocketDeliveryService webSocketDeliveryService,
+                               UserService userService) {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
@@ -57,6 +56,7 @@ public class ConversationService {
         this.self = self;
         this.connectionManager = connectionManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
+        this.userService = userService;
     }
 
     @Cacheable(value = "conversations", key = "#id")
@@ -203,7 +203,7 @@ public class ConversationService {
                 .values()
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
-                        p.conversationId(),
+                        getConversationDTO(p.conversation(), userId),
                         new UserDTO(p.user(), connectionManager.isUserOnline(p.user().getId())),
                         p.lastMessage(),
                         p.lastMessageTime(),
@@ -283,6 +283,17 @@ public class ConversationService {
 
         member.setInviteStatus(ConversationInviteStatus.ACCEPTED);
         conversationMemberRepository.save(member);
+        Conversation conversation = member.getConversation();
+
+        ConversationMember otherMember = conversation.getMembers().stream()
+                .filter(m -> !m.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow(UserNotFoundException::new);
+
+        webSocketDeliveryService.notifyConversationInviteAccepted(
+                this.getConversationDTO(conversation, user.getId()),
+                userService.toDTO(member.getUser()),
+                otherMember.getId().getUserId());
     }
 
     @Transactional
@@ -299,7 +310,7 @@ public class ConversationService {
         conversationMemberRepository.save(member);
     }
 
-    public List<DirectConversationDTO> getPendingInvites(Long userId) {
+    public List<ConversationInvitePayload> getPendingInvites(Long userId) {
         return conversationMemberRepository
                 .findByUserIdAndInviteStatus(userId, ConversationInviteStatus.PENDING)
                 .stream()
@@ -311,13 +322,14 @@ public class ConversationService {
                             .filter(u -> !u.getId().equals(userId))
                             .findFirst()
                             .orElseThrow();
-                    return new DirectConversationDTO(
+                    DirectConversationDTO conversation = new DirectConversationDTO(
                             conv.getId(),
                             conv.getCreatedAt(),
                             sender.getId(),
                             null,
                             ConversationInviteStatus.PENDING
                     );
+                    return new ConversationInvitePayload(conversation, new UserDTO(sender, connectionManager.isUserOnline(sender.getId())));
                 })
                 .toList();
     }

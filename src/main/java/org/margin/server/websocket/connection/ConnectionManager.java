@@ -14,61 +14,63 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ConnectionManager {
 
-    private final Map<Long, ClientConnection> connections = new ConcurrentHashMap<>();
+    private final Map<Long, Set<ClientConnection>> connections = new ConcurrentHashMap<>();
 
     public void addConnection(User user, ClientConnection connection) {
-        ClientConnection old = connections.put(user.getId(), connection);
-        if (old != null && old.isActive()) {
-            log.info("Replacing existing connection for user {}, closing old channel", user.getId());
-            old.close();
-        }
+        connections.computeIfAbsent(user.getId(), id -> ConcurrentHashMap.newKeySet()).add(connection);
+        log.info("User {} connected (total sessions: {})", user.getId(), connections.get(user.getId()).size());
     }
 
-    public void removeConnection(User user) {
-        connections.remove(user.getId());
-    }
-
-    public boolean isUserOnline(Long userId) {
-        ClientConnection conn = connections.get(userId);
-        return conn != null && conn.isActive();
-    }
-
-    public void sendToUser(Long userId, String jsonMessage) {
-        ClientConnection connection = connections.get(userId);
-        if (connection != null && connection.isActive()) {
-            connection.sendMessage(jsonMessage);
-        } else {
-            log.debug("User {} not connected, cannot send message", userId);
-        }
-    }
-
-    public void broadcast(String jsonMessage, Long excludeUserId) {
-        connections.forEach((userId, connection) -> {
-            if (!userId.equals(excludeUserId) && connection.isActive()) {
-                connection.sendMessage(jsonMessage);
-            }
-        });
-    }
-
-    public void clearAll() {
-        connections.values().forEach(ClientConnection::close);
-        connections.clear();
-    }
-
-    public ClientConnection getConnection(Long userId) {
-        return connections.get(userId);
-    }
-
-    public Set<Long> getOnlineUserIds() {
-        return new HashSet<>(connections.keySet());
-    }
-
-    public boolean removeConnectionIfMatch(User user, Channel channel) {
-        ClientConnection conn = connections.get(user.getId());
-        if (conn != null && conn.getChannel() == channel) {
+    public boolean removeConnection(User user, Channel channel) {
+        Set<ClientConnection> sessions = connections.get(user.getId());
+        if (sessions == null) return false;
+        sessions.removeIf(c -> c.getChannel() == channel);
+        if (sessions.isEmpty()) {
             connections.remove(user.getId());
             return true;
         }
         return false;
+    }
+
+    public boolean isUserOnline(Long userId) {
+        Set<ClientConnection> sessions = connections.get(userId);
+        return sessions != null && sessions.stream().anyMatch(ClientConnection::isActive);
+    }
+
+    public void sendToUser(Long userId, String jsonMessage) {
+        Set<ClientConnection> sessions = connections.get(userId);
+        if (sessions == null) {
+            log.debug("User {} not connected, cannot send message", userId);
+            return;
+        }
+        sessions.stream()
+                .filter(ClientConnection::isActive)
+                .forEach(c -> c.sendMessage(jsonMessage));
+    }
+
+    public void broadcast(String jsonMessage, Long excludeUserId) {
+        connections.forEach((userId, sessions) -> {
+            if (!userId.equals(excludeUserId)) {
+                sessions.stream()
+                        .filter(ClientConnection::isActive)
+                        .forEach(c -> c.sendMessage(jsonMessage));
+            }
+        });
+    }
+
+    public void closeAllSessions(Long userId) {
+        Set<ClientConnection> sessions = connections.remove(userId);
+        if (sessions != null) {
+            sessions.forEach(ClientConnection::close);
+        }
+    }
+
+    public void clearAll() {
+        connections.values().forEach(sessions -> sessions.forEach(ClientConnection::close));
+        connections.clear();
+    }
+
+    public Set<Long> getOnlineUserIds() {
+        return new HashSet<>(connections.keySet());
     }
 }

@@ -21,14 +21,20 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     @Query("""
             SELECT
-                cm.conversation.id,
+                cm.conversation,
                 u,
                 m.message,
                 m.createdAt,
                 CASE WHEN m.fromUser.id != :userId THEN true ELSE false END
                         FROM ConversationMember cm
                         JOIN cm.user u
-                        JOIN Message m ON m.conversation.id = cm.conversation.id
+                        LEFT JOIN Message m
+                            ON m.conversation.id = cm.conversation.id
+                            AND m.createdAt = (
+                            SELECT MAX(m2.createdAt)
+                            FROM Message m2
+                            WHERE m2.conversation.id = cm.conversation.id
+                        )
                         WHERE cm.conversation.id IN (
                             SELECT cm2.conversation.id
                             FROM ConversationMember cm2
@@ -36,11 +42,6 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                         )
                         AND u.id != :userId
                         AND cm.conversation.type IN ('DIRECT', 'GROUP')
-                        AND m.createdAt = (
-                            SELECT MAX(m2.createdAt)
-                            FROM Message m2
-                            WHERE m2.conversation.id = cm.conversation.id
-                        )
                         ORDER BY m.createdAt DESC
             """)
     List<RecentChatUserProjection> findRecentChatUsers(@Param("userId") Long userId);
@@ -51,8 +52,11 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     @Query("""
             SELECT cm.conversation.id AS conversationId,
                    cm.conversation.type AS type,
-                   cm.conversation.channel.space.margin.id as marginId
+                   mg.id AS marginId
             FROM ConversationMember cm
+            LEFT JOIN cm.conversation.channel ch
+            LEFT JOIN ch.space sp
+            LEFT JOIN sp.margin mg
             WHERE cm.user.id = :userId
               AND EXISTS (
                 SELECT 1 FROM Message m
@@ -71,5 +75,5 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
     java.util.Optional<ConversationMember> findByConversationIdAndUserId(@Param("conversationId") Long conversationId,
-                                                                          @Param("userId") Long userId);
+                                                                         @Param("userId") Long userId);
 }

@@ -3,20 +3,18 @@ package org.margin.server.social.conversation.controllers;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
-import org.margin.server.social.conversation.models.dtos.SendConversationInviteRequest;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -64,11 +62,8 @@ public class ConversationController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this conversation");
         }
 
-        Instant otherUserLastReadAt = conversationService.getOtherUserLastReadAt(
-                conversation.getId(), user.getId());
-
         return new GetConversationMessagesResponse(
-                messageService.getConversationMessages(conversation, limit, before, user.getId(), otherUserLastReadAt),
+                messageService.getConversationMessages(conversation, limit, before),
                 conversationService.getConversationDTO(conversation, user.getId())
         );
     }
@@ -139,7 +134,7 @@ public class ConversationController {
     }
 
     @GetMapping("/conversations/pending_invites")
-    public List<DirectConversationDTO> getPendingInvites(@AuthenticationPrincipal User user) {
+    public List<ConversationInvitePayload> getPendingInvites(@AuthenticationPrincipal User user) {
         return conversationService.getPendingInvites(user.getId());
     }
 

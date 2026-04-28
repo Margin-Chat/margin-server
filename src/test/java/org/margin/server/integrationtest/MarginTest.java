@@ -3,8 +3,11 @@ package org.margin.server.integrationtest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
+import org.margin.server.integrationtest.utils.ChannelTestUtils;
 import org.margin.server.integrationtest.utils.MarginTestUtils;
+import org.margin.server.integrationtest.utils.SoftDeleteTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
+import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -197,5 +200,34 @@ class MarginTest extends MarginTestRunner {
 
         assertFalse(dto.spaces().isEmpty());
         assertEquals("General Space", dto.spaces().getFirst().spaceName());
+    }
+
+    @Test
+    void deletingMarginSetsDeletedAt() {
+        MarginTestUtils.deleteMargin(marginId, admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("margins", "margin_id", marginId));
+    }
+
+    @Test
+    void deletingMarginSoftDeletesCascadesToSpacesAndChannels() {
+        MarginDTO dto = MarginTestUtils.getMarginDto(marginId, admin);
+        Long spaceId = dto.spaces().getFirst().spaceId();
+        List<ChannelDTO> channels = ChannelTestUtils.getChannelsForSpace(spaceId, admin);
+        Long channelId = channels.getFirst().id();
+        Long conversationId = SoftDeleteTestUtils.getConversationIdForChannel(channelId);
+
+        MarginTestUtils.deleteMargin(marginId, admin);
+
+        assertTrue(SoftDeleteTestUtils.isDeleted("spaces", "space_id", spaceId));
+        assertTrue(SoftDeleteTestUtils.isDeleted("channels", "channel_id", channelId));
+        assertTrue(SoftDeleteTestUtils.isDeleted("conversations", "conversation_id", conversationId));
+    }
+
+    @Test
+    void deletedMarginIsNotAccessible() {
+        MarginTestUtils.deleteMargin(marginId, admin);
+
+        assertThrows(Exception.class, () -> MarginTestUtils.getMargin(marginId, admin));
     }
 }

@@ -130,8 +130,8 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     public void channelInactive(ChannelHandlerContext ctx) {
         User user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user != null) {
-            boolean removed = connectionManager.removeConnectionIfMatch(user, ctx.channel());
-            if (removed) {
+            boolean lastSession = connectionManager.removeConnection(user, ctx.channel());
+            if (lastSession) {
                 presenceService.userDisconnected(user);
             }
         }

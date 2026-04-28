@@ -214,10 +214,24 @@ public class MarginService {
     @Transactional
     public void deleteMargin(Long marginId) {
         Margin margin = getById(marginId);
-        marginMemberRepository.deleteAll(margin.getMembers());
-        marginRepository.deleteById(marginId);
+        Instant now = Instant.now();
 
-        log.info("Deleted margin with id {}", marginId);
+        margin.getSpaces().forEach(space -> {
+            space.getChannels().forEach(channel -> {
+                if (channel.getConversation() != null) {
+                    channel.getConversation().setDeletedAt(now);
+                }
+                channel.setDeletedAt(now);
+            });
+            space.setDeletedAt(now);
+        });
+
+        marginMemberRepository.deleteAll(margin.getMembers());
+        margin.getMembers().clear();
+        margin.setDeletedAt(now);
+        marginRepository.save(margin);
+
+        log.info("Soft deleted margin with id {}", marginId);
     }
 
     public boolean isUserMember(Long margin, User targetUser) {

@@ -6,6 +6,8 @@ import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 public class BugReportService {
     private final BugReportRepository bugReportRepository;
@@ -20,6 +22,7 @@ public class BugReportService {
         bugReport.setTitle(title);
         bugReport.setDescription(description);
         bugReport.setUser(reportingUser);
+        bugReport.setCreatedAt(Instant.now());
         bugReportRepository.save(bugReport);
     }
 }
