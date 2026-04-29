@@ -11,6 +11,7 @@ import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Slf4j
@@ -33,6 +34,7 @@ public class DeleteMessageProcessor implements WebSocketMessageProcessor<String>
     }
 
     @Override
+    @Transactional
     public void process(User user, WebSocketMessageIn<String> message) {
         Conversation conversation = conversationService.getById(message.getRecipientId());
         conversationValidationService.validateUserIsInConversation(user, conversation);

@@ -99,7 +99,7 @@ public class UserService {
         if (displayName != null) user.setDisplayName(displayName);
         if (email != null) user.setEmail(email);
         if (file != null && !file.isEmpty()) {
-            if (user.getProfilePictureUrl() == null || !user.getProfilePictureUrl().isEmpty()) {
+            if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
                 storageService.deleteProfilePicture(user.getProfilePictureUrl());
             }
             String url = storageService.saveProfilePicture(file);
