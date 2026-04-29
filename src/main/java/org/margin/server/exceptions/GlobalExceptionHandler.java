@@ -2,6 +2,7 @@ package org.margin.server.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
+import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.springframework.dao.DuplicateKeyException;
@@ -25,6 +26,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ProblemDetail handleUserNotFound(UserNotFoundException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(ChannelNotFoundException.class)
+    public ProblemDetail handleChannelNotFound(ChannelNotFoundException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         detail.setDetail(ex.getMessage());
         return detail;
