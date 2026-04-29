@@ -60,7 +60,6 @@ public class MessageService {
                 recipients);
     }
 
-
     public MessageResult editMessage(Conversation conversation, Long messageId, String content) {
         Message message = messageActions.editMessage(getById(messageId), content);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
