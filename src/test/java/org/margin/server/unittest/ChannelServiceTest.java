@@ -109,7 +109,8 @@ class ChannelServiceTest {
         channelService.deleteChannel(channelId);
 
         verify(conversationMemberRepository).deleteAll(any());
-        verify(conversationRepository).delete(conversation);
-        verify(channelRepository).delete(channel);
+        verify(channelRepository).save(channel);
+        assertNotNull(channel.getDeletedAt());
+        assertNotNull(conversation.getDeletedAt());
     }
 }

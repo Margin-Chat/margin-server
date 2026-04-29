@@ -69,7 +69,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/auth/**", "/api/auth/login", "/api/auth/register").permitAll()
                         .requestMatchers("/api/sfu/peer_joined", "/api/sfu/peer_left").permitAll()
                         .anyRequest().authenticated()
                 )

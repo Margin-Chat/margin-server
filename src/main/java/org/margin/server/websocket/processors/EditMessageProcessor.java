@@ -10,6 +10,7 @@ import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.EditMessagePayload;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class EditMessageProcessor implements WebSocketMessageProcessor<EditMessagePayload> {
@@ -30,6 +31,7 @@ public class EditMessageProcessor implements WebSocketMessageProcessor<EditMessa
         return WebSocketMessageType.SEND_EDIT_MESSAGE;
     }
 
+    @Transactional
     @Override
     public void process(User user, WebSocketMessageIn<EditMessagePayload> message) {
         Conversation conversation = conversationService.getById(message.getRecipientId());

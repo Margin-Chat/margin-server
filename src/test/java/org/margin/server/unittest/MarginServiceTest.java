@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -91,6 +92,27 @@ class MarginServiceTest {
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
 
         verify(storageService, never()).saveMarginIcon(any());
+    }
+
+    @Test
+    void shouldUpdateMarginNameAndDescription() {
+        Margin existing = new Margin();
+        existing.setId(1L);
+        existing.setName("Old Name");
+        existing.setDescription("Old Description");
+
+        when(marginRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateMarginDTO dto = new UpdateMarginDTO(1L, "New Name", "New Description");
+        marginService.updateMarginAsDto(dto, null);
+
+        ArgumentCaptor<Margin> captor = ArgumentCaptor.forClass(Margin.class);
+        verify(marginRepository).save(captor.capture());
+
+        Margin saved = captor.getValue();
+        assertThat(saved.getName()).isEqualTo("New Name");
+        assertThat(saved.getDescription()).isEqualTo("New Description");
     }
 
     @Test

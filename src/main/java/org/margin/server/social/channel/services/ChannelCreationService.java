@@ -8,6 +8,8 @@ import org.margin.server.social.space.models.Space;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 @Slf4j
 public class ChannelCreationService {
@@ -24,6 +26,7 @@ public class ChannelCreationService {
         channel.setName(name);
         channel.setDescription(description);
         channel.setChannelType(ChannelType.Communication);
+        channel.setCreatedAt(Instant.now());
 
         Channel savedChannel = channelRepository.save(channel);
         log.info("Creating channel: {}", name);

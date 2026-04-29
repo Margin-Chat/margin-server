@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.margin.server.social.channel.entities.Channel;
 
 import java.time.Instant;
@@ -18,6 +20,7 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 @Table(name = "conversations")
+@SQLRestriction("deleted_at IS NULL")
 public class Conversation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +45,13 @@ public class Conversation {
 
     @OneToMany(mappedBy = "conversation", fetch = FetchType.LAZY)
     private List<ConversationMember> members = new ArrayList<>();
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @PrePersist
     protected void onCreate() {

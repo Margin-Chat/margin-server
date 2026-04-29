@@ -11,6 +11,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
@@ -37,6 +38,7 @@ public class ConversationService {
     private final ConversationService self;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
+    private final UserService userService;
 
     @Autowired
     public ConversationService(ConversationCreationService conversationCreationService,
@@ -45,7 +47,8 @@ public class ConversationService {
                                UserRepository userRepository,
                                @Lazy ConversationService self,
                                ConnectionManager connectionManager,
-                               WebSocketDeliveryService webSocketDeliveryService) {
+                               WebSocketDeliveryService webSocketDeliveryService,
+                               UserService userService) {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
@@ -53,6 +56,7 @@ public class ConversationService {
         this.self = self;
         this.connectionManager = connectionManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
+        this.userService = userService;
     }
 
     @Cacheable(value = "conversations", key = "#id")
@@ -199,7 +203,7 @@ public class ConversationService {
                 .values()
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
-                        p.conversationId(),
+                        getConversationDTO(p.conversation(), userId),
                         new UserDTO(p.user(), connectionManager.isUserOnline(p.user().getId())),
                         p.lastMessage(),
                         p.lastMessageTime(),
@@ -279,6 +283,17 @@ public class ConversationService {
 
         member.setInviteStatus(ConversationInviteStatus.ACCEPTED);
         conversationMemberRepository.save(member);
+        Conversation conversation = member.getConversation();
+
+        ConversationMember otherMember = conversation.getMembers().stream()
+                .filter(m -> !m.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow(UserNotFoundException::new);
+
+        webSocketDeliveryService.notifyConversationInviteAccepted(
+                this.getConversationDTO(conversation, user.getId()),
+                userService.toDTO(member.getUser()),
+                otherMember.getId().getUserId());
     }
 
     @Transactional

@@ -16,6 +16,7 @@ import org.margin.server.social.conversation.services.ConversationCreationServic
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.Mock;
@@ -44,6 +45,8 @@ class ConversationServiceTest {
     private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private ConversationCreationService conversationCreationService;
+    @Mock
+    private UserService userService;
 
     private ConversationService conversationService;
 
@@ -57,7 +60,8 @@ class ConversationServiceTest {
                 userRepository,
                 null, // self placeholder
                 connectionManager,
-                webSocketDeliveryService
+                webSocketDeliveryService,
+                userService
         );
 
         // 2. Wrap it in a spy so we can mock self-calls
