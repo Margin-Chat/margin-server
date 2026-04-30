@@ -114,7 +114,7 @@ public class UserService {
     public void changePassword(User user, String currentPassword, String newPassword,
                                String encryptedPrivateKey, String salt, String iv) {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
