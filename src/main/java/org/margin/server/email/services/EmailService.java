@@ -28,7 +28,7 @@ public class EmailService {
     }
 
     public String buildRegistrationMail(String displayName, String activationToken) {
-        String activationUrl = String.format("%s/api/auth/activate/%s", baseUrl, activationToken);
+        String activationUrl = String.format("%s/api/email-activation/%s", baseUrl, activationToken);
 
         return """
                 <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">

@@ -32,6 +32,7 @@ public class AuthenticationService {
     private final StorageService storageService;
     private final ConnectionManager connectionManager;
     private final BetaKeyRepository betaKeyRepository;
+    private final ActivationKeyService activationKeyService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -39,7 +40,7 @@ public class AuthenticationService {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             StorageService storageService,
-            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository) {
+            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository, ActivationKeyService activationKeyService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -47,12 +48,19 @@ public class AuthenticationService {
         this.storageService = storageService;
         this.connectionManager = connectionManager;
         this.betaKeyRepository = betaKeyRepository;
+        this.activationKeyService = activationKeyService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
         try {
             User user = userRepository.findByEmail(email.toLowerCase())
                     .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+            if (!activationKeyService.isUserActivated(user)) {
+                log.info("Login blocked — user {} is not yet activated", user.getId());
+                return new AuthResponse(false, "User is not yet activated",
+                        null, null, null, null, null);
+            }
 
             if (isAccountLocked(user)) {
                 throw new BadCredentialsException("Account is locked until " + user.getSecurity().getAccountLockedUntil());
