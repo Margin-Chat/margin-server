@@ -9,7 +9,7 @@ public enum WebSocketMessageType {
     USER_LOGOUT(null),
 
     // Message
-    SEND_MESSAGE(String.class),
+    SEND_MESSAGE(SendMessagePayload.class),
     RECEIVE_MESSAGE(String.class),
     SEND_EDIT_MESSAGE(EditMessagePayload.class),
     RECEIVE_EDIT_MESSAGE(String.class),
