@@ -4,6 +4,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
@@ -100,6 +102,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             case CloseWebSocketFrame close -> ctx.channel().attr(WebSocketAttributes.HANDSHAKER).get()
                     .close(ctx.channel(), close.retain());
             case PingWebSocketFrame ping -> ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
+            case PongWebSocketFrame ignored -> {
+                // pong from client in response to our ping; IdleStateHandler already saw the read
+            }
             default -> log.warn("Unhandled frame type: {}", frame.getClass().getSimpleName());
         }
     }
@@ -124,6 +129,20 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         }
 
         dbExecutor.execute(() -> processor.process(user, (WebSocketMessageIn<Object>) message));
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        if (evt instanceof IdleStateEvent idleEvent) {
+            if (idleEvent.state() == IdleState.WRITER_IDLE) {
+                ctx.writeAndFlush(new PingWebSocketFrame());
+            } else if (idleEvent.state() == IdleState.READER_IDLE) {
+                User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+                log.info("Closing idle websocket connection for user {}",
+                        user != null ? user.getId() : "<unauthenticated>");
+                ctx.close();
+            }
+        }
     }
 
     @Override

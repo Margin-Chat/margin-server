@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.timeout.IdleStateHandler;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
@@ -22,10 +23,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
 public class WebSocketServer {
+    private static final int READER_IDLE_SECONDS = 60;
+    private static final int WRITER_IDLE_SECONDS = 30;
+
     private final ObjectMapper objectMapper;
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
@@ -70,6 +75,11 @@ public class WebSocketServer {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ch.pipeline()
+                                    .addLast(new IdleStateHandler(
+                                            READER_IDLE_SECONDS,
+                                            WRITER_IDLE_SECONDS,
+                                            0,
+                                            TimeUnit.SECONDS))
                                     .addLast(new HttpServerCodec())
                                     .addLast(new HttpObjectAggregator(65536))
                                     .addLast(new WebSocketMessageDecoder(objectMapper))
