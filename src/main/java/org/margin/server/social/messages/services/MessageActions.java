@@ -23,11 +23,12 @@ public class MessageActions {
     }
 
     @Transactional
-    public Message createMessage(User fromUser, Conversation conversation, String content) {
+    public Message createMessage(User fromUser, Conversation conversation, String content, String imageAddress) {
         Message message = new Message();
         message.setConversation(conversation);
         message.setFromUser(fromUser);
         message.setMessage(content);
+        message.setImageAddress(imageAddress);
         message.setCreatedAt(Instant.now());
 
         return messageRepository.save(message);

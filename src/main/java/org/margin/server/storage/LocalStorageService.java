@@ -59,6 +59,25 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
+    public String saveConversationImage(MultipartFile file) {
+        try {
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            Path uploadPath = Paths.get(storageProperties.getLocal().getUploadDir());
+
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return storageProperties.getLocal().getBaseUrl() + "/conversation-images/" + fileName;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save conversation image locally", e);
+        }
+    }
+
+    @Override
     public void deleteProfilePicture(String url) {
         try {
             String fileName = url.substring(url.lastIndexOf('/') + 1);

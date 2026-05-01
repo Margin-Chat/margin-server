@@ -1,0 +1,1 @@
+ALTER TABLE messages ADD COLUMN image_address VARCHAR(1024);

@@ -60,7 +60,8 @@ class WebSocketDeliveryServiceTest {
                 Instant.now(),
                 1L,
                 "Test",
-                List.of()
+                List.of(),
+                null
         );
     }
 

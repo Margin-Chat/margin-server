@@ -1,7 +1,6 @@
 package org.margin.server.social.messages.models;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -34,8 +33,7 @@ public class Message {
     @JoinColumn(name = "from_user_id", nullable = false)
     private User fromUser;
 
-    @NotBlank
-    @Size(min = 1, max = 5000)
+    @Size(max = 5000)
     @Column(nullable = false)
     private String message;
 
@@ -52,6 +50,9 @@ public class Message {
 
     @Column(name = "edited_at")
     private Instant editedAt;
+
+    @Column(name = "image_address", length = 1024)
+    private String imageAddress;
 
     public Message(Conversation conversation, User fromUser, String message) {
         this.conversation = conversation;

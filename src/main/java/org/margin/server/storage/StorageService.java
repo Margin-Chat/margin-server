@@ -10,6 +10,8 @@ public interface StorageService {
 
     String saveMarginIcon(MultipartFile file);
 
+    String saveConversationImage(MultipartFile file);
+
     void deleteProfilePicture(String url);
 
     Resource getFile(String url) throws IOException;

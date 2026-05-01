@@ -87,6 +87,10 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/activate/**").permitAll()
                         .requestMatchers("/api/sfu/peer_joined", "/api/sfu/peer_left").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/files/user-profiles/**",
+                                "/api/files/margin-icons/**",
+                                "/api/files/conversation-images/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

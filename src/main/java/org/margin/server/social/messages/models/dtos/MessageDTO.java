@@ -17,7 +17,8 @@ public record MessageDTO(
         Instant createdAt,
         Long marginId,
         String channelName,
-        List<MessageReactionDTO> reactions
+        List<MessageReactionDTO> reactions,
+        String imageAddress
 ) {
 
     public static Builder from(Message message) {
@@ -30,6 +31,7 @@ public record MessageDTO(
         private Long marginId = null;
         private String channelName = null;
         private List<MessageReactionDTO> reactions = List.of();
+        private String imageAddress = null;
 
         private Builder(Message message) {
             this.message = message;
@@ -55,6 +57,11 @@ public record MessageDTO(
             return this;
         }
 
+        public Builder withImageAddress(String imageAddress) {
+            this.imageAddress = imageAddress;
+            return this;
+        }
+
         public MessageDTO build() {
             return new MessageDTO(
                     message.getId(),
@@ -66,7 +73,8 @@ public record MessageDTO(
                     message.getCreatedAt(),
                     marginId,
                     channelName,
-                    reactions
+                    reactions,
+                    imageAddress
             );
         }
     }
