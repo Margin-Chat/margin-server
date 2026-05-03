@@ -168,7 +168,7 @@
                 <configuration>
                     <mainClass>org.margin.server.MarginServerApplication</mainClass>
                     <image>
-                        <name>margin/server:${project.version}</name>
+                        <name>codeberg.org/margin/margin-server:${project.version}</name>
                     </image>
                     <excludes>
                         <exclude>
