@@ -1,9 +1,13 @@
 package org.margin.server.authentication.services;
 
+import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.entities.BetaKey;
+import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.repositories.BetaKeyRepository;
+import org.margin.server.email.services.EmailService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -15,6 +19,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -32,6 +37,8 @@ public class AuthenticationService {
     private final StorageService storageService;
     private final ConnectionManager connectionManager;
     private final BetaKeyRepository betaKeyRepository;
+    private final ActivationKeyService activationKeyService;
+    private final EmailService emailService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -39,7 +46,7 @@ public class AuthenticationService {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             StorageService storageService,
-            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository) {
+            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository, ActivationKeyService activationKeyService, EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -47,12 +54,20 @@ public class AuthenticationService {
         this.storageService = storageService;
         this.connectionManager = connectionManager;
         this.betaKeyRepository = betaKeyRepository;
+        this.activationKeyService = activationKeyService;
+        this.emailService = emailService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
         try {
             User user = userRepository.findByEmail(email.toLowerCase())
                     .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+            if (!activationKeyService.isUserActivated(user)) {
+                log.info("Login blocked — user {} is not yet activated", user.getId());
+                return new AuthResponse(false, "User is not yet activated",
+                        null, null, null, null, null);
+            }
 
             if (isAccountLocked(user)) {
                 throw new BadCredentialsException("Account is locked until " + user.getSecurity().getAccountLockedUntil());
@@ -87,16 +102,17 @@ public class AuthenticationService {
         }
     }
 
-    public void registerUser(String handle,
-                             String displayName,
-                             String email,
-                             String password,
-                             String privateKey,
-                             String publicKey,
-                             String salt,
-                             String iv,
-                             String betaKey,
-                             MultipartFile profilePicture) {
+    @Transactional
+    public ActivationKey registerUser(String handle,
+                                      String displayName,
+                                      String email,
+                                      String password,
+                                      String privateKey,
+                                      String publicKey,
+                                      String salt,
+                                      String iv,
+                                      String betaKey,
+                                      MultipartFile profilePicture) {
         BetaKey key = betaKeyRepository.findByKey(betaKey)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid beta key"));
 
@@ -143,6 +159,18 @@ public class AuthenticationService {
         key.setUsedBy(savedUser);
         key.setUsedAt(Instant.now());
         betaKeyRepository.save(key);
+
+        ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+        String registrationContent = emailService.buildRegistrationMail(user.getDisplayName(), activationKey.getToken());
+        try {
+            emailService.sendEmail(user.getEmail(), "Email activation for margin", registrationContent);
+        } catch (MessagingException _) {
+            throw new RegistrationException("Failed to send activation email for margin");
+        }
+
+        log.info("Email registration sent for user {}", user.getHandle());
+
+        return activationKey;
     }
 
     private boolean isAccountLocked(User user) {

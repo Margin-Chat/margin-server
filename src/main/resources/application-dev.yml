@@ -1,7 +1,24 @@
+margin:
+  app:
+    base-url: http://localhost:5173
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
+
 spring:
   threads:
     virtual:
       enabled: true
+  mail:
+    host: localhost
+    port: 2525
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
   datasource:
     url: jdbc:postgresql://localhost:5433/margindb
     username: sysuser
@@ -14,14 +31,10 @@ spring:
       max-lifetime: 1800000
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 5MB
+      max-request-size: 5MB
   flyway:
     clean-disabled: true
-
-margin:
-  cors:
-    allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
 
 storage:
   type: local

@@ -1,3 +1,13 @@
+margin:
+  app:
+    base-url: https://margin.chat
+  cors:
+    allowed-origins: https://margin.chat,app://
+  rate-limit:
+    conversation-image-upload:
+      capacity: 20
+      refill-period: PT1H
+
 spring:
   application:
     name: margin-server
@@ -13,8 +23,8 @@ spring:
       max-lifetime: 1800000
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 5MB
+      max-request-size: 5MB
   threads:
     virtual:
       enabled: true
@@ -22,9 +32,17 @@ spring:
   flyway:
     clean-disabled: true
 
-margin:
-  cors:
-    allowed-origins: https://margin.chat,app://
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:2525}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-not-for-production-use-only}

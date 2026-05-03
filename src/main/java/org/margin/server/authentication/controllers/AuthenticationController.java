@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.models.LoginRequest;
 import org.margin.server.authentication.models.RegisterRequest;
+import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
@@ -23,10 +24,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final RateLimitService rateLimitService;
+    private final ActivationKeyService activationKeyService;
 
-    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService) {
+    public AuthenticationController(AuthenticationService authenticationService,
+                                    RateLimitService rateLimitService,
+                                    ActivationKeyService activationKeyService) {
         this.authenticationService = authenticationService;
         this.rateLimitService = rateLimitService;
+        this.activationKeyService = activationKeyService;
     }
 
     @PostMapping("/login")
@@ -68,14 +73,7 @@ public class AuthenticationController {
                     request.iv(),
                     request.betaKey(),
                     profilePicture);
-
-            AuthResponse authResponse = authenticationService.authenticateUser(
-                    request.email(),
-                    request.password());
-
-            log.info("Successfully registered user {}", request.handle());
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
-
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for handle {}: {}", request.handle(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -85,6 +83,13 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
         }
+    }
+
+    @PostMapping(value = "/activate/{token}")
+    public ResponseEntity<Void> activate(@PathVariable String token) {
+        log.info("Activate attempt for token: {}", token);
+        activationKeyService.findAndConsumeActivationKey(token);
+        return ResponseEntity.ok().build();
     }
 
     private void rateLimitRegistration(HttpServletRequest httpServletRequest) {

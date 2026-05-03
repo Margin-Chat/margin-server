@@ -87,6 +87,29 @@ public class S3StorageService implements StorageService {
     }
 
     @Override
+    public String saveConversationImage(MultipartFile file) {
+        try {
+            String fileName = "conversations/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(storageProperties.getS3().getBucketName())
+                    .key(fileName)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(putObjectRequest,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+
+            return String.format("%s/%s/%s",
+                    storageProperties.getS3().getEndpoint(),
+                    storageProperties.getS3().getBucketName(),
+                    fileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload conversation image to S3", e);
+        }
+    }
+
+    @Override
     public void deleteProfilePicture(String url) {
         try {
             String key = extractKeyFromUrl(url);

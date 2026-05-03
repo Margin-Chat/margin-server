@@ -48,14 +48,15 @@ public class MessageService {
         this.messageValidationService = messageValidationService;
     }
 
-    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content) {
-        Message message = messageActions.createMessage(fromUser, conversation, content);
+    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content, String imageAddress) {
+        Message message = messageActions.createMessage(fromUser, conversation, content, imageAddress);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
         return new MessageResult(
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
                         .withChannelName(conversation.getChannel() == null ? null : conversation.getChannel().getName())
+                        .withImageAddress(message.getImageAddress())
                         .build(),
                 recipients);
     }
@@ -85,9 +86,9 @@ public class MessageService {
         return new MessageResult(messageDTO, recipients);
     }
 
-    public void sendMessage(User fromUser, String content, Conversation conversation) {
+    public void sendMessage(User fromUser, String content, Conversation conversation, String imageAddress) {
         messageValidationService.validateConversationIsNotPending(fromUser, conversation);
-        MessageResult result = createMessageForUsers(fromUser, conversation, content);
+        MessageResult result = createMessageForUsers(fromUser, conversation, content, imageAddress);
         webSocketDeliveryService.notifyMessage(
                 result.message(),
                 result.recipients(),
@@ -110,6 +111,7 @@ public class MessageService {
                                 .withOnline(connectionManager.isUserOnline(msg.getFromUser().getId()))
                                 .withMarginId(getMarginId(conversation))
                                 .withReactions(reactionsByMessageId.getOrDefault(msg.getId(), List.of()))
+                                .withImageAddress(msg.getImageAddress())
                                 .build())
                 .collect(Collectors.collectingAndThen(Collectors.toList(), l -> {
                     java.util.Collections.reverse(l);
