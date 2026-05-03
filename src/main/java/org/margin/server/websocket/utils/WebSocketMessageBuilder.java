@@ -1,7 +1,5 @@
 package org.margin.server.websocket.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -10,6 +8,7 @@ import org.margin.server.websocket.models.WebSocketMessage;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.NotificationPayload;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -51,11 +50,6 @@ public class WebSocketMessageBuilder {
     }
 
     private String toJson(Object obj) {
-        try {
-            return mapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize WebSocket message", e);
-            throw new RuntimeException("Failed to serialize WebSocket message", e);
-        }
+        return mapper.writeValueAsString(obj);
     }
 }
