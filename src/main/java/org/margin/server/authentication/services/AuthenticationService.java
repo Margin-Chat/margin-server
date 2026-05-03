@@ -103,16 +103,16 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public User registerUser(String handle,
-                             String displayName,
-                             String email,
-                             String password,
-                             String privateKey,
-                             String publicKey,
-                             String salt,
-                             String iv,
-                             String betaKey,
-                             MultipartFile profilePicture) {
+    public ActivationKey registerUser(String handle,
+                                      String displayName,
+                                      String email,
+                                      String password,
+                                      String privateKey,
+                                      String publicKey,
+                                      String salt,
+                                      String iv,
+                                      String betaKey,
+                                      MultipartFile profilePicture) {
         BetaKey key = betaKeyRepository.findByKey(betaKey)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid beta key"));
 
@@ -170,7 +170,7 @@ public class AuthenticationService {
 
         log.info("Email registration sent for user {}", user.getHandle());
 
-        return user;
+        return activationKey;
     }
 
     private boolean isAccountLocked(User user) {

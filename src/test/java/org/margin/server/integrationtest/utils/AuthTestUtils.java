@@ -40,18 +40,16 @@ public class AuthTestUtils {
         return betaKeyRepository.save(key);
     }
 
-    public static User register(String handle, String email, String password, String betaKey) {
+    public static ActivationKey register(String handle, String email, String password, String betaKey) {
         return authenticationService.registerUser(
                 handle, handle, email, password,
                 "enc-private-key", "public-key", "salt", "iv",
                 betaKey, null);
     }
 
-    public static User registerAndActivate(String handle, String email, String password, String betaKey) {
-        User user = register(handle, email, password, betaKey);
-        ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+    public static void registerAndActivate(String handle, String email, String password, String betaKey) {
+        ActivationKey activationKey = register(handle, email, password, betaKey);
         activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
-        return user;
     }
 
     public static AuthResponse login(String email, String password) {
