@@ -14,6 +14,10 @@ margin:
     port: 8082
   jwt:
     secret: integration-test-secret-that-is-long-enough
+  rate-limit:
+    conversation-image-upload:
+      capacity: 20
+      refill-period: PT1H
 
 storage:
   type: local

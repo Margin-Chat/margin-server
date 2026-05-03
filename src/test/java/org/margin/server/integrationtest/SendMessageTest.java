@@ -39,7 +39,7 @@ class SendMessageTest extends MarginTestRunner {
 
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(conversation.getId())
-                .payload("Hello from integration test")
+                .payload(WebSocketFrameTestBuilder.object().put("content", "Hello from integration test"))
                 .build();
 
         senderWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
@@ -66,7 +66,7 @@ class SendMessageTest extends MarginTestRunner {
 
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(conversation.getId())
-                .payload("Echo test")
+                .payload(WebSocketFrameTestBuilder.object().put("content", "Echo test"))
                 .build();
 
         senderWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
@@ -83,7 +83,7 @@ class SendMessageTest extends MarginTestRunner {
 
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(99999)
-                .payload("Should not persist")
+                .payload(WebSocketFrameTestBuilder.object().put("content", "Should not persist"))
                 .build();
 
         senderWs.sendText(frame, true).get(5, TimeUnit.SECONDS);

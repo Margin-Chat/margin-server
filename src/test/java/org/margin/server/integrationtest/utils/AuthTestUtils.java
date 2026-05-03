@@ -1,8 +1,10 @@
 package org.margin.server.integrationtest.utils;
 
+import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.entities.BetaKey;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.repositories.BetaKeyRepository;
+import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
@@ -18,14 +20,17 @@ public class AuthTestUtils {
     private static AuthenticationService authenticationService;
     private static BetaKeyRepository betaKeyRepository;
     private static UserRepository userRepository;
+    private static ActivationKeyService activationKeyService;
 
     @Autowired
     public AuthTestUtils(AuthenticationService authenticationService,
                          BetaKeyRepository betaKeyRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         ActivationKeyService activationKeyService) {
         AuthTestUtils.authenticationService = authenticationService;
         AuthTestUtils.betaKeyRepository = betaKeyRepository;
         AuthTestUtils.userRepository = userRepository;
+        AuthTestUtils.activationKeyService = activationKeyService;
     }
 
     public static BetaKey createBetaKey() {
@@ -35,12 +40,18 @@ public class AuthTestUtils {
         return betaKeyRepository.save(key);
     }
 
-    public static AuthResponse register(String handle, String email, String password, String betaKey) {
-        authenticationService.registerUser(
+    public static User register(String handle, String email, String password, String betaKey) {
+        return authenticationService.registerUser(
                 handle, handle, email, password,
                 "enc-private-key", "public-key", "salt", "iv",
                 betaKey, null);
-        return authenticationService.authenticateUser(email, password);
+    }
+
+    public static User registerAndActivate(String handle, String email, String password, String betaKey) {
+        User user = register(handle, email, password, betaKey);
+        ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+        activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
+        return user;
     }
 
     public static AuthResponse login(String email, String password) {

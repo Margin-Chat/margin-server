@@ -2,7 +2,6 @@ package org.margin.server.authentication.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.authentication.models.LoginRequest;
 import org.margin.server.authentication.models.RegisterRequest;
@@ -10,7 +9,6 @@ import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.email.services.EmailService;
 import org.margin.server.exceptions.TooManyRequestsException;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
@@ -26,13 +24,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final RateLimitService rateLimitService;
-    private final EmailService emailService;
     private final ActivationKeyService activationKeyService;
 
-    public AuthenticationController(AuthenticationService authenticationService, RateLimitService rateLimitService, EmailService emailService, ActivationKeyService activationKeyService) {
+    public AuthenticationController(AuthenticationService authenticationService,
+                                    RateLimitService rateLimitService,
+                                    ActivationKeyService activationKeyService) {
         this.authenticationService = authenticationService;
         this.rateLimitService = rateLimitService;
-        this.emailService = emailService;
         this.activationKeyService = activationKeyService;
     }
 
@@ -64,7 +62,7 @@ public class AuthenticationController {
         log.info("Registration attempt for handle: {}", request.handle());
 
         try {
-            User user = authenticationService.registerUser(
+            authenticationService.registerUser(
                     request.handle(),
                     request.displayName(),
                     request.email(),
@@ -75,14 +73,7 @@ public class AuthenticationController {
                     request.iv(),
                     request.betaKey(),
                     profilePicture);
-
-            ActivationKey activationKey = activationKeyService.generateActivationKey(user);
-            String registrationContent = emailService.buildRegistrationMail(request.displayName(), activationKey.getToken());
-            emailService.sendEmail(request.email(), "Email activation for margin", registrationContent);
-
-            log.info("Email registration sent for user {}", request.handle());
             return ResponseEntity.ok().build();
-
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for handle {}: {}", request.handle(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

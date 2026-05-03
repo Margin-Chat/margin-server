@@ -1,6 +1,6 @@
 package org.margin.server.integrationtest.utils;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.controllers.MarginInviteController;
 import org.margin.server.social.margin.entities.Margin;
@@ -41,22 +41,23 @@ public class MarginTestUtils {
     public static Margin createMargin(String marginName, User user) {
         var request = new CreateNewMarginRequest(marginName, "test", "PUBLIC");
         MarginDTO dto = marginController.createNewMargin(request, null, user).getBody();
-        Assert.assertNotNull("Margin was successfully created", dto);
+        Assertions.assertNotNull(dto, "Margin was successfully created");
         return marginService.getById(dto.marginId());
     }
 
     public static void addUserToMargin(Long marginId, User addingUser, User userToAdd) {
         MarginInviteDTO invite =
                 marginInviteController.createDirectInvite(marginId, userToAdd.getHandle(), addingUser).getBody();
-        Assert.assertNotNull("Invite was successfully created", invite);
+        Assertions.assertNotNull(invite, "Invite was successfully created");
         marginInviteController.acceptDirectInvite(invite.id(), userToAdd);
 
         Set<MarginDTO> margins = marginController.getMargins(userToAdd);
-        Assert.assertNotNull("Margin member was successfully added",
+        Assertions.assertNotNull(
                 margins.stream()
                         .map(MarginDTO::marginId)
                         .filter(id -> id.equals(marginId))
-                        .collect(Collectors.toSet()));
+                        .collect(Collectors.toSet()),
+                "Margin member was successfully added");
     }
 
     public static List<MarginMember> getMembersFromMargin(Long marginId) {
@@ -66,7 +67,7 @@ public class MarginTestUtils {
     public static void removeUserFromMargin(Long marginId, User removingUser, User userToRemove) {
         Optional<MarginMember> marginMember =
                 marginMemberRepository.findByUser_IdAndMargin_Id(userToRemove.getId(), marginId);
-        Assert.assertTrue(marginMember.isPresent());
+        Assertions.assertTrue(marginMember.isPresent());
         var request = new RemoveMarginMemberRequest(marginId, marginMember.get().getUser().getId());
         marginController.removeMarginMember(request, removingUser);
     }

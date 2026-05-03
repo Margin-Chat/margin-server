@@ -17,7 +17,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void loginWithValidCredentials_returnsTokenAndSuccess() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("alice", "alice@margin.chat", "correct-password", key.getKey());
+        AuthTestUtils.registerAndActivate("alice", "alice@margin.chat", "correct-password", key.getKey());
 
         AuthResponse response = AuthTestUtils.login("alice@margin.chat", "correct-password");
 
@@ -29,7 +29,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void loginWithWrongPassword_returnsFalse() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("bob", "bob@margin.chat", "correct-password", key.getKey());
+        AuthTestUtils.registerAndActivate("bob", "bob@margin.chat", "correct-password", key.getKey());
 
         AuthResponse response = AuthTestUtils.login("bob@margin.chat", "wrong-password");
 
@@ -48,7 +48,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void loginIsCaseInsensitiveForEmail() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("carol", "carol@margin.chat", "password123", key.getKey());
+        AuthTestUtils.registerAndActivate("carol", "carol@margin.chat", "password123", key.getKey());
 
         AuthResponse response = AuthTestUtils.login("CAROL@MARGIN.CHAT", "password123");
 
@@ -59,7 +59,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void failedLoginIncrementsAttemptCounter() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("dave", "dave@margin.chat", "correct", key.getKey());
+        AuthTestUtils.registerAndActivate("dave", "dave@margin.chat", "correct", key.getKey());
 
         AuthTestUtils.login("dave@margin.chat", "wrong");
 
@@ -70,7 +70,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void accountLocksAfterThreeFailedAttempts() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("eve", "eve@margin.chat", "correct", key.getKey());
+        AuthTestUtils.registerAndActivate("eve", "eve@margin.chat", "correct", key.getKey());
 
         AuthTestUtils.login("eve@margin.chat", "wrong");
         AuthTestUtils.login("eve@margin.chat", "wrong");
@@ -84,7 +84,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void lockedAccountRejectsLoginEvenWithCorrectPassword() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("frank", "frank@margin.chat", "correct", key.getKey());
+        AuthTestUtils.registerAndActivate("frank", "frank@margin.chat", "correct", key.getKey());
 
         AuthTestUtils.login("frank@margin.chat", "wrong");
         AuthTestUtils.login("frank@margin.chat", "wrong");
@@ -99,7 +99,7 @@ class AuthenticationTest extends MarginTestRunner {
     @Test
     void successfulLoginResetsFailedAttemptCounter() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("grace", "grace@margin.chat", "correct", key.getKey());
+        AuthTestUtils.registerAndActivate("grace", "grace@margin.chat", "correct", key.getKey());
 
         AuthTestUtils.login("grace@margin.chat", "wrong");
         AuthTestUtils.login("grace@margin.chat", "wrong");
@@ -111,13 +111,25 @@ class AuthenticationTest extends MarginTestRunner {
     }
 
     @Test
-    void registerWithValidBetaKey_succeeds() {
+    void registerWithValidBetaKey_persistsUser() {
         BetaKey key = AuthTestUtils.createBetaKey();
 
-        AuthResponse response = AuthTestUtils.register("henry", "henry@margin.chat", "password", key.getKey());
+        AuthTestUtils.register("henry", "henry@margin.chat", "password", key.getKey());
 
-        assertTrue(response.success());
-        assertNotNull(response.token());
+        User user = AuthTestUtils.findByEmail("henry@margin.chat");
+        assertNotNull(user);
+        assertEquals("henry", user.getHandle());
+    }
+
+    @Test
+    void registerWithValidBetaKey_loginRequiresActivation() {
+        BetaKey key = AuthTestUtils.createBetaKey();
+        AuthTestUtils.register("henrietta", "henrietta@margin.chat", "password", key.getKey());
+
+        AuthResponse response = AuthTestUtils.login("henrietta@margin.chat", "password");
+
+        assertFalse(response.success());
+        assertNull(response.token());
     }
 
     @Test

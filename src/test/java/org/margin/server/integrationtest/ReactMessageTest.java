@@ -146,7 +146,7 @@ class ReactMessageTest extends MarginTestRunner {
         WebSocket tempWs = WebSocketTestUtils.connect(sender);
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(conversation.getId())
-                .payload(content)
+                .payload(WebSocketFrameTestBuilder.object().put("content", content))
                 .build();
         tempWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
         Thread.sleep(300);

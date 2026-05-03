@@ -46,7 +46,7 @@ class MultiSessionTest extends MarginTestRunner {
 
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(conversation.getId())
-                .payload("Hello both devices")
+                .payload(WebSocketFrameTestBuilder.object().put("content", "Hello both devices"))
                 .build();
 
         otherWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
@@ -74,7 +74,7 @@ class MultiSessionTest extends MarginTestRunner {
 
         String frame = WebSocketFrameTestBuilder.ofType("SEND_MESSAGE")
                 .recipientId(conversation.getId())
-                .payload("Still alive")
+                .payload(WebSocketFrameTestBuilder.object().put("content", "Still alive"))
                 .build();
 
         otherWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
