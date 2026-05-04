@@ -31,6 +31,7 @@ class EmailServiceTest {
     @BeforeEach
     void injectBaseUrl() {
         ReflectionTestUtils.setField(emailService, "baseUrl", "https://margin.test");
+        ReflectionTestUtils.setField(emailService, "fromAddress", "noreply@margin.test");
     }
 
     @Test
@@ -44,7 +45,7 @@ class EmailServiceTest {
     void buildRegistrationMail_pointsAtLandingActivationPath() {
         String html = emailService.buildRegistrationMail("Alice", "abc-123");
 
-        assertTrue(html.contains("https://margin.test/api/email-activation/abc-123"),
+        assertTrue(html.contains("https://margin.test/email-activation/abc-123"),
                 "Activation link should target landing's email-activation path");
     }
 
@@ -67,5 +68,7 @@ class EmailServiceTest {
         assertEquals("Email activation for margin", mime.getSubject());
         assertEquals(1, mime.getAllRecipients().length);
         assertEquals("user@example.com", mime.getAllRecipients()[0].toString());
+        assertEquals(1, mime.getFrom().length);
+        assertEquals("noreply@margin.test", mime.getFrom()[0].toString());
     }
 }

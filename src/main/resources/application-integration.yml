@@ -8,8 +8,22 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:2525}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+            required: false
 
 margin:
+  mail:
+    from: ${MAIL_FROM:localhost@margin.chat}
   websocket:
     port: 8082
   jwt:

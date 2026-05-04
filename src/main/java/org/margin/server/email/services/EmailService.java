@@ -14,6 +14,9 @@ public class EmailService {
     @Value("${margin.app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    @Value("${margin.mail.from:noreply@localhost}")
+    private String fromAddress;
+
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -21,6 +24,7 @@ public class EmailService {
     public void sendEmail(String to, String subject, String htmlBody) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+        helper.setFrom(fromAddress);
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
@@ -28,7 +32,7 @@ public class EmailService {
     }
 
     public String buildRegistrationMail(String displayName, String activationToken) {
-        String activationUrl = String.format("%s/api/email-activation/%s", baseUrl, activationToken);
+        String activationUrl = String.format("%s/email-activation/%s", baseUrl, activationToken);
 
         return """
                 <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">

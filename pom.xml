@@ -182,6 +182,21 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <configuration>
+                    <url>jdbc:postgresql://localhost:5433/margin_test</url>
+                    <!--suppress UnresolvedMavenProperty -->
+                    <user>${flyway.user}</user>
+                    <!--suppress UnresolvedMavenProperty -->
+                    <password>${flyway.password}</password>
+                    <cleanDisabled>false</cleanDisabled>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
