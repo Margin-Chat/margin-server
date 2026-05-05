@@ -16,6 +16,9 @@ import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
+import org.margin.server.subscriptions.models.SubscriptionTier;
+import org.margin.server.subscriptions.services.SubscriptionService;
+import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -41,6 +44,8 @@ public class MarginService {
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
     private final NotificationService notificationService;
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionValidationService subscriptionValidationService;
 
     public MarginService(MarginRepository marginRepository,
                          StorageService storageService,
@@ -48,7 +53,7 @@ public class MarginService {
                          UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
-                         NotificationService notificationService) {
+                         NotificationService notificationService, SubscriptionService subscriptionService, SubscriptionValidationService subscriptionValidationService) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
@@ -56,6 +61,8 @@ public class MarginService {
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
         this.notificationService = notificationService;
+        this.subscriptionService = subscriptionService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +94,8 @@ public class MarginService {
         margin.setVisibility(visibility);
         margin.setIconUrl(iconUrl);
         margin = marginRepository.save(margin);
+
+        subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
 
@@ -124,6 +133,8 @@ public class MarginService {
 
         Margin margin = getById(marginId);
         User user = userService.getById(userId);
+
+        subscriptionValidationService.validateAddMarginMember(margin);
 
         MarginMember member = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(userId))

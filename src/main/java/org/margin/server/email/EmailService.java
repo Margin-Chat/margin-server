@@ -1,4 +1,4 @@
-package org.margin.server.email.services;
+package org.margin.server.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

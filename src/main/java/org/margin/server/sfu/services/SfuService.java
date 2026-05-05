@@ -54,12 +54,14 @@ public class SfuService {
         return headers;
     }
 
-    public void createOrJoinRoom(String roomId) {
+    public void createOrJoinRoom(String roomId, int maxParticipants) {
         String url = sfuUrl + "/rooms/" + roomId;
+        HttpHeaders headers = internalHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
         restTemplate.exchange(
                 url,
                 HttpMethod.POST,
-                new HttpEntity<>(internalHeaders()),
+                new HttpEntity<>(Map.of("maxParticipants", maxParticipants), headers),
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 }
         );
