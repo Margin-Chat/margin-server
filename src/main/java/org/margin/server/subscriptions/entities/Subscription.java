@@ -3,6 +3,7 @@ package org.margin.server.subscriptions.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
@@ -43,6 +44,7 @@ public class Subscription {
     @Column(name = "subscription_id")
     private String subscriptionId;
 
+    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 

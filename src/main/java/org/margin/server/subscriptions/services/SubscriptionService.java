@@ -5,6 +5,8 @@ import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.factories.SubscriptionLimitsFactory;
 import org.margin.server.subscriptions.models.SubscriptionTier;
+import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
+import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,5 +35,23 @@ public class SubscriptionService {
         subscriptionRepository.save(subscription);
 
         log.info("Created subscription for margin {}", subscription);
+    }
+
+    @Transactional(readOnly = true)
+    public SubscriptionDTO getSubscriptionDtoForMargin(Margin margin) {
+        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        SubscriptionLimits limits = subscription.getLimits();
+        return new SubscriptionDTO(
+                subscription.getTier(),
+                subscription.getStatus(),
+                new SubscriptionLimitsDTO(
+                        limits.getMaxMembers(),
+                        limits.getMaxStorageGb(),
+                        limits.getMaxCallParticipants()
+                ),
+                margin.getMembers().size(),
+                subscription.getTrialEndsAt(),
+                subscription.getCurrentPeriodEnd()
+        );
     }
 }

@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
+import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ProblemDetail handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
-        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONTENT_TOO_LARGE);
         detail.setDetail("File is too large. Maximum allowed size is 5MB.");
         return detail;
     }
@@ -70,6 +71,15 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleDuplicateKey(DuplicateKeyException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(SubscriptionLimitExceededException.class)
+    public ProblemDetail handleSubscriptionLimit(SubscriptionLimitExceededException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.PAYMENT_REQUIRED);
+        detail.setDetail(ex.getMessage());
+        detail.setProperty("tier", ex.getTier());
+        detail.setProperty("limit", ex.getLimit());
         return detail;
     }
 }

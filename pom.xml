@@ -186,7 +186,7 @@
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
                 <configuration>
-                    <url>jdbc:postgresql://localhost:5433/margin_test</url>
+                    <url>jdbc:postgresql://localhost:5433/margindb</url>
                     <!--suppress UnresolvedMavenProperty -->
                     <user>${flyway.user}</user>
                     <!--suppress UnresolvedMavenProperty -->

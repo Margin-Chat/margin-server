@@ -46,7 +46,8 @@ public class SfuController {
         Long channelId = Long.parseLong(roomId);
         marginAuthorizationService.requireChannelMember(user.getId(), channelId);
         Channel channel = channelService.getById(channelId);
-        int maxParticipants = subscriptionValidationService.getMaxCallParticipants(channel);
+        int currentParticipants = sfuService.getVoiceParticipants(channelId).size();
+        int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channel, currentParticipants);
         sfuService.createOrJoinRoom(roomId, maxParticipants);
         String roomToken = sfuTokenService.generateRoomToken(user.getId(), roomId);
         return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken));

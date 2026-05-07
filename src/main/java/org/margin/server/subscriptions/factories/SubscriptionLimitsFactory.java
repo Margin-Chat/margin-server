@@ -3,8 +3,6 @@ package org.margin.server.subscriptions.factories;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 
-import static org.flywaydb.core.extensibility.Tier.ENTERPRISE;
-
 public class SubscriptionLimitsFactory {
     public static SubscriptionLimits forTier(SubscriptionTier tier) {
         SubscriptionLimits limits = new SubscriptionLimits();
@@ -24,7 +22,7 @@ public class SubscriptionLimitsFactory {
                 limits.setMaxStorageGb(200);
                 limits.setMaxCallParticipants(50);
             }
-            case ENTERPRISE -> {
+            case CUSTOM -> {
                 // Set manually per negotiation
                 limits.setMaxMembers(Integer.MAX_VALUE);
                 limits.setMaxStorageGb(Integer.MAX_VALUE);
