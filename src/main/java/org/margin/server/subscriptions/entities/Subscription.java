@@ -44,6 +44,9 @@ public class Subscription {
     @Column(name = "subscription_id")
     private String subscriptionId;
 
+    @Column(name = "mollie_customer_id")
+    private String mollieCustomerId;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -53,7 +56,6 @@ public class Subscription {
 
     @OneToOne(mappedBy = "subscription",
             cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY,
             optional = false)
     private SubscriptionLimits limits;
 }
