@@ -11,9 +11,12 @@ import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
+import org.margin.server.email.EmailService;
 import org.margin.server.subscriptions.services.MollieClient;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
+import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,8 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +35,9 @@ class SubscriptionWebhookServiceTest {
     @Mock private MollieClient mollieClient;
     @Mock private SubscriptionRepository subscriptionRepository;
     @Mock private SubscriptionService subscriptionService;
+    @Mock private EmailService emailService;
+    @Mock private ConnectionManager connectionManager;
+    @Mock private WebSocketMessageBuilder wsMessageBuilder;
 
     private SubscriptionWebhookService service;
 
@@ -47,7 +52,7 @@ class SubscriptionWebhookServiceTest {
         SubscriptionPricingProperties pricing = new SubscriptionPricingProperties("EUR",
                 Map.of(SubscriptionTier.SMALL, new BigDecimal("9.99")));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
-                subscriptionService, mollie, pricing);
+                subscriptionService, mollie, pricing, emailService, connectionManager, wsMessageBuilder);
     }
 
     private Subscription localSubscription() {
@@ -73,6 +78,7 @@ class SubscriptionWebhookServiceTest {
     @Test
     void firstPaymentPaid_createsMollieSubscriptionAndAppliesTier() {
         Subscription subscription = localSubscription();
+        subscription.setPendingPaymentId(PAYMENT_ID);
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
                 "id", PAYMENT_ID,
                 "status", "paid",
@@ -82,7 +88,7 @@ class SubscriptionWebhookServiceTest {
         ));
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
         when(mollieClient.createSubscription(eq(CUSTOMER_ID), eq("9.99"), eq("EUR"), eq("1 month"),
-                anyString(), anyString())).thenReturn(Map.of(
+                anyString(), anyString(), isNull())).thenReturn(Map.of(
                 "id", SUBSCRIPTION_ID,
                 "nextPaymentDate", "2026-06-06"
         ));
@@ -111,7 +117,7 @@ class SubscriptionWebhookServiceTest {
 
         verify(subscriptionService, never()).applyTier(any(), any());
         verify(mollieClient, never()).createSubscription(anyString(), anyString(), anyString(), anyString(),
-                anyString(), anyString());
+                anyString(), anyString(), any());
     }
 
     @Test
@@ -132,7 +138,7 @@ class SubscriptionWebhookServiceTest {
     @Test
     void firstPaymentReceivedTwice_secondCallSkippedIfAlreadyProcessed() {
         Subscription subscription = localSubscription();
-        subscription.setSubscriptionId(SUBSCRIPTION_ID);
+        // pendingPaymentId is null → already processed
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
                 "id", PAYMENT_ID,
                 "status", "paid",
@@ -146,7 +152,7 @@ class SubscriptionWebhookServiceTest {
 
         verify(subscriptionService, never()).applyTier(any(), any());
         verify(mollieClient, never()).createSubscription(anyString(), anyString(), anyString(), anyString(),
-                anyString(), anyString());
+                anyString(), anyString(), any());
     }
 
     @Test
@@ -177,6 +183,7 @@ class SubscriptionWebhookServiceTest {
     @Test
     void firstPaymentMissingMetadata_doesNothing() {
         Subscription subscription = localSubscription();
+        subscription.setPendingPaymentId(PAYMENT_ID);
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
                 "id", PAYMENT_ID,
                 "status", "paid",

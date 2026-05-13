@@ -97,7 +97,7 @@ public class MarginService {
 
         subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
+        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
 
         spacesService.createNewSpace(
                 new CreateSpaceDTO(

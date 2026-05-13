@@ -6,6 +6,7 @@ import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.factories.SubscriptionLimitsFactory;
+import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 @Service
@@ -47,7 +49,7 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-        log.info("Created subscription for margin {}", subscription);
+        log.info("Created subscription for margin {}", subscription.getSubscriptionId());
     }
 
     @Transactional(readOnly = true)
@@ -64,8 +66,54 @@ public class SubscriptionService {
                 ),
                 margin.getMembers().size(),
                 subscription.getTrialEndsAt(),
-                subscription.getCurrentPeriodEnd()
+                subscription.getCurrentPeriodEnd(),
+                subscription.getPendingPaymentId() != null,
+                subscription.getPendingTier()
         );
+    }
+
+    @Transactional
+    public SubscriptionDTO changeTier(Margin margin, SubscriptionTier newTier) {
+        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+
+        if (subscription.getSubscriptionId() != null) {
+            try {
+                mollieClient.cancelSubscription(subscription.getMollieCustomerId(), subscription.getSubscriptionId());
+            } catch (Exception e) {
+                log.warn("Failed to cancel Mollie subscription {} during tier change", subscription.getSubscriptionId(), e);
+            }
+        }
+
+        BigDecimal price = subscriptionPricingProperties.prices().get(newTier);
+        String startDate = subscription.getCurrentPeriodEnd() != null
+                ? subscription.getCurrentPeriodEnd().atZone(ZoneOffset.UTC).toLocalDate().toString()
+                : null;
+
+        Map<String, Object> mollieSubscription = mollieClient.createSubscription(
+                subscription.getMollieCustomerId(),
+                price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                subscriptionPricingProperties.currency(),
+                "1 month",
+                "margin %s — %s plan".formatted(margin.getName(), newTier),
+                "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
+                startDate
+        );
+
+        subscription.setSubscriptionId((String) mollieSubscription.get("id"));
+        applyTier(subscription, newTier);
+
+        return getSubscriptionDtoForMargin(margin);
+    }
+
+    @Transactional
+    public void cancelSubscription(Margin margin) {
+        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        if (subscription.getSubscriptionId() != null) {
+            mollieClient.cancelSubscription(subscription.getMollieCustomerId(), subscription.getSubscriptionId());
+        }
+        subscription.setStatus(SubscriptionStatus.CANCELLED);
+        subscriptionRepository.save(subscription);
+        log.info("Cancelled subscription {} for margin {}", subscription.getId(), margin.getId());
     }
 
     @Transactional
@@ -95,6 +143,12 @@ public class SubscriptionService {
             log.info("Created Mollie customer {} for margin {}", customerId, margin.getId());
         }
 
+        if (subscription.getPendingPaymentId() != null) {
+            throw new IllegalStateException(
+                    "Subscription %d already has a pending payment %s — reconcile or cancel it first"
+                            .formatted(subscription.getId(), subscription.getPendingPaymentId()));
+        }
+
         Map<String, Object> payment = mollieClient.createFirstPayment(
                 customerId,
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
@@ -107,6 +161,10 @@ public class SubscriptionService {
                         "targetTier", targetTier.name()
                 )
         );
+
+        subscription.setPendingPaymentId((String) payment.get("id"));
+        subscription.setPendingTier(targetTier);
+        subscriptionRepository.save(subscription);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> links = (Map<String, Object>) payment.get("_links");

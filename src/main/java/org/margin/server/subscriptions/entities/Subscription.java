@@ -47,6 +47,13 @@ public class Subscription {
     @Column(name = "mollie_customer_id")
     private String mollieCustomerId;
 
+    @Column(name = "pending_payment_id")
+    private String pendingPaymentId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pending_tier")
+    private SubscriptionTier pendingTier;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

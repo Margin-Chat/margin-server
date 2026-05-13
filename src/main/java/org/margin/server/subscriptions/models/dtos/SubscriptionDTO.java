@@ -11,6 +11,8 @@ public record SubscriptionDTO(
         SubscriptionLimitsDTO limits,
         int currentMembers,
         Instant trialEndsAt,
-        Instant currentPeriodEnd
+        Instant currentPeriodEnd,
+        boolean hasPendingPayment,
+        SubscriptionTier pendingTier
 ) {
 }

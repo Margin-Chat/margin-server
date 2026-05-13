@@ -1,6 +1,7 @@
 package org.margin.server.websocket.models;
 
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
+import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.websocket.models.payloads.*;
 
 public enum WebSocketMessageType {
@@ -40,6 +41,9 @@ public enum WebSocketMessageType {
     // Margin
     MARGIN_INVITE(String.class),
     USER_JOINED_SPACE(String.class),
+
+    // Subscription
+    SUBSCRIPTION_UPDATED(SubscriptionDTO.class),
 
     // Conversation invites
     CONVERSATION_INVITE(ConversationInvitePayload.class),

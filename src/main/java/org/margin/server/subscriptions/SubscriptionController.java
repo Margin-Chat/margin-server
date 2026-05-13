@@ -5,6 +5,7 @@ import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
+import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.CheckoutRequest;
 import org.margin.server.subscriptions.models.dtos.CheckoutResponse;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
@@ -44,7 +45,7 @@ public class SubscriptionController {
     @GetMapping("/margin/{marginId}")
     public ResponseEntity<SubscriptionDTO> getSubscriptionForMargin(@PathVariable Long marginId,
                                                                     @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
+        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
         Margin margin = marginService.getById(marginId);
         return ResponseEntity.ok(subscriptionService.getSubscriptionDtoForMargin(margin));
     }
@@ -61,11 +62,45 @@ public class SubscriptionController {
     @PostMapping("/checkout")
     public ResponseEntity<CheckoutResponse> startCheckout(@RequestBody CheckoutRequest request,
                                                           @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
+        marginAuthorizationService.requireMarginOwner(user.getId(), request.marginId());
         String checkoutUrl = subscriptionService.createCheckout(
                 marginService.getById(request.marginId()), request.tier(), user
         );
         return ResponseEntity.ok(new CheckoutResponse(checkoutUrl));
+    }
+
+    @PostMapping("/margin/{marginId}/tier")
+    public ResponseEntity<SubscriptionDTO> changeTier(@PathVariable Long marginId,
+                                                      @RequestBody Map<String, String> body,
+                                                      @AuthenticationPrincipal User user) {
+        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
+        SubscriptionTier newTier = SubscriptionTier.valueOf(body.get("tier"));
+        SubscriptionDTO dto = subscriptionService.changeTier(marginService.getById(marginId), newTier);
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/margin/{marginId}")
+    public ResponseEntity<Void> cancelSubscription(@PathVariable Long marginId,
+                                                   @AuthenticationPrincipal User user) {
+        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
+        subscriptionService.cancelSubscription(marginService.getById(marginId));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/margin/{marginId}/reconcile")
+    public ResponseEntity<SubscriptionDTO> reconcilePending(@PathVariable Long marginId,
+                                                            @AuthenticationPrincipal User user) {
+        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
+        SubscriptionDTO dto = subscriptionWebhookService.reconcilePendingPayment(marginService.getById(marginId));
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/margin/{marginId}/cancel-pending")
+    public ResponseEntity<SubscriptionDTO> cancelPending(@PathVariable Long marginId,
+                                                         @AuthenticationPrincipal User user) {
+        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
+        SubscriptionDTO dto = subscriptionWebhookService.cancelPendingPayment(marginService.getById(marginId));
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/mollie/webhook")

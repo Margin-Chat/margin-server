@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -52,13 +53,16 @@ public class MollieClient {
                                                   String currency,
                                                   String interval,
                                                   String description,
-                                                  String webhookUrl) {
-        return post("/customers/" + customerId + "/subscriptions", Map.of(
+                                                  String webhookUrl,
+                                                  String startDate) {
+        Map<String, Object> body = new HashMap<>(Map.of(
                 "amount", Map.of("currency", currency, "value", amount),
                 "interval", interval,
                 "description", description,
                 "webhookUrl", webhookUrl
         ));
+        if (startDate != null) body.put("startDate", startDate);
+        return post("/customers/" + customerId + "/subscriptions", body);
     }
 
     public Map<String, Object> getPayment(String paymentId) {

@@ -73,3 +73,8 @@ management:
       access: unrestricted
   server:
     port: 9090
+
+mollie:
+  api-key: test_aA6sD57wnnwdrKSFQWBqBjdH6nsWFg
+  webhook-base-url: https://upset-laws-brush.loca.lt
+  redirect-base-url: http://localhost:4173

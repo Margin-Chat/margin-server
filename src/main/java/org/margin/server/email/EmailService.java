@@ -6,10 +6,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class EmailService {
     private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
 
     @Value("${margin.app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -17,8 +25,12 @@ public class EmailService {
     @Value("${margin.mail.from:noreply@localhost}")
     private String fromAddress;
 
-    public EmailService(JavaMailSender mailSender) {
+    @Value("${margin.mail.logo-url:}")
+    private String logoUrl;
+
+    public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
     }
 
     public void sendEmail(String to, String subject, String htmlBody) throws MessagingException {
@@ -31,17 +43,32 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    public String buildRegistrationMail(String displayName, String activationToken) {
-        String activationUrl = String.format("%s/email-activation/%s", baseUrl, activationToken);
+    public String buildInvoiceMail(String ownerName, String marginName, String tier,
+                                   String amount, String currency,
+                                   String paymentId, Instant nextBillingDate) {
+        String formattedNext = nextBillingDate != null
+                ? DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH).withZone(ZoneOffset.UTC).format(nextBillingDate)
+                : "—";
 
-        return """
-                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-                  <h1 style="font-size:24px;margin-bottom:8px">Welcome to margin, %s!</h1>
-                  <p style="color:#555">Please confirm your email address to activate your account.</p>
-                  <a href="%s" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#000;color:#fff;text-decoration:none;border-radius:6px">Activate account</a>
-                  <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-                  <p style="font-size:12px;color:#aaa">If you didn't create this account, you can ignore this email.</p>
-                </div>
-                """.formatted(displayName, activationUrl);
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("logoUrl", logoUrl.isBlank() ? null : logoUrl);
+        ctx.setVariable("ownerName", ownerName);
+        ctx.setVariable("marginName", marginName);
+        ctx.setVariable("tier", tier);
+        ctx.setVariable("amount", amount);
+        ctx.setVariable("currency", currency);
+        ctx.setVariable("paymentId", paymentId);
+        ctx.setVariable("nextBillingDate", formattedNext);
+
+        return templateEngine.process("email/invoice", ctx);
+    }
+
+    public String buildRegistrationMail(String displayName, String activationToken) {
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("logoUrl", logoUrl.isBlank() ? null : logoUrl);
+        ctx.setVariable("displayName", displayName);
+        ctx.setVariable("activationUrl", baseUrl + "/email-activation/" + activationToken);
+
+        return templateEngine.process("email/registration", ctx);
     }
 }
