@@ -1,7 +1,9 @@
 package org.margin.server.integrationtest.config;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.margin.server.subscriptions.services.MollieClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -11,6 +13,9 @@ import org.springframework.test.context.jdbc.Sql;
 public abstract class MarginTestRunner {
 
     protected static final int WS_PORT = 8081;
+
+    @MockitoBean
+    protected MollieClient mollieClient;
 
     @BeforeEach
     void waitForServer() throws Exception {

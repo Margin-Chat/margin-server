@@ -154,6 +154,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mollie</groupId>
+            <artifactId>mollie</artifactId>
+            <version>1.6.1</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -190,7 +195,7 @@
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
                 <configuration>
-                    <url>jdbc:postgresql://localhost:5433/margindb</url>
+                    <url>jdbc:postgresql://localhost:5433/margin_test</url>
                     <!--suppress UnresolvedMavenProperty -->
                     <user>${flyway.user}</user>
                     <!--suppress UnresolvedMavenProperty -->

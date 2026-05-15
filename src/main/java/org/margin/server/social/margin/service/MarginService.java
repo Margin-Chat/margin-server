@@ -159,6 +159,8 @@ public class MarginService {
             );
         }
 
+        subscriptionValidationService.notifyIfApproachingMemberLimit(margin);
+
         return member;
     }
 
@@ -172,7 +174,7 @@ public class MarginService {
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
-        if (member.getRole() == MarginRole.ADMIN) {
+        if (member.getRole() == MarginRole.ADMIN || member.getRole() == MarginRole.OWNER) {
             validateMemberIsNotTheLastAdmin(member, margin.getMembers());
         }
 
@@ -222,6 +224,12 @@ public class MarginService {
         return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
     }
 
+    @Transactional(readOnly = true)
+    public MarginMember getOwner(Long marginId) {
+        return marginMemberRepository.findByMargin_IdAndRole(marginId, MarginRole.OWNER)
+                .orElseThrow(() -> new IllegalStateException("Margin " + marginId + " has no owner"));
+    }
+
     @Transactional
     public void deleteMargin(Long marginId) {
         Margin margin = getById(marginId);
@@ -252,7 +260,7 @@ public class MarginService {
     private void validateMemberIsNotTheLastAdmin(MarginMember member, List<MarginMember> members) {
         boolean hasOtherAdmin = members.stream()
                 .anyMatch(m -> !m.getUser().getId().equals(member.getUser().getId())
-                        && m.getRole() == MarginRole.ADMIN);
+                        && (m.getRole() == MarginRole.ADMIN || m.getRole() == MarginRole.OWNER));
 
         if (!hasOtherAdmin) {
             throw new RuntimeException("At least one admin required.");

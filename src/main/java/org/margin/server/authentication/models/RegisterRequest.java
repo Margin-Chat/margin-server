@@ -8,7 +8,6 @@ public record RegisterRequest(
         String publicKey,
         String encryptedPrivateKey,
         String salt,
-        String iv,
-        String betaKey
+        String iv
 ) {
 }

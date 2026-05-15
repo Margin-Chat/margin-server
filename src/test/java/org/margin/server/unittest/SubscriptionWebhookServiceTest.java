@@ -1,9 +1,21 @@
 package org.margin.server.unittest;
 
+import com.mollie.mollie.models.components.Amount;
+import com.mollie.mollie.models.components.Metadata;
+import com.mollie.mollie.models.components.PaymentResponse;
+import com.mollie.mollie.models.components.PaymentResponseStatus;
+import com.mollie.mollie.models.components.SequenceTypeResponse;
+import com.mollie.mollie.models.components.SubscriptionResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.email.EmailService;
+import org.margin.server.notifications.NotificationType;
+import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
+import org.margin.server.social.margin.models.MarginRole;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -11,23 +23,34 @@ import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
-import org.margin.server.email.EmailService;
 import org.margin.server.subscriptions.services.MollieClient;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
+import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.openapitools.jackson.nullable.JsonNullable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionWebhookServiceTest {
@@ -38,6 +61,8 @@ class SubscriptionWebhookServiceTest {
     @Mock private EmailService emailService;
     @Mock private ConnectionManager connectionManager;
     @Mock private WebSocketMessageBuilder wsMessageBuilder;
+    @Mock private NotificationService notificationService;
+    @Mock private MarginService marginService;
 
     private SubscriptionWebhookService service;
 
@@ -48,11 +73,13 @@ class SubscriptionWebhookServiceTest {
     @BeforeEach
     void setUp() {
         MollieProperties mollie = new MollieProperties("test_key", "https://api.mollie.com/v2",
-                "https://example.com", "https://example.com");
+                "https://example.com", "https://example.com", "true");
         SubscriptionPricingProperties pricing = new SubscriptionPricingProperties("EUR",
                 Map.of(SubscriptionTier.SMALL, new BigDecimal("9.99")));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
-                subscriptionService, mollie, pricing, emailService, connectionManager, wsMessageBuilder);
+                subscriptionService, mollie, pricing, emailService, connectionManager, wsMessageBuilder,
+                notificationService, marginService, null);
+        ReflectionTestUtils.setField(service, "self", service);
     }
 
     private Subscription localSubscription() {
@@ -79,19 +106,13 @@ class SubscriptionWebhookServiceTest {
     void firstPaymentPaid_createsMollieSubscriptionAndAppliesTier() {
         Subscription subscription = localSubscription();
         subscription.setPendingPaymentId(PAYMENT_ID);
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "paid",
-                "customerId", CUSTOMER_ID,
-                "sequenceType", "first",
-                "metadata", Map.of("targetTier", "SMALL", "marginId", "1")
-        ));
+        PaymentResponse payment = paidFirstPayment();
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-06-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
         when(mollieClient.createSubscription(eq(CUSTOMER_ID), eq("9.99"), eq("EUR"), eq("1 month"),
-                anyString(), anyString(), isNull())).thenReturn(Map.of(
-                "id", SUBSCRIPTION_ID,
-                "nextPaymentDate", "2026-06-06"
-        ));
+                anyString(), anyString(), anyString())).thenReturn(mollieSub);
 
         service.handleWebhook(PAYMENT_ID);
 
@@ -105,12 +126,9 @@ class SubscriptionWebhookServiceTest {
     @Test
     void firstPaymentNotPaid_doesNothing() {
         Subscription subscription = localSubscription();
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "failed",
-                "customerId", CUSTOMER_ID,
-                "sequenceType", "first"
-        ));
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "failed", CUSTOMER_ID, "first");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
 
         service.handleWebhook(PAYMENT_ID);
@@ -122,12 +140,9 @@ class SubscriptionWebhookServiceTest {
 
     @Test
     void firstPaymentForUnknownCustomer_doesNothing() {
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "paid",
-                "customerId", "cst_unknown",
-                "sequenceType", "first"
-        ));
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", "cst_unknown", "first");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId("cst_unknown")).thenReturn(Optional.empty());
 
         service.handleWebhook(PAYMENT_ID);
@@ -139,13 +154,9 @@ class SubscriptionWebhookServiceTest {
     void firstPaymentReceivedTwice_secondCallSkippedIfAlreadyProcessed() {
         Subscription subscription = localSubscription();
         // pendingPaymentId is null → already processed
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "paid",
-                "customerId", CUSTOMER_ID,
-                "sequenceType", "first",
-                "metadata", Map.of("targetTier", "SMALL", "marginId", "1")
-        ));
+        PaymentResponse payment = paidFirstPayment();
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
 
         service.handleWebhook(PAYMENT_ID);
@@ -160,17 +171,12 @@ class SubscriptionWebhookServiceTest {
         Subscription subscription = localSubscription();
         subscription.setSubscriptionId(SUBSCRIPTION_ID);
         subscription.setTier(SubscriptionTier.SMALL);
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "paid",
-                "customerId", CUSTOMER_ID,
-                "sequenceType", "recurring"
-        ));
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "recurring");
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-07-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
-        when(mollieClient.getSubscription(CUSTOMER_ID, SUBSCRIPTION_ID)).thenReturn(Map.of(
-                "id", SUBSCRIPTION_ID,
-                "nextPaymentDate", "2026-07-06"
-        ));
+        when(mollieClient.getSubscription(CUSTOMER_ID, SUBSCRIPTION_ID)).thenReturn(mollieSub);
 
         service.handleWebhook(PAYMENT_ID);
 
@@ -184,16 +190,200 @@ class SubscriptionWebhookServiceTest {
     void firstPaymentMissingMetadata_doesNothing() {
         Subscription subscription = localSubscription();
         subscription.setPendingPaymentId(PAYMENT_ID);
-        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(Map.of(
-                "id", PAYMENT_ID,
-                "status", "paid",
-                "customerId", CUSTOMER_ID,
-                "sequenceType", "first"
-        ));
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "first");
+        when(payment.metadata()).thenReturn(JsonNullable.undefined());
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
 
         service.handleWebhook(PAYMENT_ID);
 
         verify(subscriptionService, never()).applyTier(any(), any());
+    }
+
+    @Test
+    void failedPayment_clearsPendingAndSendsFailureNotification() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "failed", CUSTOMER_ID, "first");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(wsMessageBuilder.buildMessage(any(), any(), any())).thenReturn("{}");
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getPendingPaymentId()).isNull();
+        verify(subscriptionRepository).save(subscription);
+        verify(notificationService).createForUsers(
+                eq(List.of(ownerUserOf(subscription))),
+                isNull(),
+                eq(NotificationType.SUBSCRIPTION_PAYMENT_FAILED),
+                isNull(),
+                eq(subscription.getMargin().getId()));
+        verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
+    }
+
+    @Test
+    void firstPaymentPaid_sendsUpgradeNotificationAndWsPush() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = paidFirstPaymentWithAmount();
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-06-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), anyString()))
+                .thenReturn(mollieSub);
+        when(wsMessageBuilder.buildMessage(any(), any(), any())).thenReturn("{}");
+
+        service.handleWebhook(PAYMENT_ID);
+
+        verify(notificationService).createForUsers(
+                eq(List.of(ownerUserOf(subscription))),
+                isNull(),
+                eq(NotificationType.SUBSCRIPTION_UPGRADED),
+                isNull(),
+                eq(subscription.getMargin().getId()));
+        verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
+    }
+
+    @Test
+    void firstPaymentPaid_sendsInvoiceEmail() throws Exception {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = paidFirstPaymentWithAmount();
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-06-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), anyString()))
+                .thenReturn(mollieSub);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        verify(emailService).buildInvoiceMail(any(), any(), any(), any(), any(), any(), any());
+        verify(emailService).sendEmail(eq(ownerUserOf(subscription).getEmail()), anyString(), any());
+    }
+
+    @Test
+    void recurringPaymentPaid_sendsInvoiceEmail() throws Exception {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setSubscriptionId(SUBSCRIPTION_ID);
+        subscription.setTier(SubscriptionTier.SMALL);
+        subscription.setCurrentPeriodEnd(Instant.parse("2026-06-06T00:00:00Z"));
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "recurring");
+        when(payment.amount()).thenReturn(Amount.builder().value("9.99").currency("EUR").build());
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-07-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.getSubscription(CUSTOMER_ID, SUBSCRIPTION_ID)).thenReturn(mollieSub);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        verify(emailService).buildInvoiceMail(any(), any(), any(), any(), any(), any(), any());
+        verify(emailService).sendEmail(eq(ownerUserOf(subscription).getEmail()), anyString(), any());
+    }
+
+    @Test
+    void firstPaymentPaid_cancelsExistingMollieSubscriptionBeforeCreatingNew() {
+        Subscription subscription = localSubscription();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        subscription.setSubscriptionId(SUBSCRIPTION_ID);
+        PaymentResponse payment = paidFirstPayment();
+        SubscriptionResponse mollieSub = mockSubscriptionResponse("sub_new", "2026-06-06");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.createSubscription(any(), any(), any(), any(), any(), any(), any())).thenReturn(mollieSub);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        verify(mollieClient).cancelSubscription(CUSTOMER_ID, SUBSCRIPTION_ID);
+        assertThat(subscription.getSubscriptionId()).isEqualTo("sub_new");
+    }
+
+    @Test
+    void cancelPendingPayment_clearsIdWhenWebhookNotYetProcessed() {
+        Subscription subscription = localSubscription();
+        Margin margin = subscription.getMargin();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "open", CUSTOMER_ID, "first");
+
+        when(subscriptionRepository.findByMargin(margin)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+
+        service.cancelPendingPayment(margin);
+
+        assertThat(subscription.getPendingPaymentId()).isNull();
+        verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void reconcilePendingPayment_delegatesToHandleWebhook() {
+        Subscription subscription = localSubscription();
+        Margin margin = subscription.getMargin();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "open", CUSTOMER_ID, "first");
+
+        when(subscriptionRepository.findByMargin(margin)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+
+        service.reconcilePendingPayment(margin);
+
+        verify(mollieClient).getPayment(PAYMENT_ID);
+    }
+
+    private Subscription localSubscriptionWithOwner() {
+        User owner = new User();
+        owner.setId(99L);
+        owner.setDisplayName("Owner");
+        owner.setEmail("owner@test.com");
+
+        MarginMember ownerMember = new MarginMember();
+        ownerMember.setUser(owner);
+        ownerMember.setRole(MarginRole.OWNER);
+
+        Subscription subscription = localSubscription();
+        subscription.getMargin().getMembers().add(ownerMember);
+        lenient().when(marginService.getOwner(subscription.getMargin().getId())).thenReturn(ownerMember);
+        return subscription;
+    }
+
+    private static User ownerUserOf(Subscription subscription) {
+        return subscription.getMargin().getMembers().stream()
+                .filter(m -> m.getRole() == MarginRole.OWNER)
+                .findFirst().orElseThrow().getUser();
+    }
+
+    private static PaymentResponse mockPayment(String id, String status, String customerId, String sequenceType) {
+        PaymentResponse payment = mock(PaymentResponse.class);
+        lenient().when(payment.id()).thenReturn(id);
+        lenient().when(payment.status()).thenReturn(PaymentResponseStatus.of(status));
+        lenient().when(payment.customerId()).thenReturn(Optional.of(customerId));
+        lenient().when(payment.sequenceType()).thenReturn(SequenceTypeResponse.of(sequenceType));
+        return payment;
+    }
+
+    private static PaymentResponse paidFirstPayment() {
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "first");
+        lenient().when(payment.metadata()).thenReturn(JsonNullable.of(Metadata.of("SMALL")));
+        return payment;
+    }
+
+    private static PaymentResponse paidFirstPaymentWithAmount() {
+        PaymentResponse payment = paidFirstPayment();
+        lenient().when(payment.amount()).thenReturn(Amount.builder().value("9.99").currency("EUR").build());
+        return payment;
+    }
+
+    private static SubscriptionResponse mockSubscriptionResponse(String id, String nextPaymentDate) {
+        SubscriptionResponse sub = mock(SubscriptionResponse.class);
+        lenient().when(sub.id()).thenReturn(id);
+        lenient().when(sub.nextPaymentDate()).thenReturn(JsonNullable.of(nextPaymentDate));
+        return sub;
     }
 }

@@ -7,6 +7,7 @@ public record MollieProperties(
         String apiKey,
         String apiBaseUrl,
         String webhookBaseUrl,
-        String redirectBaseUrl
+        String redirectBaseUrl,
+        String testmode
 ) {
 }

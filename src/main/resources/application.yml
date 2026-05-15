@@ -75,6 +75,7 @@ mollie:
   api-base-url: https://api.mollie.com/v2
   webhook-base-url: ${MOLLIE_WEBHOOK_BASE_URL:http://localhost:8080}
   redirect-base-url: ${MOLLIE_REDIRECT_BASE_URL:http://localhost:5173}
+  testmode: false
 
 subscriptions:
   currency: EUR

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -110,11 +111,13 @@ public class SubscriptionController {
             log.warn("Mollie webhook missing id: {}", form);
             return ResponseEntity.ok().build();
         }
-        try {
-            subscriptionWebhookService.handleWebhook(paymentId);
-        } catch (Exception e) {
-            log.error("Failed to process Mollie webhook for payment {}", paymentId, e);
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                subscriptionWebhookService.handleWebhook(paymentId);
+            } catch (Exception e) {
+                log.error("Failed to process Mollie webhook for payment {}", paymentId, e);
+            }
+        });
         return ResponseEntity.ok().build();
     }
 }

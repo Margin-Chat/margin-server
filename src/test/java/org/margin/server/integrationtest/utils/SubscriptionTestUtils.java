@@ -5,6 +5,7 @@ import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
+import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,19 @@ public class SubscriptionTestUtils {
         limits.setMaxMembers(maxMembers);
         limits.setMaxStorageGb(maxStorageGb);
         limits.setMaxCallParticipants(maxCallParticipants);
+        subscriptionRepository.save(subscription);
+    }
+
+    public static void setMollieCustomerId(Margin margin, String customerId) {
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        subscription.setMollieCustomerId(customerId);
+        subscriptionRepository.save(subscription);
+    }
+
+    public static void setPendingPayment(Margin margin, String paymentId, SubscriptionTier tier) {
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        subscription.setPendingPaymentId(paymentId);
+        subscription.setPendingTier(tier);
         subscriptionRepository.save(subscription);
     }
 }

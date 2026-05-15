@@ -1,5 +1,6 @@
 package org.margin.server.exceptions;
 
+import com.mollie.mollie.models.errors.APIException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
@@ -80,6 +81,13 @@ public class GlobalExceptionHandler {
         detail.setDetail(ex.getMessage());
         detail.setProperty("tier", ex.getTier());
         detail.setProperty("limit", ex.getLimit());
+        return detail;
+    }
+
+    @ExceptionHandler(APIException.class)
+    public ProblemDetail handleAPIException(APIException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        detail.setDetail(ex.getMessage());
         return detail;
     }
 }

@@ -1,5 +1,9 @@
 package org.margin.server.subscriptions.services;
 
+import com.mollie.mollie.models.components.CustomerResponse;
+import com.mollie.mollie.models.components.PaymentResponse;
+import com.mollie.mollie.models.components.SubscriptionResponse;
+import com.mollie.mollie.models.components.Url;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
@@ -11,6 +15,7 @@ import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
+import org.margin.server.subscriptions.utils.SubscriptionUtils;
 import org.margin.server.users.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.ZoneOffset;
-import java.util.Map;
 
 @Service
 public class SubscriptionService {
@@ -64,7 +67,7 @@ public class SubscriptionService {
                         limits.getMaxStorageGb(),
                         limits.getMaxCallParticipants()
                 ),
-                margin.getMembers().size(),
+                subscription.getMargin().getMembers().size(),
                 subscription.getTrialEndsAt(),
                 subscription.getCurrentPeriodEnd(),
                 subscription.getPendingPaymentId() != null,
@@ -86,10 +89,10 @@ public class SubscriptionService {
 
         BigDecimal price = subscriptionPricingProperties.prices().get(newTier);
         String startDate = subscription.getCurrentPeriodEnd() != null
-                ? subscription.getCurrentPeriodEnd().atZone(ZoneOffset.UTC).toLocalDate().toString()
+                ? SubscriptionUtils.getNextSubscriptionDate(subscription).toString()
                 : null;
 
-        Map<String, Object> mollieSubscription = mollieClient.createSubscription(
+        SubscriptionResponse mollieSubscription = mollieClient.createSubscription(
                 subscription.getMollieCustomerId(),
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
@@ -99,7 +102,7 @@ public class SubscriptionService {
                 startDate
         );
 
-        subscription.setSubscriptionId((String) mollieSubscription.get("id"));
+        subscription.setSubscriptionId(mollieSubscription.id());
         applyTier(subscription, newTier);
 
         return getSubscriptionDtoForMargin(margin);
@@ -136,8 +139,8 @@ public class SubscriptionService {
 
         String customerId = subscription.getMollieCustomerId();
         if (customerId == null) {
-            Map<String, Object> customer = mollieClient.createCustomer(margin.getName(), user.getEmail());
-            customerId = (String) customer.get("id");
+            CustomerResponse customer = mollieClient.createCustomer(margin.getName(), user.getEmail());
+            customerId = customer.id();
             subscription.setMollieCustomerId(customerId);
             subscriptionRepository.save(subscription);
             log.info("Created Mollie customer {} for margin {}", customerId, margin.getId());
@@ -149,27 +152,21 @@ public class SubscriptionService {
                             .formatted(subscription.getId(), subscription.getPendingPaymentId()));
         }
 
-        Map<String, Object> payment = mollieClient.createFirstPayment(
+        PaymentResponse payment = mollieClient.createFirstPayment(
                 customerId,
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
                 "margin %s — %s plan".formatted(margin.getName(), targetTier),
                 "%s/payment-return?marginId=%d".formatted(mollieProperties.redirectBaseUrl(), margin.getId()),
                 "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
-                Map.of(
-                        "marginId", String.valueOf(margin.getId()),
-                        "targetTier", targetTier.name()
-                )
+                targetTier.name()
         );
 
-        subscription.setPendingPaymentId((String) payment.get("id"));
+        subscription.setPendingPaymentId(payment.id());
         subscription.setPendingTier(targetTier);
         subscriptionRepository.save(subscription);
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> links = (Map<String, Object>) payment.get("_links");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> checkout = (Map<String, Object>) links.get("checkout");
-        return (String) checkout.get("href");
+        Url checkout = payment.links().checkout().orElseThrow();
+        return checkout.href();
     }
 }
