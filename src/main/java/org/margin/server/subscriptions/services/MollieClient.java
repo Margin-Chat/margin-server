@@ -127,18 +127,18 @@ public class MollieClient {
     }
 
     public SubscriptionResponse getSubscription(String customerId, String subscriptionId) {
-        GetSubscriptionResponse res = mollieClient.subscriptions().get()
+        GetSubscriptionResponse response = mollieClient.subscriptions().get()
                 .customerId(customerId)
                 .subscriptionId(subscriptionId)
                 .call();
 
-        if (res.subscriptionResponse().isPresent()) {
-            log.info("Get subscription response: {}", res.subscriptionResponse().get().status());
+        if (response.subscriptionResponse().isPresent()) {
+            log.info("Get subscription response: {}", response.subscriptionResponse().get().status());
         } else {
             throw new IllegalStateException("Subscription response is null");
         }
 
-        return res.subscriptionResponse().get();
+        return response.subscriptionResponse().get();
     }
 
     public void cancelSubscription(String customerId, String subscriptionId) {

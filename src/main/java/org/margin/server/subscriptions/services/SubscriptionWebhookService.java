@@ -87,6 +87,7 @@ public class SubscriptionWebhookService {
         if (stale.isEmpty()) return;
 
         log.info("Reconciling {} stale pending payments", stale.size());
+
         for (Subscription subscription : stale) {
             try {
                 self.reconcilePendingPayment(subscription.getMargin());
@@ -144,16 +145,16 @@ public class SubscriptionWebhookService {
             return;
         }
 
+        if ("failed".equals(status) || "expired".equals(status) || "canceled".equals(status)) {
+            subscription.setPendingPaymentId(null);
+            subscription.setPendingTier(null);
+            subscriptionRepository.save(subscription);
+            notifyOwner(subscription, NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
+            pushSubscriptionUpdate(subscription);
+
+            log.info("Payment failed for subscription {}", subscription.getId());
+        }
         if (!"paid".equals(status)) {
-            log.info("Payment {} status={}, no action", paymentId, status);
-            if ("failed".equals(status) || "expired".equals(status) || "canceled".equals(status)) {
-                subscription.setPendingPaymentId(null);
-                subscription.setPendingTier(null);
-                subscriptionRepository.save(subscription);
-                notifyOwner(subscription, NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
-                pushSubscriptionUpdate(subscription);
-                log.info("Payment failed for subscription {}", subscription.getId());
-            }
             return;
         }
 

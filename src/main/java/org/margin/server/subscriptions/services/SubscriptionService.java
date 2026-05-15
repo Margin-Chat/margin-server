@@ -162,6 +162,8 @@ public class SubscriptionService {
                 targetTier.name()
         );
 
+        log.info("Created payment for subscription {} for margin {}", subscription.getId(), margin.getName());
+        
         subscription.setPendingPaymentId(payment.id());
         subscription.setPendingTier(targetTier);
         subscriptionRepository.save(subscription);
