@@ -73,3 +73,8 @@ management:
       access: unrestricted
   server:
     port: 9090
+
+mollie:
+  api-key: ${MOLLIE_API_KEY}
+  redirect-base-url: http://localhost:4173
+  testmode: true

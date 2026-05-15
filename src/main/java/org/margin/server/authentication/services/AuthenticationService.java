@@ -3,11 +3,9 @@ package org.margin.server.authentication.services;
 import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.ActivationKey;
-import org.margin.server.authentication.entities.BetaKey;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.authentication.repositories.BetaKeyRepository;
-import org.margin.server.email.services.EmailService;
+import org.margin.server.email.EmailService;
 import org.margin.server.storage.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -36,7 +34,6 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final StorageService storageService;
     private final ConnectionManager connectionManager;
-    private final BetaKeyRepository betaKeyRepository;
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
 
@@ -46,14 +43,15 @@ public class AuthenticationService {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             StorageService storageService,
-            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository, ActivationKeyService activationKeyService, EmailService emailService) {
+            ConnectionManager connectionManager,
+            ActivationKeyService activationKeyService,
+            EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.storageService = storageService;
         this.connectionManager = connectionManager;
-        this.betaKeyRepository = betaKeyRepository;
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
     }
@@ -111,15 +109,7 @@ public class AuthenticationService {
                                       String publicKey,
                                       String salt,
                                       String iv,
-                                      String betaKey,
                                       MultipartFile profilePicture) {
-        BetaKey key = betaKeyRepository.findByKey(betaKey)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid beta key"));
-
-        if (key.isUsed()) {
-            throw new IllegalArgumentException("This beta key has already been used");
-        }
-
         if (userRepository.findByEmail(email.toLowerCase()).isPresent()) {
             throw new IllegalArgumentException("Email already in use");
         }
@@ -154,11 +144,7 @@ public class AuthenticationService {
         security.setFailedLoginAttempts(0);
         user.setSecurity(security);
 
-        User savedUser = userRepository.save(user);
-
-        key.setUsedBy(savedUser);
-        key.setUsedAt(Instant.now());
-        betaKeyRepository.save(key);
+        userRepository.save(user);
 
         ActivationKey activationKey = activationKeyService.generateActivationKey(user);
         String registrationContent = emailService.buildRegistrationMail(user.getDisplayName(), activationKey.getToken());

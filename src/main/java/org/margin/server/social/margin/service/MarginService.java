@@ -16,6 +16,9 @@ import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
+import org.margin.server.subscriptions.models.SubscriptionTier;
+import org.margin.server.subscriptions.services.SubscriptionService;
+import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -41,6 +44,8 @@ public class MarginService {
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
     private final NotificationService notificationService;
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionValidationService subscriptionValidationService;
 
     public MarginService(MarginRepository marginRepository,
                          StorageService storageService,
@@ -48,7 +53,7 @@ public class MarginService {
                          UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
-                         NotificationService notificationService) {
+                         NotificationService notificationService, SubscriptionService subscriptionService, SubscriptionValidationService subscriptionValidationService) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
@@ -56,6 +61,8 @@ public class MarginService {
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
         this.notificationService = notificationService;
+        this.subscriptionService = subscriptionService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +95,9 @@ public class MarginService {
         margin.setIconUrl(iconUrl);
         margin = marginRepository.save(margin);
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.ADMIN, user, true);
+        subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
+
+        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
 
         spacesService.createNewSpace(
                 new CreateSpaceDTO(
@@ -125,6 +134,8 @@ public class MarginService {
         Margin margin = getById(marginId);
         User user = userService.getById(userId);
 
+        subscriptionValidationService.validateAddMarginMember(margin);
+
         MarginMember member = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(userId))
                 .findFirst()
@@ -148,6 +159,8 @@ public class MarginService {
             );
         }
 
+        subscriptionValidationService.notifyIfApproachingMemberLimit(margin);
+
         return member;
     }
 
@@ -161,7 +174,7 @@ public class MarginService {
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
-        if (member.getRole() == MarginRole.ADMIN) {
+        if (member.getRole() == MarginRole.ADMIN || member.getRole() == MarginRole.OWNER) {
             validateMemberIsNotTheLastAdmin(member, margin.getMembers());
         }
 
@@ -211,6 +224,12 @@ public class MarginService {
         return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
     }
 
+    @Transactional(readOnly = true)
+    public MarginMember getOwner(Long marginId) {
+        return marginMemberRepository.findByMargin_IdAndRole(marginId, MarginRole.OWNER)
+                .orElseThrow(() -> new IllegalStateException("Margin " + marginId + " has no owner"));
+    }
+
     @Transactional
     public void deleteMargin(Long marginId) {
         Margin margin = getById(marginId);
@@ -241,7 +260,7 @@ public class MarginService {
     private void validateMemberIsNotTheLastAdmin(MarginMember member, List<MarginMember> members) {
         boolean hasOtherAdmin = members.stream()
                 .anyMatch(m -> !m.getUser().getId().equals(member.getUser().getId())
-                        && m.getRole() == MarginRole.ADMIN);
+                        && (m.getRole() == MarginRole.ADMIN || m.getRole() == MarginRole.OWNER));
 
         if (!hasOtherAdmin) {
             throw new RuntimeException("At least one admin required.");

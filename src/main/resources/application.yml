@@ -70,6 +70,19 @@ sfu:
   token-secret: ${SFU_SECRET:dev-secret-sfu-key-not-for-production-use-only}
   token-expiration: 3600000
 
+mollie:
+  api-key: ${MOLLIE_API_KEY}
+  api-base-url: https://api.mollie.com/v2
+  webhook-base-url: ${MOLLIE_WEBHOOK_BASE_URL:http://localhost:8080}
+  redirect-base-url: ${MOLLIE_REDIRECT_BASE_URL:http://localhost:4173}
+  testmode: false
+
+subscriptions:
+  currency: EUR
+  prices:
+    SMALL: 9.99
+    MEDIUM: 29.99
+
 management:
   endpoints:
     web:

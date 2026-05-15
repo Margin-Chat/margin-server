@@ -1,6 +1,7 @@
 package org.margin.server.social.margin.repositories;
 
 import org.margin.server.social.margin.entities.MarginMember;
+import org.margin.server.social.margin.models.MarginRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -8,6 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MarginMemberRepository extends JpaRepository<MarginMember, Long> {
+
+    Optional<MarginMember> findByMargin_IdAndRole(Long marginId, MarginRole role);
+
     @Query("""
             SELECT mm
             FROM MarginMember mm

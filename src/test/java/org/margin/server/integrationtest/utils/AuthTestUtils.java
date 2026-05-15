@@ -43,8 +43,7 @@ public class AuthTestUtils {
     public static ActivationKey register(String handle, String email, String password, String betaKey) {
         return authenticationService.registerUser(
                 handle, handle, email, password,
-                "enc-private-key", "public-key", "salt", "iv",
-                betaKey, null);
+                "enc-private-key", "public-key", "salt", "iv", null);
     }
 
     public static void registerAndActivate(String handle, String email, String password, String betaKey) {

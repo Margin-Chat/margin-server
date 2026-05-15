@@ -12,6 +12,8 @@ import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.StorageService;
+import org.margin.server.subscriptions.services.SubscriptionService;
+import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
@@ -50,6 +52,10 @@ class MarginServiceTest {
     private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private SubscriptionService subscriptionService;
+    @Mock
+    private SubscriptionValidationService subscriptionValidationService;
 
     @InjectMocks
     private MarginService marginService;

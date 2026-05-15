@@ -28,7 +28,7 @@ public class NotificationService {
     public void createForUsers(List<User> members, User sender, NotificationType type,
                                Long referenceId, Long marginId) {
         List<Notification> notifications = members.stream()
-                .filter(member -> !member.getId().equals(sender.getId()))
+                .filter(member -> sender == null || !member.getId().equals(sender.getId()))
                 .map(member -> {
                     Notification n = new Notification();
                     n.setRecipient(member);

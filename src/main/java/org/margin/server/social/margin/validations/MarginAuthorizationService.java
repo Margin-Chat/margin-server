@@ -45,6 +45,17 @@ public class MarginAuthorizationService {
         }
     }
 
+    public void requireMarginOwner(Long userId, Long marginId) {
+        MarginMember member = marginService.findMember(userId, marginId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Margin owner role required"));
+
+        if (!member.getRole().equals(MarginRole.OWNER)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Margin owner role required");
+        }
+    }
+
     public void requireSpaceAdmin(Long userId, Long spaceId) {
         SpaceMember spaceMember = spaceMemberRepository
                 .findByUser_IdAndSpace_Id(userId, spaceId)
