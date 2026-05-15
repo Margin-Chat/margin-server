@@ -152,6 +152,7 @@ public class SubscriptionWebhookService {
                 subscriptionRepository.save(subscription);
                 notifyOwner(subscription, NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
                 pushSubscriptionUpdate(subscription);
+                log.info("Payment failed for subscription {}", subscription.getId());
             }
             return;
         }
