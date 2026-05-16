@@ -11,6 +11,7 @@ public record UserDTO(
         String email,
         String profilePictureUrl,
         Instant createdAt,
+        Instant lastSeenAt,
         boolean isOnline
 ) {
     public UserDTO(User user, boolean online) {
@@ -21,6 +22,7 @@ public record UserDTO(
                 user.getEmail(),
                 user.getProfilePictureUrl(),
                 user.getCreatedAt(),
+                user.getLastSeenAt(),
                 online
         );
     }

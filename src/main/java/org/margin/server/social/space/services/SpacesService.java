@@ -117,15 +117,7 @@ public class SpacesService {
         User memberUser = spaceMember.getUser();
 
         return new SpaceMemberDTO(
-                new UserDTO(
-                        memberUser.getId(),
-                        memberUser.getHandle(),
-                        memberUser.getDisplayName(),
-                        memberUser.getEmail(),
-                        memberUser.getProfilePictureUrl(),
-                        memberUser.getCreatedAt(),
-                        connectionManager.isUserOnline(memberUser.getId())
-                ),
+                new UserDTO(memberUser, connectionManager.isUserOnline(memberUser.getId())),
                 spaceMember.getSpace().getId(),
                 spaceMember.getRole(),
                 spaceMember.getJoinedAt()
@@ -162,15 +154,7 @@ public class SpacesService {
         User user = saved.getUser();
 
         return new SpaceMemberDTO(
-                new UserDTO(
-                        user.getId(),
-                        user.getHandle(),
-                        user.getDisplayName(),
-                        user.getEmail(),
-                        user.getProfilePictureUrl(),
-                        user.getCreatedAt(),
-                        connectionManager.isUserOnline(user.getId())
-                ),
+                new UserDTO(user, connectionManager.isUserOnline(user.getId())),
                 saved.getSpace().getId(),
                 saved.getRole(),
                 saved.getJoinedAt()

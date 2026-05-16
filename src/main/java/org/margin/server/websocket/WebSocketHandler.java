@@ -152,6 +152,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             boolean lastSession = connectionManager.removeConnection(user, ctx.channel());
             if (lastSession) {
                 presenceService.userDisconnected(user);
+                dbExecutor.execute(() -> presenceService.stampLastSeen(user.getId()));
             }
         }
     }

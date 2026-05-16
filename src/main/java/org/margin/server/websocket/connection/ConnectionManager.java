@@ -59,10 +59,10 @@ public class ConnectionManager {
     }
 
     public void closeAllSessions(Long userId) {
-        Set<ClientConnection> sessions = connections.remove(userId);
-        if (sessions != null) {
-            sessions.forEach(ClientConnection::close);
-        }
+        Set<ClientConnection> sessions = connections.get(userId);
+        if (sessions == null) return;
+        new HashSet<>(sessions).forEach(ClientConnection::close);
+        log.info("Closing {} session(s) for user {}", sessions.size(), userId);
     }
 
     public void clearAll() {

@@ -65,6 +65,9 @@ public class User implements UserDetails {
 
     private Instant deletedAt;
 
+    @Column(name = "last_seen_at")
+    private Instant lastSeenAt;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();

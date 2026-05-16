@@ -45,6 +45,7 @@ class WebSocketDeliveryServiceTest {
                 "jdoe@example.com",
                 "https://cdn.margin.org/pfp/1.png",
                 Instant.now(),
+                null,
                 true
         );
     }
