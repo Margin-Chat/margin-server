@@ -128,7 +128,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        dbExecutor.execute(() -> processor.process(user, (WebSocketMessageIn<Object>) message));
+        try {
+            processor.process(user, (WebSocketMessageIn<Object>) message);
+        } catch (Exception t) {
+            log.error("Processor {} failed for user {}", message.getType(), user.getId(), t);
+        }
     }
 
     @Override

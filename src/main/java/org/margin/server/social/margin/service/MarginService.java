@@ -3,6 +3,7 @@ package org.margin.server.social.margin.service;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class MarginService {
+public class MarginService implements MarginLookup {
 
     private final MarginRepository marginRepository;
     private final StorageService storageService;
@@ -53,7 +54,9 @@ public class MarginService {
                          UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
-                         NotificationService notificationService, SubscriptionService subscriptionService, SubscriptionValidationService subscriptionValidationService) {
+                         NotificationService notificationService,
+                         SubscriptionService subscriptionService,
+                         SubscriptionValidationService subscriptionValidationService) {
         this.marginRepository = marginRepository;
         this.storageService = storageService;
         this.marginMemberRepository = marginMemberRepository;
@@ -65,10 +68,18 @@ public class MarginService {
         this.subscriptionValidationService = subscriptionValidationService;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Margin getById(Long marginId) {
         return marginRepository.findById(marginId)
                 .orElseThrow(() -> new MarginNotFoundException(marginId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Margin findByIconFileName(String fileName) {
+        return marginRepository.findFirstByIconUrlEndsWith("/margin-icons/" + fileName)
+                .orElseThrow(() -> new MarginNotFoundException(fileName));
     }
 
     @Transactional

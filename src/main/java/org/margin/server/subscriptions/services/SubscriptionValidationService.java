@@ -7,10 +7,10 @@ import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
+import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
-import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -20,17 +20,22 @@ import java.util.Collections;
 public class SubscriptionValidationService {
     private static final double WARNING_THRESHOLD = 0.9;
 
-    private final SubscriptionRepository subscriptionRepository;
-    private final NotificationService notificationService;
+    private static final long BYTES_PER_GB = 1024L * 1024 * 1024;
 
-    public SubscriptionValidationService(SubscriptionRepository subscriptionRepository,
-                                         NotificationService notificationService) {
-        this.subscriptionRepository = subscriptionRepository;
+    private final SubscriptionService subscriptionService;
+    private final NotificationService notificationService;
+    private final StoredFileRepository storedFileRepository;
+
+    public SubscriptionValidationService(SubscriptionService subscriptionService,
+                                         NotificationService notificationService,
+                                         StoredFileRepository storedFileRepository) {
+        this.subscriptionService = subscriptionService;
         this.notificationService = notificationService;
+        this.storedFileRepository = storedFileRepository;
     }
 
     public Subscription getSubscriptionForMargin(Margin margin) {
-        return subscriptionRepository.findByMargin(margin).orElseThrow();
+        return subscriptionService.getByMargin(margin);
     }
 
     public void validateAddMarginMember(Margin margin) {
@@ -74,6 +79,19 @@ public class SubscriptionValidationService {
     public int getMaxCallParticipants(Channel channel) {
         Margin margin = channel.getSpace().getMargin();
         return getSubscriptionForMargin(margin).getLimits().getMaxCallParticipants();
+    }
+
+    public void validateStorageQuota(Margin margin, long newFileBytes) {
+        Subscription subscription = getSubscriptionForMargin(margin);
+        long maxBytes = subscription.getLimits().getMaxStorageGb() * BYTES_PER_GB;
+        long usedBytes = storedFileRepository.sumSizeBytesByMargin(margin.getId());
+        if (usedBytes + newFileBytes > maxBytes) {
+            throw new SubscriptionLimitExceededException(
+                    "Storage quota exceeded",
+                    subscription.getTier(),
+                    LimitType.STORAGE
+            );
+        }
     }
 
     public int validateChannelVoiceJoin(Channel channel, int currentParticipants) {

@@ -5,10 +5,6 @@ margin:
     from: ${MAIL_FROM:noreply@margin.chat}
   cors:
     allowed-origins: https://margin.chat,app://
-  rate-limit:
-    conversation-image-upload:
-      capacity: 20
-      refill-period: PT1H
 
 spring:
   application:
@@ -18,15 +14,15 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     hikari:
-      maximum-pool-size: 50
+      maximum-pool-size: 200
       minimum-idle: 10
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 50MB
+      max-request-size: 50MB
   threads:
     virtual:
       enabled: true
@@ -59,6 +55,8 @@ storage:
     bucket-name: margin
     access-key: ${S3_ACCESS_KEY}
     secret-key: ${S3_SECRET_KEY}
+    base-url: ${APP_BASE_URL}/api/files
+    presign-ttl-seconds: 600
   local:
     upload-dir: /var/margin/uploads/profile-pictures
     base-url: ${APP_BASE_URL}/api/files

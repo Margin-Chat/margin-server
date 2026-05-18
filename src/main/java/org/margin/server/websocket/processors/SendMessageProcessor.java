@@ -35,6 +35,6 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<SendMessa
     public void process(User user, WebSocketMessageIn<SendMessagePayload> message) {
         Conversation conversation = conversationService.getById(message.getRecipientId());
         conversationValidationService.validateUserIsInConversation(user, conversation);
-        messageService.sendMessage(user, message.getPayload().content(), conversation, message.getPayload().imageAddress());
+        messageService.sendMessage(user, message.getPayload().content(), conversation, message.getPayload().attachmentIds());
     }
 }

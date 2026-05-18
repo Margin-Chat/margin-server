@@ -1,4 +1,6 @@
 package org.margin.server.websocket.models.payloads;
 
-public record SendMessagePayload(String content, String imageAddress) {
+import java.util.List;
+
+public record SendMessagePayload(String content, List<Long> attachmentIds) {
 }

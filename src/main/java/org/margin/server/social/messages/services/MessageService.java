@@ -9,6 +9,8 @@ import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
+import org.margin.server.storage.StorageLookup;
+import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class MessageService {
     private final MessageRepository messageRepository;
     private final MessageReactionRepository messageReactionRepository;
+    private final StorageLookup storageLookup;
     private final ConversationService conversationService;
     private final ConnectionManager connectionManager;
     private final WebSocketDeliveryService webSocketDeliveryService;
@@ -34,6 +37,7 @@ public class MessageService {
 
     public MessageService(MessageRepository messageRepository,
                           MessageReactionRepository messageReactionRepository,
+                          StorageLookup storageLookup,
                           ConversationService conversationService,
                           ConnectionManager connectionManager,
                           WebSocketDeliveryService webSocketDeliveryService,
@@ -41,6 +45,7 @@ public class MessageService {
                           MessageValidationService messageValidationService) {
         this.messageRepository = messageRepository;
         this.messageReactionRepository = messageReactionRepository;
+        this.storageLookup = storageLookup;
         this.conversationService = conversationService;
         this.connectionManager = connectionManager;
         this.webSocketDeliveryService = webSocketDeliveryService;
@@ -48,15 +53,15 @@ public class MessageService {
         this.messageValidationService = messageValidationService;
     }
 
-    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content, String imageAddress) {
-        Message message = messageActions.createMessage(fromUser, conversation, content, imageAddress);
+    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content, List<Long> attachmentIds) {
+        Message message = messageActions.createMessage(fromUser, conversation, content, attachmentIds);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
         return new MessageResult(
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
                         .withChannelName(conversation.getChannel() == null ? null : conversation.getChannel().getName())
-                        .withImageAddress(message.getImageAddress())
+                        .withAttachments(attachmentsFor(message.getId()))
                         .build(),
                 recipients);
     }
@@ -68,6 +73,7 @@ public class MessageService {
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
+                        .withAttachments(attachmentsFor(message.getId()))
                         .build(),
                 recipients);
     }
@@ -86,9 +92,9 @@ public class MessageService {
         return new MessageResult(messageDTO, recipients);
     }
 
-    public void sendMessage(User fromUser, String content, Conversation conversation, String imageAddress) {
+    public void sendMessage(User fromUser, String content, Conversation conversation, List<Long> attachmentIds) {
         messageValidationService.validateConversationIsNotPending(fromUser, conversation);
-        MessageResult result = createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = createMessageForUsers(fromUser, conversation, content, attachmentIds);
         webSocketDeliveryService.notifyMessage(
                 result.message(),
                 result.recipients(),
@@ -104,6 +110,7 @@ public class MessageService {
 
         List<Long> messageIds = messages.stream().map(Message::getId).toList();
         Map<Long, List<MessageReactionDTO>> reactionsByMessageId = loadReactionsForMessages(messageIds, conversation.getId());
+        Map<Long, List<StoredFileDTO>> attachmentsByMessageId = loadAttachmentsForMessages(messageIds);
 
         return messages.stream()
                 .map(msg ->
@@ -111,7 +118,7 @@ public class MessageService {
                                 .withOnline(connectionManager.isUserOnline(msg.getFromUser().getId()))
                                 .withMarginId(getMarginId(conversation))
                                 .withReactions(reactionsByMessageId.getOrDefault(msg.getId(), List.of()))
-                                .withImageAddress(msg.getImageAddress())
+                                .withAttachments(attachmentsByMessageId.getOrDefault(msg.getId(), List.of()))
                                 .build())
                 .collect(Collectors.collectingAndThen(Collectors.toList(), l -> {
                     java.util.Collections.reverse(l);
@@ -142,6 +149,15 @@ public class MessageService {
                         r -> r.getMessage().getId(),
                         Collectors.mapping(r -> MessageReactionDTO.from(r, conversationId), Collectors.toList())
                 ));
+    }
+
+    private Map<Long, List<StoredFileDTO>> loadAttachmentsForMessages(List<Long> messageIds) {
+        if (messageIds.isEmpty()) return Map.of();
+        return storageLookup.findAttachmentsByMessageIds(messageIds);
+    }
+
+    private List<StoredFileDTO> attachmentsFor(Long messageId) {
+        return loadAttachmentsForMessages(List.of(messageId)).getOrDefault(messageId, List.of());
     }
 
     public Message getById(Long messageId) {

@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.exceptions.CallValidationException;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
+import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
+import org.margin.server.subscriptions.exceptions.SubscriptionNotFoundException;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -39,6 +41,21 @@ public class GlobalExceptionHandler {
         detail.setDetail(ex.getMessage());
         return detail;
     }
+
+    @ExceptionHandler(StoredFileNotFoundException.class)
+    public ProblemDetail handleStoredFileNotFound(StoredFileNotFoundException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(SubscriptionNotFoundException.class)
+    public ProblemDetail handleSubscriptionNotFound(SubscriptionNotFoundException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ProblemDetail handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MarginRepository extends JpaRepository<Margin, Long> {
@@ -15,4 +16,6 @@ public interface MarginRepository extends JpaRepository<Margin, Long> {
     List<Margin> findByName(String name);
 
     List<Margin> findMarginByMembersIn(Collection<List<MarginMember>> members);
+
+    Optional<Margin> findFirstByIconUrlEndsWith(String suffix);
 }

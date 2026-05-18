@@ -1,11 +1,6 @@
 package org.margin.server.unittest;
 
-import com.mollie.mollie.models.components.Amount;
-import com.mollie.mollie.models.components.Metadata;
-import com.mollie.mollie.models.components.PaymentResponse;
-import com.mollie.mollie.models.components.PaymentResponseStatus;
-import com.mollie.mollie.models.components.SequenceTypeResponse;
-import com.mollie.mollie.models.components.SubscriptionResponse;
+import com.mollie.mollie.models.components.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,27 +37,28 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionWebhookServiceTest {
 
-    @Mock private MollieClient mollieClient;
-    @Mock private SubscriptionRepository subscriptionRepository;
-    @Mock private SubscriptionService subscriptionService;
-    @Mock private EmailService emailService;
-    @Mock private ConnectionManager connectionManager;
-    @Mock private WebSocketMessageBuilder wsMessageBuilder;
-    @Mock private NotificationService notificationService;
-    @Mock private MarginService marginService;
+    @Mock
+    private MollieClient mollieClient;
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+    @Mock
+    private SubscriptionService subscriptionService;
+    @Mock
+    private EmailService emailService;
+    @Mock
+    private ConnectionManager connectionManager;
+    @Mock
+    private WebSocketMessageBuilder wsMessageBuilder;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private MarginService marginService;
 
     private SubscriptionWebhookService service;
 
@@ -104,7 +100,7 @@ class SubscriptionWebhookServiceTest {
 
     @Test
     void firstPaymentPaid_createsMollieSubscriptionAndAppliesTier() {
-        Subscription subscription = localSubscription();
+        Subscription subscription = localSubscriptionWithOwner();
         subscription.setPendingPaymentId(PAYMENT_ID);
         PaymentResponse payment = paidFirstPayment();
         SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-06-06");
@@ -168,7 +164,7 @@ class SubscriptionWebhookServiceTest {
 
     @Test
     void recurringPaymentPaid_extendsPeriod() {
-        Subscription subscription = localSubscription();
+        Subscription subscription = localSubscriptionWithOwner();
         subscription.setSubscriptionId(SUBSCRIPTION_ID);
         subscription.setTier(SubscriptionTier.SMALL);
         PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "recurring");
@@ -288,7 +284,7 @@ class SubscriptionWebhookServiceTest {
 
     @Test
     void firstPaymentPaid_cancelsExistingMollieSubscriptionBeforeCreatingNew() {
-        Subscription subscription = localSubscription();
+        Subscription subscription = localSubscriptionWithOwner();
         subscription.setPendingPaymentId(PAYMENT_ID);
         subscription.setSubscriptionId(SUBSCRIPTION_ID);
         PaymentResponse payment = paidFirstPayment();

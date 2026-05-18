@@ -46,7 +46,7 @@ public class SubscriptionController {
     @GetMapping("/margin/{marginId}")
     public ResponseEntity<SubscriptionDTO> getSubscriptionForMargin(@PathVariable Long marginId,
                                                                     @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
+        marginAuthorizationService.requireMarginMember(user.getId(), marginId);
         Margin margin = marginService.getById(marginId);
         return ResponseEntity.ok(subscriptionService.getSubscriptionDtoForMargin(margin));
     }
