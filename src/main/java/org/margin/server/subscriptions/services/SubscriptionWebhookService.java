@@ -273,8 +273,8 @@ public class SubscriptionWebhookService {
     }
 
     private void sendPaymentConfirmation(Subscription subscription, PaymentResponse payment, SubscriptionTier tier) {
-        MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
         try {
+            MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
             Amount amount = payment.amount();
             String html = emailService.buildInvoiceMail(
                     owner.getUser().getDisplayName(),
@@ -292,6 +292,7 @@ public class SubscriptionWebhookService {
             );
         } catch (MessagingException e) {
             log.warn("Failed to send invoice email for subscription {}", subscription.getId(), e);
+            // TODO: Handle failed email
         }
     }
 

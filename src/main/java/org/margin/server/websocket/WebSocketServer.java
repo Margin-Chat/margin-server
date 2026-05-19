@@ -21,7 +21,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +44,11 @@ public class WebSocketServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
+    private final CompletableFuture<Integer> boundPort = new CompletableFuture<>();
+
+    public int awaitBoundPort(long timeoutMs) throws Exception {
+        return boundPort.get(timeoutMs, TimeUnit.MILLISECONDS);
+    }
 
     public WebSocketServer(ObjectMapper objectMapper,
                            JwtService jwtService,
@@ -95,7 +102,9 @@ public class WebSocketServer {
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             serverChannel = bootstrap.bind(port).sync().channel();
-            log.info("WebSocket server started on port {}", port);
+            int actualPort = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+            boundPort.complete(actualPort);
+            log.info("WebSocket server started on port {}", actualPort);
 
             serverChannel.closeFuture().sync();
 

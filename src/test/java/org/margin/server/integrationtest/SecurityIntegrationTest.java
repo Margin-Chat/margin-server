@@ -6,6 +6,7 @@ import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.users.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +21,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class SecurityIntegrationTest extends MarginTestRunner {
 
-    private static final String BASE = "http://localhost:8080";
+    @LocalServerPort
+    private int port;
 
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(2))
@@ -29,10 +31,14 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Autowired
     private JwtService jwtService;
 
+    private String base() {
+        return "http://localhost:" + port;
+    }
+
     @Test
     void unauthenticatedRequestToProtectedEndpoint_returns401() throws Exception {
         HttpResponse<String> response = client.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/api/users/me")).GET().build(),
+                HttpRequest.newBuilder(URI.create(base() +"/api/users/me")).GET().build(),
                 HttpResponse.BodyHandlers.ofString()
         );
 
@@ -42,7 +48,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void requestWithLiteralBearerNull_returns401() throws Exception {
         HttpResponse<String> response = client.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/api/users/me"))
+                HttpRequest.newBuilder(URI.create(base() +"/api/users/me"))
                         .header("Authorization", "Bearer null")
                         .GET()
                         .build(),
@@ -55,7 +61,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void requestWithMalformedBearer_returns401() throws Exception {
         HttpResponse<String> response = client.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/api/users/me"))
+                HttpRequest.newBuilder(URI.create(base() +"/api/users/me"))
                         .header("Authorization", "Bearer not-a-valid-jwt")
                         .GET()
                         .build(),
@@ -68,7 +74,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void publicEndpointDoesNotRequireAuth() throws Exception {
         HttpResponse<String> response = client.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/api/auth/login"))
+                HttpRequest.newBuilder(URI.create(base() +"/api/auth/login"))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"x\",\"password\":\"y\"}"))
                         .build(),
@@ -85,7 +91,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
         String token = jwtService.generateToken(user.getEmail(), user.getId());
 
         HttpResponse<String> response = client.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/api/channels/9999999"))
+                HttpRequest.newBuilder(URI.create(base() +"/api/channels/9999999"))
                         .header("Authorization", "Bearer " + token)
                         .GET()
                         .build(),

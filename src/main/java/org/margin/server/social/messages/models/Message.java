@@ -51,9 +51,6 @@ public class Message {
     @Column(name = "edited_at")
     private Instant editedAt;
 
-    @Column(name = "image_address", length = 1024)
-    private String imageAddress;
-
     public Message(Conversation conversation, User fromUser, String message) {
         this.conversation = conversation;
         this.fromUser = fromUser;

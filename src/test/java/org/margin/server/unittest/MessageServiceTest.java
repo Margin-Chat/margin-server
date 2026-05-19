@@ -19,6 +19,7 @@ import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.messages.services.MessageValidationService;
 import org.margin.server.social.space.models.Space;
+import org.margin.server.storage.StorageLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
@@ -45,6 +46,8 @@ class MessageServiceTest {
     @Mock
     private MessageReactionRepository messageReactionRepository;
     @Mock
+    private StorageLookup storageLookup;
+    @Mock
     private ConversationMemberRepository conversationMemberRepository;
     @Mock
     private ConversationService conversationService;
@@ -59,7 +62,7 @@ class MessageServiceTest {
     @InjectMocks
     private MessageService messageService;
 
-    private static final String imageAddress = "https://example.com/image.png";
+    private static final List<Long> attachmentIds = List.of();
 
     @Test
     void createMessage_directConversation_savesMessageForUsers() {
@@ -70,17 +73,17 @@ class MessageServiceTest {
         Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
         List<User> members = List.of(fromUser, createUser(2L, "recipient"));
 
-        when(messageActions.createMessage(fromUser, conversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
         assertEquals(content, result.message().content());
         assertEquals(2, result.recipients().size());
         assertTrue(result.recipients().contains(fromUser));
 
-        verify(messageActions).createMessage(fromUser, conversation, content, imageAddress);
+        verify(messageActions).createMessage(fromUser, conversation, content, attachmentIds);
         verify(conversationService).getConversationMembers(conversation.getId());
     }
 
@@ -97,10 +100,10 @@ class MessageServiceTest {
                 createUser(3L, "user3")
         );
 
-        when(messageActions.createMessage(fromUser, conversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
         assertEquals(3, result.recipients().size());
@@ -119,15 +122,15 @@ class MessageServiceTest {
         Message savedMessage = createSavedMessage(200L, conversation, fromUser, content);
         List<User> members = Arrays.asList(fromUser, createUser(2L, "user2"));
 
-        when(messageActions.createMessage(fromUser, conversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
 
-        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
         assertEquals(2, result.recipients().size());
         assertEquals(content, result.message().content());
-        verify(messageActions).createMessage(fromUser, conversation, content, imageAddress);
+        verify(messageActions).createMessage(fromUser, conversation, content, attachmentIds);
         verify(conversationService).getConversationMembers(conversation.getId());
     }
 
@@ -140,13 +143,13 @@ class MessageServiceTest {
         Conversation dmConversation = createConversation(10L, ConversationType.DIRECT);
         Message savedMessage = createSavedMessage(100L, dmConversation, fromUser, content);
 
-        when(messageActions.createMessage(fromUser, dmConversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, dmConversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(dmConversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, toUser));
 
-        messageService.sendMessage(fromUser, content, dmConversation, imageAddress);
+        messageService.sendMessage(fromUser, content, dmConversation, attachmentIds);
 
-        verify(messageActions).createMessage(fromUser, dmConversation, content, imageAddress);
+        verify(messageActions).createMessage(fromUser, dmConversation, content, attachmentIds);
         verify(webSocketDeliveryService).notifyMessage(
                 argThat(msg -> msg.content().equals(content)),
                 argThat(recipients -> recipients.contains(toUser)),
@@ -165,10 +168,10 @@ class MessageServiceTest {
         User user3 = createUser(3L, "user3");
         List<User> allMembers = Arrays.asList(fromUser, user2, user3);
 
-        when(messageActions.createMessage(fromUser, conversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
 
-        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertEquals(3, result.recipients().size());
         assertTrue(result.recipients().contains(fromUser));
@@ -184,11 +187,11 @@ class MessageServiceTest {
 
         Message savedMessage = createSavedMessage(100L, conversation, fromUser, content);
 
-        when(messageActions.createMessage(fromUser, conversation, content, imageAddress)).thenReturn(savedMessage);
+        when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, createUser(2L, "recipient")));
 
-        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, imageAddress);
+        MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
         assertEquals("", result.message().content());

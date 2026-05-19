@@ -10,141 +10,161 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+
+import org.margin.server.storage.exceptions.S3DeleteException;
+import org.margin.server.storage.exceptions.S3RetrievalException;
+import org.margin.server.storage.exceptions.S3UploadException;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(name = "storage.type", havingValue = "s3")
 public class S3StorageService implements StorageService {
+    private static final Map<String, String> PATH_TO_PREFIX = Map.of(
+            "user-profiles", "users",
+            "margin-icons", "margins",
+            "conversation-images", "conversations",
+            "stored-files", "stored"
+    );
 
     private final S3Client s3Client;
-    private final StorageProperties storageProperties;
+    private final S3Presigner s3Presigner;
+    private final StorageProperties.S3Properties s3Props;
+    private final String legacyKeyPrefix;
 
     public S3StorageService(StorageProperties storageProperties) {
-        this.storageProperties = storageProperties;
+        this.s3Props = storageProperties.getS3();
 
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(
-                storageProperties.getS3().getAccessKey(),
-                storageProperties.getS3().getSecretKey()
-        );
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(s3Props.getAccessKey(), s3Props.getSecretKey());
+        StaticCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(credentials);
+        URI endpoint = URI.create(s3Props.getEndpoint());
+        Region region = Region.of(s3Props.getRegion());
 
         this.s3Client = S3Client.builder()
-                .endpointOverride(URI.create(storageProperties.getS3().getEndpoint()))
-                .region(Region.of(storageProperties.getS3().getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .endpointOverride(endpoint)
+                .region(region)
+                .credentialsProvider(credentialsProvider)
                 .forcePathStyle(true)
                 .build();
+
+        this.s3Presigner = S3Presigner.builder()
+                .endpointOverride(endpoint)
+                .region(region)
+                .credentialsProvider(credentialsProvider)
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .build())
+                .build();
+
+        this.legacyKeyPrefix = s3Props.getEndpoint() + "/" + s3Props.getBucketName() + "/";
     }
 
     @Override
     public String saveProfilePicture(MultipartFile file) {
-        try {
-            String fileName = "users/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(storageProperties.getS3().getBucketName())
-                    .key(fileName)
-                    .contentType(file.getContentType())
-                    .build();
-
-            s3Client.putObject(putObjectRequest,
-                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-
-            return String.format("%s/%s/%s",
-                    storageProperties.getS3().getEndpoint(),
-                    storageProperties.getS3().getBucketName(),
-                    fileName);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload profile picture to S3", e);
-        }
+        return upload(file, "user-profiles", "profile picture");
     }
 
     @Override
     public String saveMarginIcon(MultipartFile file) {
-        try {
-            String fileName = "margins/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(storageProperties.getS3().getBucketName())
-                    .key(fileName)
-                    .contentType(file.getContentType())
-                    .build();
-
-            s3Client.putObject(putObjectRequest,
-                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-
-            return String.format("%s/%s/%s",
-                    storageProperties.getS3().getEndpoint(),
-                    storageProperties.getS3().getBucketName(),
-                    fileName);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload margin icon to S3", e);
-        }
+        return upload(file, "margin-icons", "margin icon");
     }
 
     @Override
-    public String saveConversationImage(MultipartFile file) {
+    public String saveStoredFile(MultipartFile file) {
+        return upload(file, "stored-files", "stored file");
+    }
+
+    private String upload(MultipartFile file, String urlPath, String label) {
         try {
-            String fileName = "conversations/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String key = PATH_TO_PREFIX.get(urlPath) + "/" + fileName;
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(storageProperties.getS3().getBucketName())
-                    .key(fileName)
+                    .bucket(s3Props.getBucketName())
+                    .key(key)
                     .contentType(file.getContentType())
                     .build();
 
             s3Client.putObject(putObjectRequest,
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-            return String.format("%s/%s/%s",
-                    storageProperties.getS3().getEndpoint(),
-                    storageProperties.getS3().getBucketName(),
-                    fileName);
+            return s3Props.getBaseUrl() + "/" + urlPath + "/" + fileName;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload conversation image to S3", e);
+            throw new S3UploadException(label, e);
         }
     }
 
     @Override
     public void deleteProfilePicture(String url) {
-        try {
-            String key = extractKeyFromUrl(url);
-            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(storageProperties.getS3().getBucketName())
-                    .key(key)
-                    .build();
+        delete(url);
+    }
 
-            s3Client.deleteObject(deleteObjectRequest);
+    @Override
+    public void delete(String url) {
+        try {
+            DeleteObjectRequest req = DeleteObjectRequest.builder()
+                    .bucket(s3Props.getBucketName())
+                    .key(toKey(url))
+                    .build();
+            s3Client.deleteObject(req);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete file from S3", e);
+            throw new S3DeleteException(e);
         }
     }
 
     @Override
     public Resource getFile(String url) {
         try {
-            String key = extractKeyFromUrl(url);
-
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(storageProperties.getS3().getBucketName())
-                    .key(key)
+            GetObjectRequest req = GetObjectRequest.builder()
+                    .bucket(s3Props.getBucketName())
+                    .key(toKey(url))
                     .build();
-
-            var s3Object = s3Client.getObject(getObjectRequest);
-            return new InputStreamResource(s3Object);
+            return new InputStreamResource(s3Client.getObject(req));
         } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve profile picture from S3", e);
+            throw new S3RetrievalException(e);
         }
     }
 
-    private String extractKeyFromUrl(String url) {
-        String bucketUrl = String.format("%s/%s/",
-                storageProperties.getS3().getEndpoint(),
-                storageProperties.getS3().getBucketName());
-        return url.replace(bucketUrl, "");
+    @Override
+    public Optional<String> presign(String url, String downloadFilename) {
+        GetObjectRequest.Builder getBuilder = GetObjectRequest.builder()
+                .bucket(s3Props.getBucketName())
+                .key(toKey(url));
+
+        if (downloadFilename != null) {
+            String safe = downloadFilename.replace("\"", "");
+            getBuilder.responseContentDisposition("attachment; filename=\"" + safe + "\"");
+        }
+
+        GetObjectPresignRequest req = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofSeconds(s3Props.getPresignTtlSeconds()))
+                .getObjectRequest(getBuilder.build())
+                .build();
+
+        return Optional.of(s3Presigner.presignGetObject(req).url().toString());
+    }
+
+    private String toKey(String url) {
+        if (url.startsWith(legacyKeyPrefix)) {
+            return url.substring(legacyKeyPrefix.length());
+        }
+        for (Map.Entry<String, String> entry : PATH_TO_PREFIX.entrySet()) {
+            String marker = "/" + entry.getKey() + "/";
+            int idx = url.indexOf(marker);
+            if (idx >= 0) {
+                return entry.getValue() + "/" + url.substring(idx + marker.length());
+            }
+        }
+        throw new IllegalArgumentException("Unrecognized storage URL: " + url);
     }
 }

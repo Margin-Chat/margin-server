@@ -1,105 +1,128 @@
 package org.margin.server.storage.controllers;
 
-import io.github.bucket4j.Bandwidth;
-import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.TooManyRequestsException;
+import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
+import org.margin.server.social.margin.MarginLookup;
+import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.validations.MarginAuthorizationService;
+import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.StorageService;
+import org.margin.server.storage.StoredFileService;
+import org.margin.server.storage.models.StoredFile;
 import org.margin.server.users.models.User;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.time.Duration;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/files")
 public class FilesController {
     private final StorageService storageService;
-    private final RateLimitService rateLimitService;
-    private final Bandwidth conversationImageUploadBandwidth;
+    private final StorageProperties storageProperties;
+    private final MarginLookup marginLookup;
+    private final StoredFileService storedFileService;
+    private final MarginAuthorizationService marginAuthorizationService;
+    private final ConversationAuthorizationService conversationAuthorizationService;
 
     public FilesController(StorageService storageService,
-                           RateLimitService rateLimitService,
-                           @Value("${margin.rate-limit.conversation-image-upload.capacity}") int capacity,
-                           @Value("${margin.rate-limit.conversation-image-upload.refill-period}") Duration refillPeriod) {
+                           StorageProperties storageProperties,
+                           MarginLookup marginLookup,
+                           StoredFileService storedFileService,
+                           MarginAuthorizationService marginAuthorizationService,
+                           ConversationAuthorizationService conversationAuthorizationService) {
         this.storageService = storageService;
-        this.rateLimitService = rateLimitService;
-        this.conversationImageUploadBandwidth = Bandwidth.builder()
-                .capacity(capacity)
-                .refillGreedy(capacity, refillPeriod)
-                .build();
-    }
-
-    @PostMapping("/upload_to_conversation")
-    public String upload(@RequestParam("attachedFile") MultipartFile file,
-                         @AuthenticationPrincipal User user) {
-        String key = "upload_to_conversation:" + user.getId();
-        if (!rateLimitService.tryConsume(key, conversationImageUploadBandwidth)) {
-            throw new TooManyRequestsException("Image upload limit reached. Try again later.");
-        }
-        return storageService.saveConversationImage(file);
-    }
-
-    @GetMapping("/conversation-images/{fileName}")
-    public ResponseEntity<Resource> getConversationImage(@PathVariable String fileName) {
-        try {
-            Resource resource = storageService.getFile("/conversation-images/" + fileName);
-
-            String contentType = Files.probeContentType(Path.of(fileName));
-            return ResponseEntity.ok()
-                    .contentType(contentType != null
-                            ? MediaType.parseMediaType(contentType)
-                            : MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-
-        } catch (NoSuchFileException _) {
-            return ResponseEntity.notFound().build();
-        } catch (IOException _) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        this.storageProperties = storageProperties;
+        this.marginLookup = marginLookup;
+        this.storedFileService = storedFileService;
+        this.marginAuthorizationService = marginAuthorizationService;
+        this.conversationAuthorizationService = conversationAuthorizationService;
     }
 
     @GetMapping("/user-profiles/{fileName}")
-    public ResponseEntity<Resource> getProfilePicture(@PathVariable String fileName) {
-        try {
-            Resource resource = storageService.getFile("/user-profiles/" + fileName);
-
-            String contentType = Files.probeContentType(Path.of(fileName));
-            return ResponseEntity.ok()
-                    .contentType(contentType != null
-                            ? MediaType.parseMediaType(contentType)
-                            : MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-
-        } catch (NoSuchFileException _) {
-            return ResponseEntity.notFound().build();
-        } catch (IOException _) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    public ResponseEntity<Resource> getProfilePicture(@PathVariable String fileName,
+                                                      @AuthenticationPrincipal User viewer) {
+        if (viewer == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        return serve("/user-profiles/" + fileName, fileName);
     }
 
     @GetMapping("/margin-icons/{fileName}")
-    public ResponseEntity<Resource> getMarginIcon(@PathVariable String fileName) {
-        try {
-            Resource resource = storageService.getFile("/margin-icons/" + fileName);
+    public ResponseEntity<Resource> getMarginIcon(@PathVariable String fileName,
+                                                  @AuthenticationPrincipal User viewer) {
+        if (viewer == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Margin margin = marginLookup.findByIconFileName(fileName);
+        marginAuthorizationService.requireMarginMember(viewer.getId(), margin.getId());
+        return serve(margin.getIconUrl(), fileName);
+    }
 
+    @GetMapping("/stored-files/{fileName}")
+    public ResponseEntity<Resource> getStoredFileByName(@PathVariable String fileName,
+                                                        @AuthenticationPrincipal User viewer) {
+        if (viewer == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        StoredFile f = storedFileService.findByStoredFileName(fileName);
+
+        if (f.getChannel() != null && f.getChannel().getConversation() != null) {
+            conversationAuthorizationService.requireConversationMember(viewer.getId(), f.getChannel().getConversation().getId());
+        } else {
+            marginAuthorizationService.requireMarginMember(viewer.getId(), f.getMargin().getId());
+        }
+
+        return serve(f.getStorageUrl(), fileName);
+    }
+
+    @GetMapping("/conversation-images/{fileName}")
+    public ResponseEntity<Resource> getConversationImage(@PathVariable String fileName,
+                                                         @AuthenticationPrincipal User viewer) {
+        if (viewer == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        StoredFile file = storedFileService.findByConversationImageFileName(fileName);
+        if (file.getMessageId() == null || file.getChannel() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        conversationAuthorizationService.requireConversationMember(viewer.getId(), file.getChannel().getConversation().getId());
+        return serve(file.getStorageUrl(), fileName);
+    }
+
+    private ResponseEntity<Resource> serve(String storageUrl, String fileName) {
+        if ("s3".equals(storageProperties.getType())) {
+            Optional<String> presigned = storageService.presign(storageUrl);
+            if (presigned.isPresent()) {
+                long ttl = storageProperties.getS3().getPresignTtlSeconds();
+                long browserCache = Math.max(ttl - 60, 30);
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.CACHE_CONTROL, "private, max-age=" + browserCache)
+                        .location(URI.create(presigned.get()))
+                        .build();
+            }
+        }
+
+        try {
+            Resource resource = storageService.getFile(storageUrl);
             String contentType = Files.probeContentType(Path.of(fileName));
             return ResponseEntity.ok()
                     .contentType(contentType != null
                             ? MediaType.parseMediaType(contentType)
                             : MediaType.APPLICATION_OCTET_STREAM)
                     .body(resource);
-
         } catch (NoSuchFileException _) {
             return ResponseEntity.notFound().build();
         } catch (IOException _) {

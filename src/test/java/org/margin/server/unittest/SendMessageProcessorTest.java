@@ -10,6 +10,8 @@ import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
+
+import java.util.List;
 import org.margin.server.websocket.models.payloads.SendMessagePayload;
 import org.margin.server.websocket.processors.SendMessageProcessor;
 import org.mockito.ArgumentCaptor;
@@ -52,15 +54,15 @@ class SendMessageProcessorTest {
         WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setType(WebSocketMessageType.SEND_MESSAGE);
         message.setRecipientId(10L);
-        message.setPayload(new SendMessagePayload("Hello", "https://example.com/image.png"));
+        message.setPayload(new SendMessagePayload("Hello", List.of(7L)));
 
         when(conversationService.getById(10L)).thenReturn(conversation);
-        doNothing().when(messageService).sendMessage(sender, "Hello", conversation, "https://example.com/image.png");
+        doNothing().when(messageService).sendMessage(sender, "Hello", conversation, List.of(7L));
 
         processor.process(sender, message);
 
         verify(conversationService).getById(10L);
-        verify(messageService).sendMessage(sender, "Hello", conversation, "https://example.com/image.png");
+        verify(messageService).sendMessage(sender, "Hello", conversation, List.of(7L));
     }
 
     @Test
@@ -72,18 +74,18 @@ class SendMessageProcessorTest {
         conversation.setType(ConversationType.GROUP);
 
         String content = "Test message content";
-        String image = "https://example.com/image.png";
+        List<Long> ids = List.of(11L, 12L);
 
         WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setRecipientId(10L);
-        message.setPayload(new SendMessagePayload(content, image));
+        message.setPayload(new SendMessagePayload(content, ids));
 
         when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
         ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).sendMessage(eq(sender), contentCaptor.capture(), eq(conversation), eq(image));
+        verify(messageService).sendMessage(eq(sender), contentCaptor.capture(), eq(conversation), eq(ids));
         assertEquals(content, contentCaptor.getValue());
     }
 

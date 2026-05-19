@@ -13,6 +13,7 @@ import org.margin.server.subscriptions.factories.SubscriptionLimitsFactory;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
+import org.margin.server.subscriptions.exceptions.SubscriptionNotFoundException;
 import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.utils.SubscriptionUtils;
@@ -40,6 +41,11 @@ public class SubscriptionService {
         this.mollieProperties = mollieProperties;
     }
 
+    public Subscription getByMargin(Margin margin) {
+        return subscriptionRepository.findByMargin(margin)
+                .orElseThrow(() -> new SubscriptionNotFoundException(margin.getId()));
+    }
+
     @Transactional
     public void createSubscriptionForMargin(Margin margin, SubscriptionTier tier) {
         Subscription subscription = new Subscription();
@@ -57,7 +63,7 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public SubscriptionDTO getSubscriptionDtoForMargin(Margin margin) {
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        Subscription subscription = getByMargin(margin);
         SubscriptionLimits limits = subscription.getLimits();
         return new SubscriptionDTO(
                 subscription.getTier(),
@@ -77,7 +83,7 @@ public class SubscriptionService {
 
     @Transactional
     public SubscriptionDTO changeTier(Margin margin, SubscriptionTier newTier) {
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        Subscription subscription = getByMargin(margin);
 
         if (subscription.getSubscriptionId() != null) {
             try {
@@ -110,7 +116,7 @@ public class SubscriptionService {
 
     @Transactional
     public void cancelSubscription(Margin margin) {
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        Subscription subscription = getByMargin(margin);
         if (subscription.getSubscriptionId() != null) {
             mollieClient.cancelSubscription(subscription.getMollieCustomerId(), subscription.getSubscriptionId());
         }
@@ -135,7 +141,7 @@ public class SubscriptionService {
     public String createCheckout(Margin margin, SubscriptionTier targetTier, User user) {
         BigDecimal price = subscriptionPricingProperties.prices().get(targetTier);
 
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        Subscription subscription = getByMargin(margin);
 
         String customerId = subscription.getMollieCustomerId();
         if (customerId == null) {

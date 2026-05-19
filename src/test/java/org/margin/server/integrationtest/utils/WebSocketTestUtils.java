@@ -2,6 +2,7 @@ package org.margin.server.integrationtest.utils;
 
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.WebSocketServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -16,11 +17,12 @@ import java.util.concurrent.TimeUnit;
 public class WebSocketTestUtils {
 
     private static JwtService jwtService;
-    private static final int WS_PORT = 8081;
+    private static WebSocketServer webSocketServer;
 
     @Autowired
-    public WebSocketTestUtils(JwtService jwtService) {
+    public WebSocketTestUtils(JwtService jwtService, WebSocketServer webSocketServer) {
         WebSocketTestUtils.jwtService = jwtService;
+        WebSocketTestUtils.webSocketServer = webSocketServer;
     }
 
     public static WebSocket connect(User user) throws Exception {
@@ -30,12 +32,13 @@ public class WebSocketTestUtils {
 
     public static WebSocket connect(User user, WebSocket.Listener listener) throws Exception {
         String token = jwtService.generateToken(user.getEmail(), user.getId());
+        int wsPort = webSocketServer.awaitBoundPort(5000);
         CompletableFuture<Void> connected = new CompletableFuture<>();
 
         WebSocket ws = HttpClient.newHttpClient()
                 .newWebSocketBuilder()
                 .buildAsync(
-                        URI.create("ws://localhost:" + WS_PORT + "/ws?token=" + token),
+                        URI.create("ws://localhost:" + wsPort + "/ws?token=" + token),
                         new WebSocket.Listener() {
                             @Override
                             public void onOpen(WebSocket webSocket) {

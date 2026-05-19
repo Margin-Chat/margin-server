@@ -21,6 +21,9 @@ spring:
             enable: false
             required: false
 
+websocket:
+  port: 0
+
 margin:
   mail:
     from: ${MAIL_FROM:localhost@margin.chat}
@@ -28,10 +31,9 @@ margin:
     port: 8082
   jwt:
     secret: integration-test-secret-that-is-long-enough
-  rate-limit:
-    conversation-image-upload:
-      capacity: 20
-      refill-period: PT1H
 
 storage:
   type: local
+  local:
+    upload-dir: ${java.io.tmpdir}/margin-integration-uploads
+    base-url: http://localhost:8080/api/files

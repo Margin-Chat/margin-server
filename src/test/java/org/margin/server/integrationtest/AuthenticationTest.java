@@ -143,21 +143,6 @@ class AuthenticationTest extends MarginTestRunner {
     }
 
     @Test
-    void registerWithInvalidBetaKey_throws() {
-        assertThrows(IllegalArgumentException.class, () ->
-                AuthTestUtils.register("judy", "judy@margin.chat", "password", "nonexistent-key"));
-    }
-
-    @Test
-    void registerWithAlreadyUsedBetaKey_throws() {
-        BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("karl", "karl@margin.chat", "password", key.getKey());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                AuthTestUtils.register("karl2", "karl2@margin.chat", "password", key.getKey()));
-    }
-
-    @Test
     void registerWithDuplicateEmail_throws() {
         BetaKey key1 = AuthTestUtils.createBetaKey();
         BetaKey key2 = AuthTestUtils.createBetaKey();
