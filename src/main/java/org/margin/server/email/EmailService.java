@@ -63,6 +63,15 @@ public class EmailService {
         return templateEngine.process("email/invoice", ctx);
     }
 
+    public String buildPasswordResetMail(String displayName, String resetToken) {
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("logoUrl", logoUrl.isBlank() ? null : logoUrl);
+        ctx.setVariable("displayName", displayName);
+        ctx.setVariable("resetUrl", baseUrl + "/reset-password/" + resetToken);
+
+        return templateEngine.process("email/password-reset", ctx);
+    }
+
     public String buildRegistrationMail(String displayName, String activationToken) {
         Context ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("logoUrl", logoUrl.isBlank() ? null : logoUrl);

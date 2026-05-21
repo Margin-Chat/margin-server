@@ -3,10 +3,13 @@ package org.margin.server.authentication.controllers;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.models.AuthResponse;
+import org.margin.server.authentication.models.ForgotPasswordRequest;
 import org.margin.server.authentication.models.LoginRequest;
 import org.margin.server.authentication.models.RegisterRequest;
+import org.margin.server.authentication.models.ResetPasswordRequest;
 import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
+import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.config.ratelimit.RateLimitConfig;
 import org.margin.server.config.ratelimit.RateLimitService;
 import org.margin.server.exceptions.TooManyRequestsException;
@@ -25,13 +28,16 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final RateLimitService rateLimitService;
     private final ActivationKeyService activationKeyService;
+    private final PasswordResetService passwordResetService;
 
     public AuthenticationController(AuthenticationService authenticationService,
                                     RateLimitService rateLimitService,
-                                    ActivationKeyService activationKeyService) {
+                                    ActivationKeyService activationKeyService,
+                                    PasswordResetService passwordResetService) {
         this.authenticationService = authenticationService;
         this.rateLimitService = rateLimitService;
         this.activationKeyService = activationKeyService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -84,6 +90,22 @@ public class AuthenticationController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(HttpServletRequest httpServletRequest,
+                                               @RequestBody ForgotPasswordRequest request) {
+        rateLimitForgotPassword(httpServletRequest);
+        passwordResetService.requestPasswordReset(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(HttpServletRequest httpServletRequest,
+                                              @RequestBody ResetPasswordRequest request) {
+        rateLimitResetPassword(httpServletRequest);
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/activate/{token}")
     public ResponseEntity<Void> activate(@PathVariable String token) {
         log.info("Activate attempt for token: {}", token);
@@ -98,6 +120,26 @@ public class AuthenticationController {
         String key = "register:" + ip;
         if (!rateLimitService.tryConsume(key, RateLimitConfig.register())) {
             throw new TooManyRequestsException("Too many registration attempts. Try again later.");
+        }
+    }
+
+    private void rateLimitForgotPassword(HttpServletRequest httpServletRequest) {
+        String ip = httpServletRequest.getHeader("X-Forwarded-For");
+        if (ip == null) ip = httpServletRequest.getRemoteAddr();
+
+        String key = "forgot-password:" + ip;
+        if (!rateLimitService.tryConsume(key, RateLimitConfig.forgotPassword())) {
+            throw new TooManyRequestsException("Too many password reset requests. Try again later.");
+        }
+    }
+
+    private void rateLimitResetPassword(HttpServletRequest httpServletRequest) {
+        String ip = httpServletRequest.getHeader("X-Forwarded-For");
+        if (ip == null) ip = httpServletRequest.getRemoteAddr();
+
+        String key = "reset-password:" + ip;
+        if (!rateLimitService.tryConsume(key, RateLimitConfig.resetPassword())) {
+            throw new TooManyRequestsException("Too many password reset attempts. Try again later.");
         }
     }
 }

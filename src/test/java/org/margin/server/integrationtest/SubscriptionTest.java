@@ -41,9 +41,9 @@ class SubscriptionTest extends MarginTestRunner {
     void freeTierSubscriptionHasDefaultLimits() {
         Subscription subscription = SubscriptionTestUtils.getForMargin(margin);
 
-        assertEquals(25, subscription.getLimits().getMaxMembers());
-        assertEquals(5, subscription.getLimits().getMaxStorageGb());
-        assertEquals(10, subscription.getLimits().getMaxCallParticipants());
+        assertEquals(10, subscription.getLimits().getMaxMembers());
+        assertEquals(0, subscription.getLimits().getMaxStorageGb());
+        assertEquals(5, subscription.getLimits().getMaxCallParticipants());
     }
 
     @Test
@@ -62,7 +62,7 @@ class SubscriptionTest extends MarginTestRunner {
 
         int max = SubscriptionTestUtils.getMaxCallParticipantsForChannel(channelId);
 
-        assertEquals(10, max);
+        assertEquals(5, max);
     }
 
     @Test

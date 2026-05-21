@@ -23,6 +23,20 @@ public final class RateLimitConfig {
                 .build();
     }
 
+    public static Bandwidth forgotPassword() {
+        return Bandwidth.builder()
+                .capacity(3)
+                .refillGreedy(3, Duration.ofHours(1))
+                .build();
+    }
+
+    public static Bandwidth resetPassword() {
+        return Bandwidth.builder()
+                .capacity(5)
+                .refillGreedy(5, Duration.ofHours(1))
+                .build();
+    }
+
     public static Bandwidth uploadImage() {
         return Bandwidth.builder()
                 .capacity(3)

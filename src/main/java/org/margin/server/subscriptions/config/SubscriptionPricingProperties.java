@@ -9,6 +9,12 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "subscriptions")
 public record SubscriptionPricingProperties(
         String currency,
-        Map<SubscriptionTier, BigDecimal> prices
+        Map<SubscriptionTier, TierConfig> tiers
 ) {
+    public record TierConfig(
+            BigDecimal price,
+            int maxMembers,
+            int maxStorageGb,
+            int maxCallParticipants
+    ) {}
 }

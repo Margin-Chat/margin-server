@@ -36,6 +36,7 @@ class StoredFileTest extends MarginTestRunner {
 
         Margin margin = MarginTestUtils.createMargin("FilesMargin", owner);
         marginId = margin.getId();
+        SubscriptionTestUtils.overrideLimits(margin, 25, 100, 10);
 
         MarginTestUtils.addUserToMargin(marginId, owner, admin);
         MarginTestUtils.updateMemberRole(marginId, admin, MarginRole.ADMIN, owner);
@@ -264,6 +265,16 @@ class StoredFileTest extends MarginTestRunner {
                 marginId, StoredFileTestUtils.textFile("a.txt", "x"), owner).getBody().fileId();
 
         ResponseEntity<StoredFileDTO> response = StoredFileTestUtils.renameFile(fileId, "   ", owner);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void renamingWithTooLongNameRejected() {
+        Long fileId = StoredFileTestUtils.uploadMarginFile(
+                marginId, StoredFileTestUtils.textFile("a.txt", "x"), owner).getBody().fileId();
+
+        ResponseEntity<StoredFileDTO> response = StoredFileTestUtils.renameFile(fileId, "x".repeat(513), owner);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }

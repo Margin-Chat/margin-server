@@ -77,9 +77,21 @@ mollie:
 
 subscriptions:
   currency: EUR
-  prices:
-    SMALL: 9.99
-    MEDIUM: 29.99
+  tiers:
+    FREE:
+      maxMembers: 10
+      maxStorageGb: 0
+      maxCallParticipants: 5
+    SMALL:
+      price: 9.99
+      maxMembers: 25
+      maxStorageGb: 50
+      maxCallParticipants: 10
+    MEDIUM:
+      price: 29.99
+      maxMembers: 200
+      maxStorageGb: 100
+      maxCallParticipants: 25
 
 management:
   endpoints:

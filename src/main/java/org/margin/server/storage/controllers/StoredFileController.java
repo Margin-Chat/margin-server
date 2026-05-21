@@ -12,7 +12,6 @@ import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
-import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +38,6 @@ public class StoredFileController {
     private final ConversationAuthorizationService conversationAuthorizationService;
     private final MarginAuthorizationService marginAuthorizationService;
     private final MarginLookup marginLookup;
-    private final SubscriptionValidationService subscriptionValidationService;
 
     public StoredFileController(StorageService storageService,
                                 StorageProperties storageProperties,
@@ -47,8 +45,7 @@ public class StoredFileController {
                                 ChannelLookup channelLookup,
                                 ConversationAuthorizationService conversationAuthorizationService,
                                 MarginAuthorizationService marginAuthorizationService,
-                                MarginLookup marginLookup,
-                                SubscriptionValidationService subscriptionValidationService) {
+                                MarginLookup marginLookup) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.storedFileService = storedFileService;
@@ -56,7 +53,6 @@ public class StoredFileController {
         this.conversationAuthorizationService = conversationAuthorizationService;
         this.marginAuthorizationService = marginAuthorizationService;
         this.marginLookup = marginLookup;
-        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     @GetMapping("/margins/{marginId}/stored-files")
@@ -87,21 +83,7 @@ public class StoredFileController {
                                                           @AuthenticationPrincipal User uploader) {
         marginAuthorizationService.requireMarginAdmin(uploader.getId(), marginId);
         Margin margin = marginLookup.getById(marginId);
-        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
-
-        String url = storageService.saveStoredFile(file);
-
-        StoredFile entity = new StoredFile();
-        entity.setScope(StoredFileScope.MARGIN);
-        entity.setMargin(margin);
-        entity.setChannel(null);
-        entity.setFileName(file.getOriginalFilename());
-        entity.setContentType(file.getContentType());
-        entity.setSizeBytes(file.getSize());
-        entity.setStorageUrl(url);
-        entity.setUploadedBy(uploader);
-
-        StoredFile saved = storedFileService.save(entity);
+        StoredFile saved = storedFileService.uploadMarginFile(margin, file, uploader);
         return ResponseEntity.ok(StoredFileDTO.from(saved, false));
     }
 
@@ -111,25 +93,8 @@ public class StoredFileController {
                                                            @RequestParam(value = "inline", defaultValue = "false") boolean inline,
                                                            @AuthenticationPrincipal User uploader) {
         marginAuthorizationService.requireChannelMember(uploader.getId(), channelId);
-
         Channel channel = channelLookup.getById(channelId);
-        Margin margin = channel.getSpace().getMargin();
-
-        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
-        String url = storageService.saveStoredFile(file);
-
-        StoredFile entity = new StoredFile();
-        entity.setScope(StoredFileScope.CHANNEL);
-        entity.setMargin(margin);
-        entity.setChannel(channel);
-        entity.setFileName(file.getOriginalFilename());
-        entity.setContentType(file.getContentType());
-        entity.setSizeBytes(file.getSize());
-        entity.setStorageUrl(url);
-        entity.setUploadedBy(uploader);
-        entity.setInline(inline);
-
-        StoredFile saved = storedFileService.save(entity);
+        StoredFile saved = storedFileService.uploadChannelFile(channel, file, uploader, inline);
         return ResponseEntity.ok(StoredFileDTO.from(saved, false));
     }
 

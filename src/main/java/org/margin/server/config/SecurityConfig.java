@@ -86,7 +86,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/activate/**").permitAll()
+                                "/api/auth/activate/**",
+                                "/api/auth/activate-test",
+                                "/api/auth/register-and-activate-test",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/sfu/peer_joined", "/api/sfu/peer_left").permitAll()
                         .requestMatchers("/api/subscriptions/mollie/webhook").permitAll()
                         .anyRequest().authenticated()

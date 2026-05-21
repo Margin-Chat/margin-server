@@ -5,6 +5,8 @@ import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
+import org.margin.server.subscriptions.factories.SubscriptionLimitsFactory;
+import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
@@ -16,14 +18,17 @@ public class SubscriptionTestUtils {
     private static SubscriptionRepository subscriptionRepository;
     private static SubscriptionValidationService subscriptionValidationService;
     private static ChannelService channelService;
+    private static SubscriptionLimitsFactory subscriptionLimitsFactory;
 
     @Autowired
     public SubscriptionTestUtils(SubscriptionRepository subscriptionRepository,
                                  SubscriptionValidationService subscriptionValidationService,
-                                 ChannelService channelService) {
+                                 ChannelService channelService,
+                                 SubscriptionLimitsFactory subscriptionLimitsFactory) {
         SubscriptionTestUtils.subscriptionRepository = subscriptionRepository;
         SubscriptionTestUtils.subscriptionValidationService = subscriptionValidationService;
         SubscriptionTestUtils.channelService = channelService;
+        SubscriptionTestUtils.subscriptionLimitsFactory = subscriptionLimitsFactory;
     }
 
     public static Subscription getForMargin(Margin margin) {
@@ -54,6 +59,20 @@ public class SubscriptionTestUtils {
         Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
         subscription.setPendingPaymentId(paymentId);
         subscription.setPendingTier(tier);
+        subscriptionRepository.save(subscription);
+    }
+
+    public static void setActiveSubscription(Margin margin, String customerId, String subscriptionId, SubscriptionTier tier) {
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        subscription.setMollieCustomerId(customerId);
+        subscription.setSubscriptionId(subscriptionId);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setTier(tier);
+        SubscriptionLimits limits = subscription.getLimits();
+        SubscriptionLimits desired = subscriptionLimitsFactory.forTier(tier);
+        limits.setMaxMembers(desired.getMaxMembers());
+        limits.setMaxStorageGb(desired.getMaxStorageGb());
+        limits.setMaxCallParticipants(desired.getMaxCallParticipants());
         subscriptionRepository.save(subscription);
     }
 }

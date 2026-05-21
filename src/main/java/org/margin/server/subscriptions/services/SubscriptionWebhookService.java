@@ -191,7 +191,7 @@ public class SubscriptionWebhookService {
         }
 
         SubscriptionTier targetTier = SubscriptionTier.valueOf((String) metadata.get().value());
-        BigDecimal price = pricingProperties.prices().get(targetTier);
+        BigDecimal price = pricingProperties.tiers().get(targetTier).price();
         if (price == null) {
             log.warn("No price configured for tier {}", targetTier);
             return;

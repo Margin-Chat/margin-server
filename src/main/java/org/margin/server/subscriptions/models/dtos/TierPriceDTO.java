@@ -7,6 +7,9 @@ import java.math.BigDecimal;
 public record TierPriceDTO(
         SubscriptionTier tier,
         BigDecimal price,
-        String currency
+        String currency,
+        int maxMembers,
+        int maxStorageGb,
+        int maxCallParticipants
 ) {
 }

@@ -17,4 +17,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     @Query("SELECT s FROM Subscription s WHERE s.pendingPaymentId IS NOT NULL AND s.updatedAt < :before")
     List<Subscription> findStalePendingPayments(@Param("before") Instant before);
+
+    @Query("SELECT s FROM Subscription s WHERE s.status = 'CANCELLED' AND s.currentPeriodEnd < :now")
+    List<Subscription> findExpiredSubscriptions(@Param("now") Instant now);
 }

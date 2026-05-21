@@ -1,13 +1,19 @@
 package org.margin.server.storage;
 
+import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
+import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.storage.repositories.StoredFileRepository;
+import org.margin.server.subscriptions.services.SubscriptionValidationService;
+import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -21,10 +27,50 @@ public class StoredFileService implements StorageLookup {
 
     private final StoredFileRepository storedFileRepository;
     private final ConnectionManager connectionManager;
+    private final StorageService storageService;
+    private final SubscriptionValidationService subscriptionValidationService;
 
-    public StoredFileService(StoredFileRepository storedFileRepository, ConnectionManager connectionManager) {
+    public StoredFileService(StoredFileRepository storedFileRepository,
+                             ConnectionManager connectionManager,
+                             StorageService storageService,
+                             SubscriptionValidationService subscriptionValidationService) {
         this.storedFileRepository = storedFileRepository;
         this.connectionManager = connectionManager;
+        this.storageService = storageService;
+        this.subscriptionValidationService = subscriptionValidationService;
+    }
+
+    @Transactional
+    public StoredFile uploadMarginFile(Margin margin, MultipartFile file, User uploader) {
+        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
+        String url = storageService.saveStoredFile(file);
+        StoredFile entity = new StoredFile();
+        entity.setScope(StoredFileScope.MARGIN);
+        entity.setMargin(margin);
+        entity.setFileName(file.getOriginalFilename());
+        entity.setContentType(file.getContentType());
+        entity.setSizeBytes(file.getSize());
+        entity.setStorageUrl(url);
+        entity.setUploadedBy(uploader);
+        return storedFileRepository.save(entity);
+    }
+
+    @Transactional
+    public StoredFile uploadChannelFile(Channel channel, MultipartFile file, User uploader, boolean inline) {
+        Margin margin = channel.getSpace().getMargin();
+        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
+        String url = storageService.saveStoredFile(file);
+        StoredFile entity = new StoredFile();
+        entity.setScope(StoredFileScope.CHANNEL);
+        entity.setMargin(margin);
+        entity.setChannel(channel);
+        entity.setFileName(file.getOriginalFilename());
+        entity.setContentType(file.getContentType());
+        entity.setSizeBytes(file.getSize());
+        entity.setStorageUrl(url);
+        entity.setUploadedBy(uploader);
+        entity.setInline(inline);
+        return storedFileRepository.save(entity);
     }
 
     @Transactional(readOnly = true)

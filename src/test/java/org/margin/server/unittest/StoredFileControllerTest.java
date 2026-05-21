@@ -20,7 +20,6 @@ import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
 import org.margin.server.subscriptions.models.SubscriptionTier;
-import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -61,9 +60,6 @@ class StoredFileControllerTest {
     private MarginAuthorizationService marginAuthorizationService;
     @Mock
     private ConversationAuthorizationService conversationAuthorizationService;
-    @Mock
-    private SubscriptionValidationService subscriptionValidationService;
-
     @InjectMocks
     private StoredFileController controller;
 
@@ -118,27 +114,16 @@ class StoredFileControllerTest {
     }
 
     @Test
-    void uploadMarginFilePersistsEntityWithMarginScope() {
+    void uploadMarginFileDelegatesToService() {
         when(marginLookup.getById(7L)).thenReturn(margin);
-        when(storageService.saveStoredFile(any())).thenReturn("/api/files/stored-files/x_a.txt");
-        when(storedFileService.save(any())).thenAnswer(inv -> {
-            StoredFile f = inv.getArgument(0);
-            f.setId(101L);
-            return f;
-        });
+        when(storedFileService.uploadMarginFile(eq(margin), any(), eq(user)))
+                .thenReturn(fileEntity(101L, "a.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadMarginFile(
                 7L, fakeFile("a.txt", "text/plain", "hi"), user);
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        ArgumentCaptor<StoredFile> captor = ArgumentCaptor.forClass(StoredFile.class);
-        verify(storedFileService).save(captor.capture());
-        StoredFile saved = captor.getValue();
-        assertEquals(StoredFileScope.MARGIN, saved.getScope());
-        assertEquals(margin, saved.getMargin());
-        assertNull(saved.getChannel());
-        assertEquals("a.txt", saved.getFileName());
-        assertEquals(user, saved.getUploadedBy());
+        verify(storedFileService).uploadMarginFile(eq(margin), any(), eq(user));
     }
 
     @Test
@@ -148,52 +133,40 @@ class StoredFileControllerTest {
 
         assertThrows(ResponseStatusException.class, () -> controller.uploadMarginFile(
                 7L, fakeFile("a.txt", "text/plain", "x"), user));
-        verify(storageService, never()).saveStoredFile(any());
-        verify(storedFileService, never()).save(any());
+        verify(storedFileService, never()).uploadMarginFile(any(), any(), any());
     }
 
     @Test
-    void uploadChannelFileAllowedForAnyChannelMember() {
+    void uploadChannelFileDelegatesToService() {
         when(channelLookup.getById(3L)).thenReturn(channelOnMargin());
-        when(storageService.saveStoredFile(any())).thenReturn("/api/files/stored-files/y_b.txt");
-        when(storedFileService.save(any())).thenAnswer(inv -> {
-            StoredFile f = inv.getArgument(0);
-            f.setId(102L);
-            return f;
-        });
+        when(storedFileService.uploadChannelFile(eq(channel), any(), eq(user), eq(false)))
+                .thenReturn(fileEntity(102L, "b.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadChannelFile(
                 3L, fakeFile("b.txt", "text/plain", "x"), false, user);
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        ArgumentCaptor<StoredFile> captor = ArgumentCaptor.forClass(StoredFile.class);
-        verify(storedFileService).save(captor.capture());
-        assertEquals(StoredFileScope.CHANNEL, captor.getValue().getScope());
-        assertEquals(channel, captor.getValue().getChannel());
+        verify(storedFileService).uploadChannelFile(eq(channel), any(), eq(user), eq(false));
     }
 
     @Test
-    void uploadMarginFileRejectedWhenStorageQuotaExceeded() {
+    void uploadMarginFileForbiddenWhenServiceThrowsQuotaException() {
         when(marginLookup.getById(7L)).thenReturn(margin);
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(subscriptionValidationService).validateStorageQuota(eq(margin), anyLong());
+                .when(storedFileService).uploadMarginFile(eq(margin), any(), eq(user));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
                 controller.uploadMarginFile(7L, fakeFile("big.bin", "application/octet-stream", "data"), user));
-        verify(storageService, never()).saveStoredFile(any());
-        verify(storedFileService, never()).save(any());
     }
 
     @Test
-    void uploadChannelFileRejectedWhenStorageQuotaExceeded() {
+    void uploadChannelFileForbiddenWhenServiceThrowsQuotaException() {
         when(channelLookup.getById(3L)).thenReturn(channelOnMargin());
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(subscriptionValidationService).validateStorageQuota(eq(margin), anyLong());
+                .when(storedFileService).uploadChannelFile(eq(channel), any(), eq(user), eq(false));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
                 controller.uploadChannelFile(3L, fakeFile("img.png", "image/png", "bytes"), false, user));
-        verify(storageService, never()).saveStoredFile(any());
-        verify(storedFileService, never()).save(any());
     }
 
     @Test

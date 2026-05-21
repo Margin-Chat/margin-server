@@ -9,22 +9,28 @@ import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
+import org.margin.server.subscriptions.exceptions.SubscriptionNotFoundException;
 import org.margin.server.subscriptions.factories.SubscriptionLimitsFactory;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
-import org.margin.server.subscriptions.exceptions.SubscriptionNotFoundException;
 import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.utils.SubscriptionUtils;
 import org.margin.server.users.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.List;
 
 @Service
 public class SubscriptionService {
@@ -33,12 +39,21 @@ public class SubscriptionService {
     private final SubscriptionPricingProperties subscriptionPricingProperties;
     private final MollieClient mollieClient;
     private final MollieProperties mollieProperties;
+    private final SubscriptionLimitsFactory subscriptionLimitsFactory;
+    private final SubscriptionService self;
 
-    public SubscriptionService(SubscriptionRepository subscriptionRepository, SubscriptionPricingProperties subscriptionPricingProperties, MollieClient mollieClient, MollieProperties mollieProperties) {
+    public SubscriptionService(SubscriptionRepository subscriptionRepository,
+                               SubscriptionPricingProperties subscriptionPricingProperties,
+                               MollieClient mollieClient,
+                               MollieProperties mollieProperties,
+                               SubscriptionLimitsFactory subscriptionLimitsFactory,
+                               @Lazy SubscriptionService self) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPricingProperties = subscriptionPricingProperties;
         this.mollieClient = mollieClient;
         this.mollieProperties = mollieProperties;
+        this.subscriptionLimitsFactory = subscriptionLimitsFactory;
+        this.self = self;
     }
 
     public Subscription getByMargin(Margin margin) {
@@ -52,7 +67,7 @@ public class SubscriptionService {
         subscription.setMargin(margin);
         subscription.setTier(tier);
 
-        SubscriptionLimits limits = SubscriptionLimitsFactory.forTier(SubscriptionTier.FREE);
+        SubscriptionLimits limits = subscriptionLimitsFactory.forTier(SubscriptionTier.FREE);
         limits.setSubscription(subscription);
         subscription.setLimits(limits);
 
@@ -82,8 +97,12 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDTO changeTier(Margin margin, SubscriptionTier newTier) {
+    public SubscriptionDTO downgrade(Margin margin, SubscriptionTier newTier) {
         Subscription subscription = getByMargin(margin);
+
+        if (!newTier.isLowerTier(subscription.getTier())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Margin cannot be upgrade without a checkout");
+        }
 
         if (subscription.getSubscriptionId() != null) {
             try {
@@ -93,7 +112,7 @@ public class SubscriptionService {
             }
         }
 
-        BigDecimal price = subscriptionPricingProperties.prices().get(newTier);
+        BigDecimal price = subscriptionPricingProperties.tiers().get(newTier).price();
         String startDate = subscription.getCurrentPeriodEnd() != null
                 ? SubscriptionUtils.getNextSubscriptionDate(subscription).toString()
                 : null;
@@ -109,9 +128,9 @@ public class SubscriptionService {
         );
 
         subscription.setSubscriptionId(mollieSubscription.id());
-        applyTier(subscription, newTier);
+        self.applyTier(subscription, newTier);
 
-        return getSubscriptionDtoForMargin(margin);
+        return self.getSubscriptionDtoForMargin(margin);
     }
 
     @Transactional
@@ -127,7 +146,7 @@ public class SubscriptionService {
 
     @Transactional
     public void applyTier(Subscription subscription, SubscriptionTier tier) {
-        SubscriptionLimits desired = SubscriptionLimitsFactory.forTier(tier);
+        SubscriptionLimits desired = subscriptionLimitsFactory.forTier(tier);
         SubscriptionLimits current = subscription.getLimits();
         current.setMaxMembers(desired.getMaxMembers());
         current.setMaxStorageGb(desired.getMaxStorageGb());
@@ -139,7 +158,7 @@ public class SubscriptionService {
 
     @Transactional
     public String createCheckout(Margin margin, SubscriptionTier targetTier, User user) {
-        BigDecimal price = subscriptionPricingProperties.prices().get(targetTier);
+        BigDecimal price = subscriptionPricingProperties.tiers().get(targetTier).price();
 
         Subscription subscription = getByMargin(margin);
 
@@ -169,12 +188,28 @@ public class SubscriptionService {
         );
 
         log.info("Created payment for subscription {} for margin {}", subscription.getId(), margin.getName());
-        
+
         subscription.setPendingPaymentId(payment.id());
         subscription.setPendingTier(targetTier);
         subscriptionRepository.save(subscription);
 
         Url checkout = payment.links().checkout().orElseThrow();
         return checkout.href();
+    }
+
+    @Transactional
+    @Scheduled(fixedDelayString = "${scheduling.subscription-cleanup-delay-ms:3600000}")
+    public void updateExpiredSubscriptions() {
+        List<Subscription> expiredSubscriptions = subscriptionRepository.findExpiredSubscriptions(Instant.now());
+        if (expiredSubscriptions.isEmpty()) return;
+
+        log.info("Reverting {} expired cancelled subscriptions to FREE", expiredSubscriptions.size());
+        for (Subscription subscription : expiredSubscriptions) {
+            self.applyTier(subscription, SubscriptionTier.FREE);
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+            subscription.setCurrentPeriodStart(null);
+            subscription.setCurrentPeriodEnd(null);
+            log.info("Reverting {} expired subscription to free", subscription.getId());
+        }
     }
 }

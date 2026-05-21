@@ -1,8 +1,8 @@
 package org.margin.server.subscriptions;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.models.SubscriptionTier;
@@ -28,34 +28,44 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
     private final SubscriptionWebhookService subscriptionWebhookService;
     private final MarginAuthorizationService marginAuthorizationService;
-    private final MarginService marginService;
     private final SubscriptionPricingProperties pricingProperties;
+    private final MarginLookup marginLookup;
 
     public SubscriptionController(SubscriptionService subscriptionService,
                                   SubscriptionWebhookService subscriptionWebhookService,
                                   MarginAuthorizationService marginAuthorizationService,
-                                  MarginService marginService,
-                                  SubscriptionPricingProperties pricingProperties) {
+                                  SubscriptionPricingProperties pricingProperties,
+                                  MarginLookup marginLookup) {
         this.subscriptionService = subscriptionService;
         this.subscriptionWebhookService = subscriptionWebhookService;
         this.marginAuthorizationService = marginAuthorizationService;
-        this.marginService = marginService;
         this.pricingProperties = pricingProperties;
+        this.marginLookup = marginLookup;
     }
 
     @GetMapping("/margin/{marginId}")
     public ResponseEntity<SubscriptionDTO> getSubscriptionForMargin(@PathVariable Long marginId,
                                                                     @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginMember(user.getId(), marginId);
-        Margin margin = marginService.getById(marginId);
+        Margin margin = marginLookup.getById(marginId);
         return ResponseEntity.ok(subscriptionService.getSubscriptionDtoForMargin(margin));
     }
 
     @GetMapping("/tiers")
     public ResponseEntity<List<TierPriceDTO>> getTiers() {
-        List<TierPriceDTO> tiers = pricingProperties.prices().entrySet().stream()
-                .map(e ->
-                        new TierPriceDTO(e.getKey(), e.getValue(), pricingProperties.currency()))
+        List<TierPriceDTO> tiers = List.of(SubscriptionTier.FREE, SubscriptionTier.SMALL, SubscriptionTier.MEDIUM)
+                .stream()
+                .map(tier -> {
+                    SubscriptionPricingProperties.TierConfig config = pricingProperties.tiers().get(tier);
+                    return new TierPriceDTO(
+                            tier,
+                            config.price(),
+                            pricingProperties.currency(),
+                            config.maxMembers(),
+                            config.maxStorageGb(),
+                            config.maxCallParticipants()
+                    );
+                })
                 .toList();
         return ResponseEntity.ok(tiers);
     }
@@ -65,7 +75,7 @@ public class SubscriptionController {
                                                           @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginOwner(user.getId(), request.marginId());
         String checkoutUrl = subscriptionService.createCheckout(
-                marginService.getById(request.marginId()), request.tier(), user
+                marginLookup.getById(request.marginId()), request.tier(), user
         );
         return ResponseEntity.ok(new CheckoutResponse(checkoutUrl));
     }
@@ -76,7 +86,7 @@ public class SubscriptionController {
                                                       @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
         SubscriptionTier newTier = SubscriptionTier.valueOf(body.get("tier"));
-        SubscriptionDTO dto = subscriptionService.changeTier(marginService.getById(marginId), newTier);
+        SubscriptionDTO dto = subscriptionService.downgrade(marginLookup.getById(marginId), newTier);
         return ResponseEntity.ok(dto);
     }
 
@@ -84,7 +94,7 @@ public class SubscriptionController {
     public ResponseEntity<Void> cancelSubscription(@PathVariable Long marginId,
                                                    @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
-        subscriptionService.cancelSubscription(marginService.getById(marginId));
+        subscriptionService.cancelSubscription(marginLookup.getById(marginId));
         return ResponseEntity.ok().build();
     }
 
@@ -92,7 +102,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDTO> reconcilePending(@PathVariable Long marginId,
                                                             @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
-        SubscriptionDTO dto = subscriptionWebhookService.reconcilePendingPayment(marginService.getById(marginId));
+        SubscriptionDTO dto = subscriptionWebhookService.reconcilePendingPayment(marginLookup.getById(marginId));
         return ResponseEntity.ok(dto);
     }
 
@@ -100,7 +110,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDTO> cancelPending(@PathVariable Long marginId,
                                                          @AuthenticationPrincipal User user) {
         marginAuthorizationService.requireMarginOwner(user.getId(), marginId);
-        SubscriptionDTO dto = subscriptionWebhookService.cancelPendingPayment(marginService.getById(marginId));
+        SubscriptionDTO dto = subscriptionWebhookService.cancelPendingPayment(marginLookup.getById(marginId));
         return ResponseEntity.ok(dto);
     }
 

@@ -1,11 +1,6 @@
 package org.margin.server.integrationtest;
 
-import com.mollie.mollie.models.components.Amount;
-import com.mollie.mollie.models.components.Metadata;
-import com.mollie.mollie.models.components.PaymentResponse;
-import com.mollie.mollie.models.components.PaymentResponseStatus;
-import com.mollie.mollie.models.components.SequenceTypeResponse;
-import com.mollie.mollie.models.components.SubscriptionResponse;
+import com.mollie.mollie.models.components.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
@@ -25,14 +20,15 @@ import org.margin.server.users.models.User;
 import org.mockito.Mockito;
 import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SubscriptionPaymentTest extends MarginTestRunner {
@@ -138,6 +134,54 @@ class SubscriptionPaymentTest extends MarginTestRunner {
         MarginTestUtils.addUserToMargin(margin.getId(), owner, extra);
 
         assertThat(NotificationTestUtils.hasNotification(owner, NotificationType.SUBSCRIPTION_LIMIT_WARNING)).isTrue();
+    }
+
+    @Test
+    void changeTier_forbiddenForNonOwner() {
+        User nonOwner = UserTestUtils.createUser("notowner", "notowner@margin.chat");
+        MarginTestUtils.addUserToMargin(margin.getId(), owner, nonOwner);
+
+        assertThrows(ResponseStatusException.class, () ->
+                subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), nonOwner));
+    }
+
+    @Test
+    void cancelSubscription_setsStatusToCancelled() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
+
+        subscriptionController.cancelSubscription(margin.getId(), owner);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelSubscription_doesNotRevertTierOrLimits() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
+
+        subscriptionController.cancelSubscription(margin.getId(), owner);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(25);
+    }
+
+    @Test
+    void cancelSubscription_callsMollieCancelSubscription() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
+
+        subscriptionController.cancelSubscription(margin.getId(), owner);
+
+        verify(mollieClient).cancelSubscription(CUSTOMER_ID, "sub_old");
+    }
+
+    @Test
+    void cancelSubscription_forbiddenForNonOwner() {
+        User nonOwner = UserTestUtils.createUser("notowner2", "notowner2@margin.chat");
+        MarginTestUtils.addUserToMargin(margin.getId(), owner, nonOwner);
+
+        assertThrows(ResponseStatusException.class, () ->
+                subscriptionController.cancelSubscription(margin.getId(), nonOwner));
     }
 
     private static PaymentResponse mockPayment(String id, String status, String customerId, String sequenceType) {
