@@ -103,8 +103,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(APIException.class)
     public ProblemDetail handleAPIException(APIException ex) {
+        log.error("Mollie API error", ex);
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Unhandled exception", ex);
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        detail.setDetail("An unexpected error occurred");
         return detail;
     }
 }

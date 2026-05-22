@@ -57,29 +57,30 @@ public class AuthenticationService {
     }
 
     public AuthResponse authenticateUser(String email, String password) {
+        String normalisedEmail = email.toLowerCase();
+        log.info("Login attempt for email {}", normalisedEmail);
         try {
-            User user = userRepository.findByEmail(email.toLowerCase())
-                    .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+            User user = userRepository.findByEmail(normalisedEmail)
+                    .orElseThrow(() -> new BadCredentialsException("user not found"));
 
             if (!activationKeyService.isUserActivated(user)) {
-                log.info("Login blocked — user {} is not yet activated", user.getId());
+                log.warn("Login blocked — userId {} not yet activated", user.getId());
                 return new AuthResponse(false, "User is not yet activated",
                         null, null, null, null, null);
             }
 
             if (isAccountLocked(user)) {
-                throw new BadCredentialsException("Account is locked until " + user.getSecurity().getAccountLockedUntil());
+                log.warn("Login blocked — userId {} locked until {}", user.getId(), user.getSecurity().getAccountLockedUntil());
+                throw new BadCredentialsException("account locked");
             }
 
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email.toLowerCase(), password)
+                    new UsernamePasswordAuthenticationToken(normalisedEmail, password)
             );
 
             resetFailedAttempts(user);
-
             String token = jwtService.generateToken(email, user.getId());
-
-            log.info("User {} authenticated successfully", user.getDisplayName());
+            log.info("Login successful for userId={}", user.getId());
 
             return new AuthResponse(
                     true,
@@ -90,9 +91,9 @@ public class AuthenticationService {
                     user.getEncryption().getSalt(),
                     user.getEncryption().getIv());
 
-        } catch (BadCredentialsException _) {
-            handleFailedLogin(email);
-            log.info("Authentication failed for email: {}", email);
+        } catch (BadCredentialsException e) {
+            log.warn("Login failed for email {} reason {}", normalisedEmail, e.getMessage());
+            handleFailedLogin(normalisedEmail);
             return new AuthResponse(
                     false,
                     "Invalid credentials",
@@ -192,5 +193,14 @@ public class AuthenticationService {
 
     public void logoutUser(User user) {
         connectionManager.closeAllSessions(user.getId());
+    }
+
+    @Transactional
+    public void updateEncryptionKeys(User user, String publicKey, String encryptedPrivateKey, String salt, String iv) {
+        user.getEncryption().setPublicKey(publicKey);
+        user.getEncryption().setEncryptedPrivateKey(encryptedPrivateKey);
+        user.getEncryption().setSalt(salt);
+        user.getEncryption().setIv(iv);
+        userRepository.save(user);
     }
 }

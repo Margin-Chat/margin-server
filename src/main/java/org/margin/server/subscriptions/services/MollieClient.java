@@ -6,13 +6,11 @@ import com.mollie.mollie.models.operations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Component
 public class MollieClient {
     private final MollieProperties properties;
-    private final RestTemplate restTemplate = new RestTemplate();
     private final Client mollieClient;
     private final String apiKey;
 
@@ -155,21 +153,5 @@ public class MollieClient {
         } else {
             throw new IllegalStateException("Subscription response is null");
         }
-    }
-
-    public GetCustomerResponseBody getCustomer(String customerId) {
-        GetCustomerResponse response = mollieClient.customers().get()
-                .customerId("cst_5B8cwPMGnU")
-                .include("events")
-                .idempotencyKey("123e4567-e89b-12d3-a456-426")
-                .call();
-
-        if (response.object().isPresent()) {
-            log.info("Get customer response: {}", response.object().get());
-        } else {
-            throw new IllegalStateException("Customer response is null");
-        }
-
-        return response.object().get();
     }
 }

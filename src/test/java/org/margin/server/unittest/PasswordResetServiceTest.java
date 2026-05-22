@@ -8,6 +8,7 @@ import org.margin.server.authentication.repositories.PasswordResetTokenRepositor
 import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.repositories.UserRepository;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -87,7 +88,7 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    void resetPassword_validToken_encodesAndPersistsPassword() {
+    void resetPassword_validToken_encodesPersistsPasswordAndClearsEncryptionKeys() {
         User user = makeUser();
         PasswordResetToken token = makeToken(user, false, false);
         when(tokenRepository.findByToken("valid-token")).thenReturn(Optional.of(token));
@@ -96,6 +97,10 @@ class PasswordResetServiceTest {
         passwordResetService.resetPassword("valid-token", "new-pass");
 
         assertEquals("hashed", user.getPassword());
+        assertNull(user.getEncryption().getPublicKey());
+        assertNull(user.getEncryption().getEncryptedPrivateKey());
+        assertNull(user.getEncryption().getSalt());
+        assertNull(user.getEncryption().getIv());
         verify(userRepository).save(user);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
@@ -142,6 +147,14 @@ class PasswordResetServiceTest {
         user.setId(1L);
         user.setDisplayName("Alice");
         user.setEmail("alice@margin.chat");
+
+        UserEncryption encryption = new UserEncryption();
+        encryption.setPublicKey("old-public");
+        encryption.setEncryptedPrivateKey("old-encrypted-private");
+        encryption.setSalt("old-salt");
+        encryption.setIv("old-iv");
+        user.setEncryption(encryption);
+
         return user;
     }
 

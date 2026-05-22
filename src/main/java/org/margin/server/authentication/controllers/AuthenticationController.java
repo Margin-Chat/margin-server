@@ -113,6 +113,16 @@ public class AuthenticationController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/encryption-keys")
+    public ResponseEntity<Void> updateEncryptionKeys(@RequestBody EncryptionKeysRequest request,
+                                                     @AuthenticationPrincipal User user) {
+        authenticationService.updateEncryptionKeys(user, request.publicKey(), request.encryptedPrivateKey(), request.salt(), request.iv());
+        log.info("Encryption keys updated for userId={}", user.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    public record EncryptionKeysRequest(String publicKey, String encryptedPrivateKey, String salt, String iv) {}
+
     private void rateLimitRegistration(HttpServletRequest httpServletRequest) {
         String ip = httpServletRequest.getHeader("X-Forwarded-For");
         if (ip == null) ip = httpServletRequest.getRemoteAddr();

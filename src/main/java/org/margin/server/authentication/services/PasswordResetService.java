@@ -39,8 +39,9 @@ public class PasswordResetService {
 
     @Transactional
     public void requestPasswordReset(String email) {
-        // Always succeeds to avoid leaking whether an email is registered
-        userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
+        String normalised = email.toLowerCase();
+        log.info("Password reset requested for email {}", normalised);
+        userRepository.findByEmail(normalised).ifPresent(user -> {
             tokenRepository.deleteByUser(user);
 
             PasswordResetToken resetToken = new PasswordResetToken();
@@ -52,34 +53,46 @@ public class PasswordResetService {
             String body = emailService.buildPasswordResetMail(user.getDisplayName(), resetToken.getToken());
             try {
                 emailService.sendEmail(user.getEmail(), "Reset your margin password", body);
+                log.info("Password reset email sent to userId={}", user.getId());
             } catch (MessagingException e) {
-                log.error("Failed to send password reset email to {}", user.getEmail(), e);
+                log.error("Failed to send password reset email to userId={}", user.getId(), e);
             }
-
-            log.info("Password reset email sent for user {}", user.getId());
         });
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        PasswordResetToken resetToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired token"));
+        log.info("Password reset attempt for token prefix {}", token.length() > 8 ? token.substring(0, 8) : "short");
+
+        PasswordResetToken resetToken = tokenRepository.findByToken(token).orElse(null);
+        if (resetToken == null) {
+            log.warn("Password reset failed — token not found");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired token");
+        }
 
         if (resetToken.isExpired()) {
+            log.warn("Password reset failed — token expired at {} userId {}", resetToken.getExpiresAt(), resetToken.getUser().getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has expired");
         }
 
         if (resetToken.isUsed()) {
+            log.warn("Password reset failed — token already used at {} userId {}", resetToken.getUsedAt(), resetToken.getUser().getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has already been used");
         }
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.getEncryption().setPublicKey(null);
+        user.getEncryption().setEncryptedPrivateKey(null);
+        user.getEncryption().setSalt(null);
+        user.getEncryption().setIv(null);
+        log.info("Encryption keys cleared for userId {} — will be regenerated on next login", user.getId());
+
         userRepository.save(user);
 
         resetToken.setUsedAt(Instant.now());
         tokenRepository.save(resetToken);
 
-        log.info("Password reset successfully for user {}", user.getId());
+        log.info("Password reset successfully for userId {}", user.getId());
     }
 }
