@@ -80,7 +80,7 @@ public class FilesController {
         StoredFile f = storedFileService.findByStoredFileName(fileName);
 
         if (f.getChannel() != null && f.getChannel().getConversation() != null) {
-            conversationAuthorizationService.requireConversationMember(viewer.getId(), f.getChannel().getConversation().getId());
+            conversationAuthorizationService.requireConversationMember(f.getChannel().getConversation().getId(), viewer.getId());
         } else {
             marginAuthorizationService.requireMarginMember(viewer.getId(), f.getMargin().getId());
         }
@@ -98,7 +98,7 @@ public class FilesController {
         if (file.getMessageId() == null || file.getChannel() == null) {
             return ResponseEntity.notFound().build();
         }
-        conversationAuthorizationService.requireConversationMember(viewer.getId(), file.getChannel().getConversation().getId());
+        conversationAuthorizationService.requireConversationMember(file.getChannel().getConversation().getId(), viewer.getId());
         return serve(file.getStorageUrl(), fileName);
     }
 

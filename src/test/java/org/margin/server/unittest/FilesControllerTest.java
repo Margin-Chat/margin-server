@@ -156,7 +156,7 @@ class FilesControllerTest {
         StoredFile f = channelStoredFile();
         when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
-                .when(conversationAuthorizationService).requireConversationMember(1L, 99L);
+                .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
 
         assertThrows(ResponseStatusException.class,
                 () -> controller.getStoredFileByName("file.pdf", viewer));
@@ -233,7 +233,7 @@ class FilesControllerTest {
         StoredFile f = channelStoredFile();
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
-                .when(conversationAuthorizationService).requireConversationMember(1L, 99L);
+                .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
 
         assertThrows(ResponseStatusException.class,
                 () -> controller.getConversationImage("img.png", viewer));
@@ -251,7 +251,7 @@ class FilesControllerTest {
         ResponseEntity<?> response = controller.getConversationImage("img.png", viewer);
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        verify(conversationAuthorizationService).requireConversationMember(1L, 99L);
+        verify(conversationAuthorizationService).requireConversationMember(99L, 1L);
     }
 
     // --- helpers ---
