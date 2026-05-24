@@ -1,6 +1,6 @@
 # margin-server
 
-Spring Boot backend for [Margin](https://margin.chat). Handles REST, WebSocket, auth, storage, subscriptions, and SFU coordination.
+Spring Boot backend for [margin](https://margin.chat). Handles REST, WebSocket, auth, storage, subscriptions, and SFU coordination.
 
 ## Building
 
