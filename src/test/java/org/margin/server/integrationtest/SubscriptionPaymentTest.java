@@ -184,6 +184,25 @@ class SubscriptionPaymentTest extends MarginTestRunner {
                 subscriptionController.cancelSubscription(margin.getId(), nonOwner));
     }
 
+    @Test
+    void webhookFirstPaymentPaid_whenNextPaymentDateUndefined_usesStartDateAndActivates() {
+        SubscriptionTestUtils.setPendingPayment(margin, PAYMENT_ID, SubscriptionTier.SMALL);
+        PaymentResponse payment = paidFirstPaymentWithAmount();
+        SubscriptionResponse mollieSub = SubscriptionTestUtils.mockSubscriptionResponseWithStartDate(SUBSCRIPTION_ID, "2026-06-22");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), anyString()))
+                .thenReturn(mollieSub);
+
+        subscriptionWebhookService.handleWebhook(PAYMENT_ID);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getPendingPaymentId()).isNull();
+        assertThat(sub.getCurrentPeriodEnd()).isNotNull();
+    }
+
     private static PaymentResponse mockPayment(String id, String status, String customerId, String sequenceType) {
         PaymentResponse payment = Mockito.mock(PaymentResponse.class);
         Mockito.lenient().when(payment.id()).thenReturn(id);
@@ -201,9 +220,6 @@ class SubscriptionPaymentTest extends MarginTestRunner {
     }
 
     private static SubscriptionResponse mockSubscriptionResponse(String id, String nextPaymentDate) {
-        SubscriptionResponse sub = Mockito.mock(SubscriptionResponse.class);
-        Mockito.lenient().when(sub.id()).thenReturn(id);
-        Mockito.lenient().when(sub.nextPaymentDate()).thenReturn(JsonNullable.of(nextPaymentDate));
-        return sub;
+        return SubscriptionTestUtils.mockSubscriptionResponse(id, nextPaymentDate);
     }
 }

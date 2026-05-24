@@ -9,6 +9,7 @@ import org.margin.server.sfu.services.SfuTokenService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
+import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -50,7 +51,11 @@ public class SfuController {
         int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channel, currentParticipants);
         sfuService.createOrJoinRoom(roomId, maxParticipants);
         String roomToken = sfuTokenService.generateRoomToken(user.getId(), roomId);
-        return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken));
+        boolean isFree = subscriptionValidationService
+                .getSubscriptionForMargin(channel.getSpace().getMargin())
+                .getTier() == SubscriptionTier.FREE;
+        Integer maxVideoHeight = isFree ? 720 : null;
+        return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken, maxVideoHeight));
     }
 
     @PostMapping("peer_joined")

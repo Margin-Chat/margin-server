@@ -1,5 +1,6 @@
 package org.margin.server.integrationtest.utils;
 
+import com.mollie.mollie.models.components.SubscriptionResponse;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
@@ -10,6 +11,8 @@ import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
+import org.mockito.Mockito;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -60,6 +63,21 @@ public class SubscriptionTestUtils {
         subscription.setPendingPaymentId(paymentId);
         subscription.setPendingTier(tier);
         subscriptionRepository.save(subscription);
+    }
+
+    public static SubscriptionResponse mockSubscriptionResponse(String id, String nextPaymentDate) {
+        SubscriptionResponse sub = Mockito.mock(SubscriptionResponse.class);
+        Mockito.lenient().when(sub.id()).thenReturn(id);
+        Mockito.lenient().when(sub.nextPaymentDate()).thenReturn(JsonNullable.of(nextPaymentDate));
+        return sub;
+    }
+
+    public static SubscriptionResponse mockSubscriptionResponseWithStartDate(String id, String startDate) {
+        SubscriptionResponse sub = Mockito.mock(SubscriptionResponse.class);
+        Mockito.lenient().when(sub.id()).thenReturn(id);
+        Mockito.lenient().when(sub.nextPaymentDate()).thenReturn(JsonNullable.undefined());
+        Mockito.lenient().when(sub.startDate()).thenReturn(startDate);
+        return sub;
     }
 
     public static void setActiveSubscription(Margin margin, String customerId, String subscriptionId, SubscriptionTier tier) {

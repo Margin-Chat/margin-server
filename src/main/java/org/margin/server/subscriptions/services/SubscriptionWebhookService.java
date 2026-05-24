@@ -1,9 +1,11 @@
 package org.margin.server.subscriptions.services;
 
 import com.mollie.mollie.models.components.Amount;
+import com.mollie.mollie.models.components.ListSubscriptionResponse;
 import com.mollie.mollie.models.components.Metadata;
 import com.mollie.mollie.models.components.PaymentResponse;
 import com.mollie.mollie.models.components.SubscriptionResponse;
+import com.mollie.mollie.models.errors.APIException;
 import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
@@ -197,20 +199,39 @@ public class SubscriptionWebhookService {
             return;
         }
 
-        SubscriptionResponse mollieSubscription = mollieClient.createSubscription(
-                subscription.getMollieCustomerId(),
-                price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                pricingProperties.currency(),
-                "1 month",
-                "margin %s — %s plan".formatted(subscription.getMargin().getName(), targetTier),
-                "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
-                LocalDate.now(ZoneOffset.UTC).plusMonths(1).toString()
-        );
+        String description = "margin %s — %s plan".formatted(subscription.getMargin().getName(), targetTier);
+        SubscriptionResponse mollieSubscription;
+        try {
+            mollieSubscription = mollieClient.createSubscription(
+                    subscription.getMollieCustomerId(),
+                    price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                    pricingProperties.currency(),
+                    "1 month",
+                    description,
+                    "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
+                    LocalDate.now(ZoneOffset.UTC).plusMonths(1).toString()
+            );
+        } catch (APIException e) {
+            if (e.code() == 422 && e.bodyAsString().map(b -> b.contains("already exists")).orElse(false)) {
+                log.warn("Mollie subscription already exists for customer {}, recovering", subscription.getMollieCustomerId());
+                mollieSubscription = mollieClient.listSubscriptions(subscription.getMollieCustomerId())
+                        .stream()
+                        .filter(s -> description.equals(s.description()))
+                        .findFirst()
+                        .map(s -> mollieClient.getSubscription(subscription.getMollieCustomerId(), s.id()))
+                        .orElseThrow(() -> e);
+            } else {
+                throw e;
+            }
+        }
 
+        String nextDate = mollieSubscription.nextPaymentDate().isPresent()
+                ? mollieSubscription.nextPaymentDate().get()
+                : mollieSubscription.startDate();
         subscription.setSubscriptionId(mollieSubscription.id());
         subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setCurrentPeriodStart(Instant.now());
-        subscription.setCurrentPeriodEnd(parseMollieDate(mollieSubscription.nextPaymentDate().get()));
+        subscription.setCurrentPeriodEnd(parseMollieDate(nextDate));
         subscription.setPendingPaymentId(null);
         subscription.setPendingTier(null);
 
@@ -231,7 +252,10 @@ public class SubscriptionWebhookService {
         }
         SubscriptionResponse mollieSubscription = mollieClient.getSubscription(
                 subscription.getMollieCustomerId(), subscription.getSubscriptionId());
-        Instant nextPaymentDate = parseMollieDate(mollieSubscription.nextPaymentDate().get());
+        String nextDateStr = mollieSubscription.nextPaymentDate().isPresent()
+                ? mollieSubscription.nextPaymentDate().get()
+                : null;
+        Instant nextPaymentDate = parseMollieDate(nextDateStr);
         subscription.setCurrentPeriodStart(Instant.now());
         subscription.setCurrentPeriodEnd(nextPaymentDate);
         subscription.setStatus(SubscriptionStatus.ACTIVE);

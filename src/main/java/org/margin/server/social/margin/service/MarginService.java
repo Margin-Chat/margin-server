@@ -23,9 +23,11 @@ import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -176,26 +178,43 @@ public class MarginService implements MarginLookup {
     }
 
     @Transactional
-    public MarginMemberDTO updateMarginMemberRole(Long marginId, MarginMemberDTO memberDTO) {
+    public MarginMemberDTO updateMarginMemberRole(Long marginId, Long requesterId, MarginMemberDTO memberDTO) {
 
         Margin margin = getById(marginId);
 
-        MarginMember member = margin.getMembers().stream()
+        MarginMember requester = margin.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(requesterId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this margin"));
+
+        if (requesterId.equals(memberDTO.user().id())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot change your own role");
+        }
+
+        MarginMember target = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(memberDTO.user().id()))
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
-        if (member.getRole() == MarginRole.ADMIN || member.getRole() == MarginRole.OWNER) {
-            validateMemberIsNotTheLastAdmin(member, margin.getMembers());
+        if (target.getRole().getRank() <= requester.getRole().getRank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot change the role of a member with equal or higher rank");
         }
 
-        member.setRole(memberDTO.role());
+        if (memberDTO.role().getRank() < requester.getRole().getRank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot assign a role with higher authority than your own");
+        }
+
+        if (target.getRole() == MarginRole.ADMIN || target.getRole() == MarginRole.OWNER) {
+            validateMemberIsNotTheLastAdmin(target, margin.getMembers());
+        }
+
+        target.setRole(memberDTO.role());
         marginRepository.save(margin);
 
         return new MarginMemberDTO(
-                new org.margin.server.users.models.dtos.UserDTO(member.getUser(), false),
-                member.getRole(),
-                member.getJoinedAt()
+                new org.margin.server.users.models.dtos.UserDTO(target.getUser(), false),
+                target.getRole(),
+                target.getJoinedAt()
         );
     }
 

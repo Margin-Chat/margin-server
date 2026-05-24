@@ -87,7 +87,7 @@ public class MarginController {
 
         marginAuthorizationService.requireMarginAdmin(user.getId(), request.marginId());
         return ResponseEntity.ok(
-                marginService.updateMarginMemberRole(request.marginId(), request.member())
+                marginService.updateMarginMemberRole(request.marginId(), user.getId(), request.member())
         );
     }
 

@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.List;
+
 @Slf4j
 @Component
 public class MollieClient {
@@ -137,6 +140,17 @@ public class MollieClient {
         }
 
         return response.subscriptionResponse().get();
+    }
+
+    public List<ListSubscriptionResponse> listSubscriptions(String customerId) {
+        ListSubscriptionsResponse response = mollieClient.subscriptions().list()
+                .request(ListSubscriptionsRequest.builder()
+                        .customerId(customerId)
+                        .build())
+                .call();
+        return response.object()
+                .map(body -> body.embedded().subscriptions().orElse(Collections.emptyList()))
+                .orElse(Collections.emptyList());
     }
 
     public void cancelSubscription(String customerId, String subscriptionId) {

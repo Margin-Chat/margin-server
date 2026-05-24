@@ -10,7 +10,13 @@ import java.util.Optional;
 
 public interface StoredFileRepository extends JpaRepository<StoredFile, Long> {
 
-    Optional<StoredFile> findFirstByStorageUrlEndsWith(String suffix);
+    @Query("""
+            SELECT f FROM StoredFile f
+            LEFT JOIN FETCH f.channel c
+            LEFT JOIN FETCH c.conversation
+            WHERE f.storageUrl LIKE CONCAT('%', :suffix)
+            """)
+    Optional<StoredFile> findFirstByStorageUrlEndsWith(@Param("suffix") String suffix);
 
     @Query("""
             SELECT f FROM StoredFile f

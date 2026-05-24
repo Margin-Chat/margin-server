@@ -1,6 +1,7 @@
 package org.margin.server.unittest;
 
 import com.mollie.mollie.models.components.*;
+import com.mollie.mollie.models.errors.APIException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -428,6 +429,56 @@ class SubscriptionWebhookServiceTest {
         PaymentResponse payment = paidFirstPayment();
         lenient().when(payment.amount()).thenReturn(Amount.builder().value("9.99").currency("EUR").build());
         return payment;
+    }
+
+    @Test
+    void firstPaymentPaid_whenNextPaymentDateUndefined_usesStartDateAsFallback() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = paidFirstPaymentWithAmount();
+        SubscriptionResponse mollieSub = mock(SubscriptionResponse.class);
+        lenient().when(mollieSub.id()).thenReturn(SUBSCRIPTION_ID);
+        when(mollieSub.nextPaymentDate()).thenReturn(JsonNullable.undefined());
+        when(mollieSub.startDate()).thenReturn("2026-06-22");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.createSubscription(any(), any(), any(), any(), any(), any(), any())).thenReturn(mollieSub);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getCurrentPeriodEnd()).isNotNull();
+        verify(subscriptionService).applyTier(any(), eq(SubscriptionTier.SMALL));
+    }
+
+    @Test
+    void firstPaymentPaid_whenMollieSubscriptionAlreadyExists_recoversAndCompletes() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = paidFirstPaymentWithAmount();
+
+        APIException alreadyExists = mock(APIException.class);
+        when(alreadyExists.code()).thenReturn(422);
+        when(alreadyExists.bodyAsString()).thenReturn(Optional.of(
+                "{\"detail\":\"A subscription with the same description already exists for this customer\"}"));
+
+        ListSubscriptionResponse existing = mock(ListSubscriptionResponse.class);
+        when(existing.id()).thenReturn(SUBSCRIPTION_ID);
+        when(existing.description()).thenReturn("margin Test Margin — SMALL plan");
+
+        SubscriptionResponse recovered = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-06-22");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.createSubscription(any(), any(), any(), any(), any(), any(), any())).thenThrow(alreadyExists);
+        when(mollieClient.listSubscriptions(CUSTOMER_ID)).thenReturn(List.of(existing));
+        when(mollieClient.getSubscription(CUSTOMER_ID, SUBSCRIPTION_ID)).thenReturn(recovered);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getSubscriptionId()).isEqualTo(SUBSCRIPTION_ID);
+        assertThat(subscription.getPendingPaymentId()).isNull();
+        verify(subscriptionService).applyTier(any(), eq(SubscriptionTier.SMALL));
     }
 
     private static SubscriptionResponse mockSubscriptionResponse(String id, String nextPaymentDate) {
