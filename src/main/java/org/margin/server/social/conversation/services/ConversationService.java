@@ -198,7 +198,11 @@ public class ConversationService {
                 .collect(Collectors.toMap(
                         p -> p.user().getId(),
                         p -> p,
-                        (a, b) -> a.lastMessageTime().isAfter(b.lastMessageTime()) ? a : b
+                        (a, b) -> {
+                            if (a.lastMessageTime() == null) return b;
+                            if (b.lastMessageTime() == null) return a;
+                            return a.lastMessageTime().isAfter(b.lastMessageTime()) ? a : b;
+                        }
                 ))
                 .values()
                 .stream()
