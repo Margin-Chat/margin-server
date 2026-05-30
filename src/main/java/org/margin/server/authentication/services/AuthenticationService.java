@@ -12,6 +12,7 @@ import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +28,9 @@ import java.time.Instant;
 public class AuthenticationService {
     private static final int MAX_FAILED_ATTEMPTS = 3;
     private static final int LOCK_DURATION_SECONDS = 30;
+
+    @Value("${margin.mail.require-email-activation:true}")
+    private boolean requireEmailActivation;
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -148,6 +152,13 @@ public class AuthenticationService {
         userRepository.save(user);
 
         ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+
+        if (!requireEmailActivation) {
+            activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
+            log.info("Email activation disabled — user {} auto-activated", user.getHandle());
+            return activationKey;
+        }
+
         String registrationContent = emailService.buildRegistrationMail(user.getDisplayName(), activationKey.getToken());
         try {
             emailService.sendEmail(user.getEmail(), "Email activation for margin", registrationContent);

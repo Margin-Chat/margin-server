@@ -2,6 +2,7 @@ package org.margin.server.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -15,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 @Service
+@Slf4j
 public class EmailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
@@ -28,12 +30,19 @@ public class EmailService {
     @Value("${margin.mail.logo-url:}")
     private String logoUrl;
 
+    @Value("${margin.mail.log-only:false}")
+    private boolean logOnly;
+
     public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
     }
 
     public void sendEmail(String to, String subject, String htmlBody) throws MessagingException {
+        if (logOnly) {
+            log.info("[EMAIL LOG-ONLY] to={} subject=\"{}\" body={}", to, subject, htmlBody);
+            return;
+        }
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
         helper.setFrom(fromAddress);
