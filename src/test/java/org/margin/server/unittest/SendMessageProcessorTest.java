@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class SendMessageProcessorTest {
@@ -122,10 +123,4 @@ class SendMessageProcessorTest {
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
     }
 
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
 }

@@ -29,6 +29,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
+import static org.margin.server.unittest.utils.ConversationTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class ConversationServiceTest {
@@ -154,16 +156,4 @@ class ConversationServiceTest {
         assertThrows(RuntimeException.class, () -> conversationService.getById(1L));
     }
 
-    private User createUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
-    }
-
-    private Conversation createConversation(Long id, ConversationType type) {
-        Conversation conv = new Conversation();
-        conv.setId(id);
-        conv.setType(type);
-        return conv;
-    }
 }

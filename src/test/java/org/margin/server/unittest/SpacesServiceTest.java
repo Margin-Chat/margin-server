@@ -38,6 +38,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class SpacesServiceTest {
@@ -66,12 +67,6 @@ class SpacesServiceTest {
     @InjectMocks
     private SpacesService spacesService;
 
-    private User testUser(long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
-    }
-
     private Margin testMargin(User... members) {
         Margin margin = new Margin();
         List<MarginMember> marginMembers = new ArrayList<>();
@@ -94,7 +89,7 @@ class SpacesServiceTest {
         when(spacesRepository.getSpaceByName("General", margin.getId()))
                 .thenReturn(Optional.of(new Space()));
 
-        User user = testUser(1L);
+        User user = createUser(1L);
         assertThrows(DuplicateKeyException.class,
                 () -> spacesService.createNewSpace(dto, user, margin));
     }
@@ -103,7 +98,7 @@ class SpacesServiceTest {
     @DisplayName("createNewSpace should create space, add creator as ADMIN, and create General Chat channel")
     void createNewSpace_Success() {
         CreateSpaceDTO dto = new CreateSpaceDTO("General", "Desc", Visibility.PUBLIC, 1L);
-        User user = testUser(1L);
+        User user = createUser(1L);
 
         Margin margin = testMargin(user);
         margin.setId(5L);
@@ -147,7 +142,7 @@ class SpacesServiceTest {
     void addNewUserToSpace_Success() {
         Space space = new Space();
         space.setId(1L);
-        User newUser = testUser(2L);
+        User newUser = createUser(2L);
 
         SpaceMember spaceMember = new SpaceMember();
         spaceMember.setUser(newUser);
@@ -168,7 +163,7 @@ class SpacesServiceTest {
     void addNewUserToSpace_RejectsDuplicate() {
         Space space = new Space();
         space.setId(1L);
-        User existingUser = testUser(1L);
+        User existingUser = createUser(1L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
         when(spacesActions.addUserToSpace(existingUser, space, SpaceRole.MEMBER))
@@ -184,7 +179,7 @@ class SpacesServiceTest {
     void addNewUserToSpace_RejectsNonMarginMember() {
         Space space = new Space();
         space.setId(1L);
-        User outsider = testUser(3L);
+        User outsider = createUser(3L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
         when(spacesActions.addUserToSpace(outsider, space, SpaceRole.MEMBER))

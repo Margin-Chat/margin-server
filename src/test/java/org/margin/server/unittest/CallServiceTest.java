@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class CallServiceTest {
@@ -98,10 +99,4 @@ class CallServiceTest {
                 () -> callService.rejectCall(999L));
     }
 
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
 }

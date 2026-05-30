@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class ActivationKeyServiceTest {
@@ -32,7 +33,7 @@ class ActivationKeyServiceTest {
 
     @Test
     void generateActivationKey_createsTokenAndPersists() {
-        User user = makeUser();
+        User user = createUser(42L, "alice");
         when(activationKeyRepository.save(any(ActivationKey.class))).thenAnswer(i -> i.getArgument(0));
 
         ActivationKey key = activationKeyService.generateActivationKey(user);
@@ -46,7 +47,7 @@ class ActivationKeyServiceTest {
 
     @Test
     void generateActivationKey_producesUniqueTokens() {
-        User user = makeUser();
+        User user = createUser(42L, "alice");
         when(activationKeyRepository.save(any(ActivationKey.class))).thenAnswer(i -> i.getArgument(0));
 
         String first = activationKeyService.generateActivationKey(user).getToken();
@@ -103,7 +104,7 @@ class ActivationKeyServiceTest {
 
     @Test
     void isUserActivated_returnsTrueWhenActivated() {
-        User user = makeUser();
+        User user = createUser(42L, "alice");
         ActivationKey key = makeKey(false, true);
         when(activationKeyRepository.findActivationKeyByUser(user)).thenReturn(Optional.of(key));
 
@@ -112,24 +113,17 @@ class ActivationKeyServiceTest {
 
     @Test
     void isUserActivated_returnsFalseWhenNotActivated() {
-        User user = makeUser();
+        User user = createUser(42L, "alice");
         ActivationKey key = makeKey(false, false);
         when(activationKeyRepository.findActivationKeyByUser(user)).thenReturn(Optional.of(key));
 
         assertFalse(activationKeyService.isUserActivated(user));
     }
 
-    private static User makeUser() {
-        User user = new User();
-        user.setId(42L);
-        user.setHandle("alice");
-        return user;
-    }
-
     private static ActivationKey makeKey(boolean expired, boolean activated) {
         ActivationKey key = new ActivationKey();
         key.setToken("t");
-        key.setUser(makeUser());
+        key.setUser(createUser(42L, "alice"));
         key.setExpiresAt(expired ? Instant.now().minusSeconds(60) : Instant.now().plusSeconds(3600));
         if (activated) key.setActivatedAt(Instant.now().minusSeconds(30));
         return key;

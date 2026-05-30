@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketHandlerTest {
@@ -148,10 +149,4 @@ class WebSocketHandlerTest {
         verifyNoInteractions(presenceService);
     }
 
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
 }

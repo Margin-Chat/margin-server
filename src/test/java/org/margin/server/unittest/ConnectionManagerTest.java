@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class ConnectionManagerTest {
@@ -25,12 +26,6 @@ class ConnectionManagerTest {
     @BeforeEach
     void setUp() {
         connectionManager = new ConnectionManager();
-    }
-
-    private User createUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
     }
 
     private ClientConnection activeConnection(Channel channel) {

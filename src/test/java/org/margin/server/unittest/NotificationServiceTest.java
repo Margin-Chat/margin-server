@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,9 +35,9 @@ class NotificationServiceTest {
 
     @Test
     void createForUsers_excludesSender() {
-        User sender = testUser(1L);
-        User member1 = testUser(2L);
-        User member2 = testUser(3L);
+        User sender = createUser(1L);
+        User member1 = createUser(2L);
+        User member2 = createUser(3L);
 
         notificationService.createForUsers(
                 List.of(sender, member1, member2), sender,
@@ -54,8 +55,8 @@ class NotificationServiceTest {
 
     @Test
     void createForUsers_setsCorrectFields() {
-        User sender = testUser(1L);
-        User member = testUser(2L);
+        User sender = createUser(1L);
+        User member = createUser(2L);
 
         notificationService.createForUsers(
                 List.of(member), sender,
@@ -77,7 +78,7 @@ class NotificationServiceTest {
 
     @Test
     void markNotificationAsSeen() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
         Notification n = unseenNotification(recipient, 10L);
 
         notificationService.markNotificationAsSeen(n);
@@ -88,7 +89,7 @@ class NotificationServiceTest {
 
     @Test
     void getUnseenCountsPerMargin_groupsCorrectly() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
 
         Notification n1 = unseenNotification(recipient, 10L);
         Notification n2 = unseenNotification(recipient, 10L);
@@ -106,7 +107,7 @@ class NotificationServiceTest {
 
     @Test
     void getNotificationsForUser_delegatesToRepository() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
         List<Notification> expected = List.of(unseenNotification(recipient, 10L));
         when(notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipient.getId()))
                 .thenReturn(expected);
@@ -115,12 +116,6 @@ class NotificationServiceTest {
 
         assertThat(result).isEqualTo(expected);
         verify(notificationRepository).findByRecipient_IdOrderByCreatedAtDesc(recipient.getId());
-    }
-
-    private User testUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
     }
 
     private Notification unseenNotification(User recipient, Long marginId) {

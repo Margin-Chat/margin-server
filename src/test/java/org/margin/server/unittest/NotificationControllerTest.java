@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationControllerTest {
@@ -32,7 +33,7 @@ class NotificationControllerTest {
 
     @Test
     void getNotifications_returnsUserNotifications() {
-        User user = testUser(1L);
+        User user = createUser(1L);
         List<Notification> expected = List.of(testNotification(user, 10L));
         when(notificationService.getNotificationsForUser(user.getId())).thenReturn(expected);
 
@@ -43,7 +44,7 @@ class NotificationControllerTest {
 
     @Test
     void getUnseenCounts_returnsCountMap() {
-        User user = testUser(1L);
+        User user = createUser(1L);
         Map<Long, Long> expected = Map.of(10L, 3L, 20L, 1L);
         when(notificationService.getUnseenCountsPerMargin(user.getId())).thenReturn(expected);
 
@@ -54,7 +55,7 @@ class NotificationControllerTest {
 
     @Test
     void markSeen_delegatesToService() {
-        User user = testUser(1L);
+        User user = createUser(1L);
         Notification notification = testNotification(user, 10L);
         when(notificationService.getNotification(99L)).thenReturn(notification);
 
@@ -65,19 +66,13 @@ class NotificationControllerTest {
 
     @Test
     void markSeen_throwsForbidden_whenNotificationBelongsToOtherUser() {
-        User requester = testUser(1L);
-        User owner = testUser(2L);
+        User requester = createUser(1L);
+        User owner = createUser(2L);
         Notification notification = testNotification(owner, 10L);
         when(notificationService.getNotification(99L)).thenReturn(notification);
 
         assertThatThrownBy(() -> notificationController.markSeen(requester, 99L))
                 .isInstanceOf(ResponseStatusException.class);
-    }
-
-    private User testUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
     }
 
     private Notification testNotification(User recipient, Long marginId) {

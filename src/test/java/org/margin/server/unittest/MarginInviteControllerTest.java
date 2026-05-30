@@ -31,6 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
+import static org.margin.server.unittest.utils.MarginTestUtils.*;
+import static org.margin.server.unittest.utils.MarginInviteTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.STRICT_STUBS)
@@ -56,14 +59,14 @@ class MarginInviteControllerTest {
 
     @BeforeEach
     void setUp() {
-        adminUser = testUser(1L, "admin");
-        targetUser = testUser(2L, "targetUser");
-        margin = testMargin();
+        adminUser = createUser(1L, "admin");
+        targetUser = createUser(2L, "targetUser");
+        margin = createMargin(1L, "Test Margin");
     }
 
     @Test
     void createLinkInvite_shouldReturnInvite() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
         when(marginInviteService.createLinkInvite(margin, 10, adminUser)).thenReturn(invite);
 
@@ -79,7 +82,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createLinkInvite_withNullMaxUses_shouldSucceed() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
         when(marginInviteService.createLinkInvite(margin, null, adminUser)).thenReturn(invite);
 
@@ -102,7 +105,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_shouldReturnInvite() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(userService.getByHandle("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
@@ -146,7 +149,7 @@ class MarginInviteControllerTest {
 
     @Test
     void getInviteDetails_shouldReturnDetails() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
         ResponseEntity<?> response = marginInviteController.getInviteDetails("abc-123");
@@ -159,7 +162,7 @@ class MarginInviteControllerTest {
 
     @Test
     void getInviteDetails_whenExpired_shouldThrow410() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
@@ -169,7 +172,7 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptLinkInvite_shouldSucceed() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
         when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(false);
         when(marginInviteService.acceptLinkInvite(invite, targetUser)).thenReturn(margin);
@@ -184,7 +187,7 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptLinkInvite_whenExpired_shouldThrow410() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
@@ -194,7 +197,7 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptLinkInvite_whenAlreadyMember_shouldThrow409() {
-        MarginInvite invite = testLinkInvite(margin, adminUser);
+        MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
         when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(true);
 
@@ -204,7 +207,7 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptDirectInvite_shouldReturnMargin() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
 
         when(marginInviteService.getById(1L)).thenReturn(invite);
         when(marginInviteService.acceptDirectInvite(invite, targetUser)).thenReturn(margin);
@@ -231,10 +234,10 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptDirectInvite_whenNotTargetUser_shouldThrow403() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
-        User otherUser = testUser(99L, "other");
+        User otherUser = createUser(99L, "other");
 
         assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, otherUser))
                 .isInstanceOf(ResponseStatusException.class);
@@ -242,7 +245,7 @@ class MarginInviteControllerTest {
 
     @Test
     void acceptDirectInvite_whenExpired_shouldThrow410() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
@@ -252,7 +255,7 @@ class MarginInviteControllerTest {
 
     @Test
     void declineDirectInvite_shouldReturn200() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
         ResponseEntity<?> response = marginInviteController.declineDirectInvite(1L, targetUser);
@@ -263,10 +266,10 @@ class MarginInviteControllerTest {
 
     @Test
     void declineDirectInvite_whenNotTargetUser_shouldThrow403() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
-        User otherUser = testUser(99L, "other");
+        User otherUser = createUser(99L, "other");
 
         assertThatThrownBy(() -> marginInviteController.declineDirectInvite(1L, otherUser))
                 .isInstanceOf(ResponseStatusException.class);
@@ -274,7 +277,7 @@ class MarginInviteControllerTest {
 
     @Test
     void declineDirectInvite_whenAlreadyResolved_shouldThrow409() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         invite.setStatus(MarginInvite.InviteStatus.ACCEPTED);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
@@ -284,7 +287,7 @@ class MarginInviteControllerTest {
 
     @Test
     void getPendingInvites_shouldReturnList() {
-        MarginInvite invite = testDirectInvite(margin, adminUser, targetUser);
+        MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(marginInviteService.getPendingInvites(targetUser)).thenReturn(List.of(invite));
 
         ResponseEntity<?> response = marginInviteController.getPendingInvites(targetUser);
@@ -296,43 +299,4 @@ class MarginInviteControllerTest {
         assertThat(body.get(0).marginName()).isEqualTo("Test Margin");
     }
 
-    private User testUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
-
-    private Margin testMargin() {
-        Margin newMargin = new Margin();
-        newMargin.setId(1L);
-        newMargin.setName("Test Margin");
-        return newMargin;
-    }
-
-    private MarginInvite testLinkInvite(Margin margin, User invitedBy) {
-        MarginInvite invite = new MarginInvite();
-        invite.setId(1L);
-        invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
-        invite.setType(MarginInvite.InviteType.LINK);
-        invite.setStatus(MarginInvite.InviteStatus.PENDING);
-        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
-        invite.setInviteCode("abc-123");
-        return invite;
-    }
-
-    private MarginInvite testDirectInvite(Margin margin, User invitedBy, User invitedUser) {
-        MarginInvite invite = new MarginInvite();
-        invite.setId(1L);
-        invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
-        invite.setInvitedUser(invitedUser);
-        invite.setType(MarginInvite.InviteType.DIRECT);
-        invite.setStatus(MarginInvite.InviteStatus.PENDING);
-        invite.setMaxUses(1);
-        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
-        invite.setInviteCode("direct-123");
-        return invite;
-    }
 }

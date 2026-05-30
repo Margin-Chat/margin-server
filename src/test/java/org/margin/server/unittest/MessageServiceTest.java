@@ -37,6 +37,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
+import static org.margin.server.unittest.utils.ConversationTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
@@ -287,21 +289,6 @@ class MessageServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(messageReactionRepository, never()).delete(any());
-    }
-
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
-
-    private Conversation createConversation(Long id, ConversationType type) {
-        Conversation conversation = new Conversation();
-        conversation.setId(id);
-        conversation.setType(type);
-        conversation.setCreatedAt(Instant.now());
-        return conversation;
     }
 
     private Channel createChannel(Long id) {

@@ -29,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class MarginServiceTest {
@@ -60,13 +61,6 @@ class MarginServiceTest {
     @InjectMocks
     private MarginService marginService;
 
-    private User testUser() {
-        User user = new User();
-        user.setId(1L);
-        user.setHandle("testuser");
-        return user;
-    }
-
     private void stubMarginSave() {
         when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> {
             Margin m = invocation.getArgument(0);
@@ -80,14 +74,14 @@ class MarginServiceTest {
             m.setMembers(new ArrayList<>());
             return Optional.of(m);
         });
-        when(userService.getById(1L)).thenReturn(testUser());
+        when(userService.getById(1L)).thenReturn(createUser(1L, "testuser"));
     }
 
     @Test
     void shouldCreateMargin() {
         stubMarginSave();
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, createUser(1L, "testuser"));
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -135,7 +129,7 @@ class MarginServiceTest {
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
         when(storageService.saveMarginIcon(profilePicture)).thenReturn(expectedUrl);
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser"));
 
         verify(storageService, times(1)).saveMarginIcon(profilePicture);
 
@@ -160,7 +154,7 @@ class MarginServiceTest {
                 new byte[0]
         );
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser"));
 
         verify(storageService, never()).saveMarginIcon(any());
 
@@ -184,7 +178,7 @@ class MarginServiceTest {
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->
-                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser())
+                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser"))
         );
 
         verify(marginRepository, never()).save(any());

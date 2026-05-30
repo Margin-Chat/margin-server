@@ -31,6 +31,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
+import static org.margin.server.unittest.utils.MarginTestUtils.*;
+import static org.margin.server.unittest.utils.MarginInviteTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.STRICT_STUBS)
@@ -58,9 +61,9 @@ class MarginInviteServiceTest {
 
     @BeforeEach
     void setUp() {
-        admin = testUser(1L, "admin");
-        targetUser = testUser(2L, "targetUser");
-        margin = testMargin(1L, "Test Margin");
+        admin = createUser(1L, "admin");
+        targetUser = createUser(2L, "targetUser");
+        margin = createMargin(1L, "Test Margin");
     }
 
     @Test
@@ -139,7 +142,7 @@ class MarginInviteServiceTest {
 
     @Test
     void acceptLinkInvite_shouldAddUserToMarginAndDefaultSpaces() {
-        MarginInvite invite = testLinkInvite(margin, admin);
+        MarginInvite invite = createLinkInvite(margin, admin);
 
         when(marginService.getById(margin.getId())).thenReturn(margin);
 
@@ -161,7 +164,7 @@ class MarginInviteServiceTest {
 
     @Test
     void acceptDirectInvite_shouldAddUserAndSetStatusAccepted() {
-        MarginInvite invite = testDirectInvite(margin, admin, targetUser);
+        MarginInvite invite = createDirectInvite(margin, admin, targetUser);
 
         when(marginService.getById(margin.getId())).thenReturn(margin);
 
@@ -183,7 +186,7 @@ class MarginInviteServiceTest {
 
     @Test
     void declineDirectInvite_shouldSetStatusDeclined() {
-        MarginInvite invite = testDirectInvite(margin, admin, targetUser);
+        MarginInvite invite = createDirectInvite(margin, admin, targetUser);
 
         marginInviteService.declineDirectInvite(invite);
 
@@ -193,7 +196,7 @@ class MarginInviteServiceTest {
 
     @Test
     void getPendingInvites_shouldReturnPendingInvitesForUser() {
-        MarginInvite invite = testDirectInvite(margin, admin, targetUser);
+        MarginInvite invite = createDirectInvite(margin, admin, targetUser);
         when(marginInviteRepository.findInvitesForUserByStatus(
                 eq(targetUser.getId()),
                 eq(MarginInvite.InviteStatus.PENDING),
@@ -224,7 +227,7 @@ class MarginInviteServiceTest {
 
     @Test
     void getById_shouldReturnInviteWhenExists() {
-        MarginInvite invite = testDirectInvite(margin, admin, targetUser);
+        MarginInvite invite = createDirectInvite(margin, admin, targetUser);
         invite.setId(1L);
         when(marginInviteRepository.findById(1L)).thenReturn(Optional.of(invite));
 
@@ -241,39 +244,4 @@ class MarginInviteServiceTest {
                 .isInstanceOf(RuntimeException.class);
     }
 
-    private User testUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
-
-    private Margin testMargin(Long id, String name) {
-        Margin margin = new Margin();
-        margin.setId(id);
-        margin.setName(name);
-        return margin;
-    }
-
-    private MarginInvite testLinkInvite(Margin margin, User invitedBy) {
-        MarginInvite invite = new MarginInvite();
-        invite.setId(1L);
-        invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
-        invite.setType(MarginInvite.InviteType.LINK);
-        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
-        return invite;
-    }
-
-    private MarginInvite testDirectInvite(Margin margin, User invitedBy, User invitedUser) {
-        MarginInvite invite = new MarginInvite();
-        invite.setId(1L);
-        invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
-        invite.setInvitedUser(invitedUser);
-        invite.setType(MarginInvite.InviteType.DIRECT);
-        invite.setMaxUses(1);
-        invite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
-        return invite;
-    }
 }
