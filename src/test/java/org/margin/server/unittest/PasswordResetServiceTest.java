@@ -8,7 +8,6 @@ import org.margin.server.authentication.repositories.PasswordResetTokenRepositor
 import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.repositories.UserRepository;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -25,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.UserTestUtils.createEncryption;
 
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
@@ -143,18 +144,8 @@ class PasswordResetServiceTest {
     }
 
     private static User makeUser() {
-        User user = new User();
-        user.setId(1L);
-        user.setDisplayName("Alice");
-        user.setEmail("alice@margin.chat");
-
-        UserEncryption encryption = new UserEncryption();
-        encryption.setPublicKey("old-public");
-        encryption.setEncryptedPrivateKey("old-encrypted-private");
-        encryption.setSalt("old-salt");
-        encryption.setIv("old-iv");
-        user.setEncryption(encryption);
-
+        User user = createUser(1L, null, "Alice", "alice@margin.chat");
+        user.setEncryption(createEncryption("old-public", "old-encrypted-private", "old-salt", "old-iv"));
         return user;
     }
 

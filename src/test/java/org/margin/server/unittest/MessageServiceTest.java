@@ -7,7 +7,6 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -18,7 +17,6 @@ import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.messages.services.MessageValidationService;
-import org.margin.server.social.space.models.Space;
 import org.margin.server.storage.StorageLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -29,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +36,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.margin.server.unittest.utils.UserTestUtils.*;
 import static org.margin.server.unittest.utils.ConversationTestUtils.*;
+import static org.margin.server.unittest.utils.ChannelTestUtils.*;
+import static org.margin.server.unittest.utils.MessageTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
@@ -116,7 +115,7 @@ class MessageServiceTest {
     @Test
     void createMessage_ForUsers_channelConversation_returnsAllMembers() {
         User fromUser = createUser(1L, "sender");
-        Channel channel = createChannel(5L);
+        Channel channel = createChannelWithSpaceAndMargin(5L, 1L, 1L);
         Conversation conversation = createConversation(10L, ConversationType.CHANNEL);
         conversation.setChannel(channel);
         String content = "Channel message";
@@ -289,27 +288,5 @@ class MessageServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(messageReactionRepository, never()).delete(any());
-    }
-
-    private Channel createChannel(Long id) {
-        Channel channel = new Channel();
-        channel.setId(id);
-        Space space = new Space();
-        space.setId(1L);
-        Margin margin = new Margin();
-        margin.setId(1L);
-        space.setMargin(margin);
-        channel.setSpace(space);
-        return channel;
-    }
-
-    private Message createSavedMessage(Long id, Conversation conversation, User fromUser, String content) {
-        Message message = new Message();
-        message.setId(id);
-        message.setConversation(conversation);
-        message.setFromUser(fromUser);
-        message.setMessage(content);
-        message.setCreatedAt(Instant.now());
-        return message;
     }
 }

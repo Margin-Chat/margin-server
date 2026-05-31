@@ -40,6 +40,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.MarginTestUtils.createMargin;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionWebhookServiceTest {
@@ -82,9 +84,7 @@ class SubscriptionWebhookServiceTest {
     }
 
     private Subscription localSubscription() {
-        Margin margin = new Margin();
-        margin.setId(1L);
-        margin.setName("Test Margin");
+        Margin margin = createMargin(1L, "Test Margin");
 
         SubscriptionLimits limits = new SubscriptionLimits();
         limits.setMaxMembers(25);
@@ -389,10 +389,7 @@ class SubscriptionWebhookServiceTest {
     }
 
     private Subscription localSubscriptionWithOwner() {
-        User owner = new User();
-        owner.setId(99L);
-        owner.setDisplayName("Owner");
-        owner.setEmail("owner@test.com");
+        User owner = createUser(99L, null, "Owner", "owner@test.com");
 
         MarginMember ownerMember = new MarginMember();
         ownerMember.setUser(owner);

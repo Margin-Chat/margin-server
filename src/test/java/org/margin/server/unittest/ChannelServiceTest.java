@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.SpaceTestUtils.createSpace;
 
 @ExtendWith(MockitoExtension.class)
 class ChannelServiceTest {
@@ -50,11 +52,9 @@ class ChannelServiceTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
+        testUser = createUser(1L);
 
-        testSpace = new Space();
-        testSpace.setId(100L);
+        testSpace = createSpace(100L);
 
         SpaceMember member = new SpaceMember();
         member.setUser(testUser);

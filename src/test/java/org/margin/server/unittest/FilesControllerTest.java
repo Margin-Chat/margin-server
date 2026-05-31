@@ -14,7 +14,6 @@ import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.controllers.FilesController;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
-import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,6 +31,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.channelFile;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.marginFile;
 
 @ExtendWith(MockitoExtension.class)
 class FilesControllerTest {
@@ -59,8 +62,7 @@ class FilesControllerTest {
 
     @BeforeEach
     void setUp() {
-        viewer = new User();
-        viewer.setId(1L);
+        viewer = createUser(1L);
 
         margin = new Margin();
         margin.setId(10L);
@@ -260,36 +262,15 @@ class FilesControllerTest {
         Conversation conv = new Conversation();
         conv.setId(99L);
 
-        org.margin.server.social.channel.entities.Channel ch =
-                new org.margin.server.social.channel.entities.Channel();
-        ch.setId(5L);
+        org.margin.server.social.channel.entities.Channel ch = createChannel(5L);
         ch.setConversation(conv);
 
-        StoredFile f = new StoredFile();
-        f.setId(1L);
-        f.setScope(StoredFileScope.CHANNEL);
-        f.setMargin(margin);
-        f.setChannel(ch);
+        StoredFile f = channelFile(1L, margin, ch, viewer);
         f.setMessageId(42L);
-        f.setFileName("file.pdf");
-        f.setContentType("application/pdf");
-        f.setSizeBytes(100L);
-        f.setStorageUrl("/api/files/stored-files/uuid_file.pdf");
-        f.setUploadedBy(viewer);
         return f;
     }
 
     private StoredFile marginStoredFile() {
-        StoredFile f = new StoredFile();
-        f.setId(2L);
-        f.setScope(StoredFileScope.MARGIN);
-        f.setMargin(margin);
-        f.setChannel(null);
-        f.setFileName("file.pdf");
-        f.setContentType("application/pdf");
-        f.setSizeBytes(100L);
-        f.setStorageUrl("/api/files/stored-files/uuid_file.pdf");
-        f.setUploadedBy(viewer);
-        return f;
+        return marginFile(2L, "file.pdf", margin, viewer);
     }
 }

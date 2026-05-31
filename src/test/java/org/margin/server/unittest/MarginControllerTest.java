@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.GlobalExceptionHandler;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
@@ -19,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
@@ -30,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.margin.server.unittest.utils.ControllerTestSupport.standaloneMockMvc;
 
 @ExtendWith(MockitoExtension.class)
 class MarginControllerTest {
@@ -50,9 +49,7 @@ class MarginControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc() {
-        return MockMvcBuilders.standaloneSetup(marginController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+        return standaloneMockMvc(marginController);
     }
 
     @Test

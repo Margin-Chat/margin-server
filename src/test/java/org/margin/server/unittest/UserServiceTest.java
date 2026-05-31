@@ -22,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -39,8 +40,7 @@ class UserServiceTest {
     @Test
     @DisplayName("getByHandle should return user when found")
     void getByHandle_Found() {
-        User user = new User();
-        user.setHandle("alice");
+        User user = createUser(null, "alice");
         when(userRepository.findByHandle("alice")).thenReturn(Optional.of(user));
 
         User result = userService.getByHandle("alice");
@@ -60,8 +60,7 @@ class UserServiceTest {
     @DisplayName("savePublicPrivateKeysForUser should update encryption details and save")
     void savePublicPrivateKeysForUser_Success() {
         Long userId = 1L;
-        User user = new User();
-        user.setId(userId);
+        User user = createUser(userId);
         UserEncryption encryption = new UserEncryption();
         user.setEncryption(encryption);
 
@@ -77,10 +76,7 @@ class UserServiceTest {
     @Test
     @DisplayName("searchUsers should return grouped results with shared margins")
     void searchUsers_WithSharedMargins_ReturnsGroupedResults() {
-        User user = new User();
-        user.setId(2L);
-        user.setHandle("bob");
-        user.setEmail("bob@margin.org");
+        User user = createUser(2L, "bob", null, "bob@margin.org");
         user.setCreatedAt(Instant.now());
 
         Long searcherId = 1L;

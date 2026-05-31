@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 
 @ExtendWith(MockitoExtension.class)
 class PresenceServiceTest {
@@ -36,8 +37,7 @@ class PresenceServiceTest {
     @Test
     @DisplayName("stampLastSeen sets lastSeenAt to now and saves the user")
     void stampLastSeen_persistsCurrentInstant() {
-        User user = new User();
-        user.setId(42L);
+        User user = createUser(42L);
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
 
         Instant before = Instant.now();
@@ -73,8 +73,7 @@ class PresenceServiceTest {
     @Test
     @DisplayName("userDisconnected broadcasts USER_LOGOUT via delivery service")
     void userDisconnected_broadcastsOffline() {
-        User user = new User();
-        user.setId(3L);
+        User user = createUser(3L);
 
         presenceService.userDisconnected(user);
 

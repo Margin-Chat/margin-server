@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketDeliveryServiceTest {
@@ -71,11 +72,8 @@ class WebSocketDeliveryServiceTest {
     void notifyMessage_FiltersByOnlineStatus() {
         MessageDTO messageDto = createTestMessageDTO();
 
-        User onlineUser = new User();
-        onlineUser.setId(1L);
-
-        User offlineUser = new User();
-        offlineUser.setId(2L);
+        User onlineUser = createUser(1L);
+        User offlineUser = createUser(2L);
 
         String mockJson = "{\"type\":\"msg\", \"payload\":{...}}";
 
@@ -94,8 +92,7 @@ class WebSocketDeliveryServiceTest {
     @Test
     @DisplayName("notifyUserOffline should broadcast logout event to everyone else")
     void notifyUserOffline_BroadcastsLogout() {
-        User user = new User();
-        user.setId(77L);
+        User user = createUser(77L);
         String mockJson = "{\"type\":\"USER_LOGOUT\", \"userId\":77}";
 
         when(messageBuilder.buildMessage(eq(WebSocketMessageType.USER_LOGOUT), eq(77L), any()))

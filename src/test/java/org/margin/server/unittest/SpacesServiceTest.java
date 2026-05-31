@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.margin.server.unittest.utils.UserTestUtils.*;
+import static org.margin.server.unittest.utils.SpaceTestUtils.createSpace;
 
 @ExtendWith(MockitoExtension.class)
 class SpacesServiceTest {
@@ -103,9 +104,7 @@ class SpacesServiceTest {
         Margin margin = testMargin(user);
         margin.setId(5L);
 
-        Space space = new Space();
-        space.setId(10L);
-        space.setMargin(margin);
+        Space space = createSpace(10L, margin);
         space.setChannels(new ArrayList<>());
         space.setMembers(new ArrayList<>());
 
@@ -140,8 +139,7 @@ class SpacesServiceTest {
     @Test
     @DisplayName("addNewUserToSpace should delegate to SpacesActions")
     void addNewUserToSpace_Success() {
-        Space space = new Space();
-        space.setId(1L);
+        Space space = createSpace(1L);
         User newUser = createUser(2L);
 
         SpaceMember spaceMember = new SpaceMember();
@@ -161,8 +159,7 @@ class SpacesServiceTest {
     @Test
     @DisplayName("addNewUserToSpace should propagate DuplicateKeyException from SpacesActions")
     void addNewUserToSpace_RejectsDuplicate() {
-        Space space = new Space();
-        space.setId(1L);
+        Space space = createSpace(1L);
         User existingUser = createUser(1L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
@@ -177,8 +174,7 @@ class SpacesServiceTest {
     @Test
     @DisplayName("addNewUserToSpace should propagate UserNotInMargin from SpacesActions")
     void addNewUserToSpace_RejectsNonMarginMember() {
-        Space space = new Space();
-        space.setId(1L);
+        Space space = createSpace(1L);
         User outsider = createUser(3L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));

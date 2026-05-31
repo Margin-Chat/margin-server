@@ -16,7 +16,6 @@ import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.controllers.StoredFileController;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.models.StoredFile;
-import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
 import org.margin.server.subscriptions.models.SubscriptionTier;
@@ -40,6 +39,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.marginFile;
 
 @ExtendWith(MockitoExtension.class)
 class StoredFileControllerTest {
@@ -69,9 +71,7 @@ class StoredFileControllerTest {
 
     @BeforeEach
     void setUp() {
-        user = new User();
-        user.setId(42L);
-        user.setHandle("alice");
+        user = createUser(42L, "alice");
 
         margin = new Margin();
         margin.setId(7L);
@@ -79,8 +79,7 @@ class StoredFileControllerTest {
         Conversation conv = new Conversation();
         conv.setId(13L);
 
-        channel = new Channel();
-        channel.setId(3L);
+        channel = createChannel(3L);
         channel.setConversation(conv);
     }
 
@@ -187,8 +186,7 @@ class StoredFileControllerTest {
 
     @Test
     void deleteByNonUploaderNonManagerIsForbidden() {
-        User someoneElse = new User();
-        someoneElse.setId(999L);
+        User someoneElse = createUser(999L);
         StoredFile existing = fileEntity(55L, "old.txt");
         existing.setUploadedBy(someoneElse);
         when(storedFileService.getById(55L)).thenReturn(existing);
@@ -202,8 +200,7 @@ class StoredFileControllerTest {
 
     @Test
     void deleteByMarginAdminAllowedEvenWhenNotUploader() {
-        User otherUploader = new User();
-        otherUploader.setId(999L);
+        User otherUploader = createUser(999L);
         StoredFile existing = fileEntity(55L, "old.txt");
         existing.setUploadedBy(otherUploader);
         existing.setStorageUrl("/api/files/stored-files/x");
@@ -277,16 +274,7 @@ class StoredFileControllerTest {
     }
 
     private StoredFile fileEntity(Long id, String name) {
-        StoredFile f = new StoredFile();
-        f.setId(id);
-        f.setScope(StoredFileScope.MARGIN);
-        f.setMargin(margin);
-        f.setFileName(name);
-        f.setContentType("text/plain");
-        f.setSizeBytes(5);
-        f.setStorageUrl("/api/files/stored-files/" + id + "_" + name);
-        f.setUploadedBy(user);
-        return f;
+        return marginFile(id, name, margin, user);
     }
 
     private Channel channelOnMargin() {

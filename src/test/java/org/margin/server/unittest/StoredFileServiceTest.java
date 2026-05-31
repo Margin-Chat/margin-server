@@ -6,7 +6,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.storage.StorageService;
 import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.models.StoredFile;
-import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
@@ -25,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.channelFile;
 
 @ExtendWith(MockitoExtension.class)
 class StoredFileServiceTest {
@@ -42,11 +44,9 @@ class StoredFileServiceTest {
 
     @BeforeEach
     void setUp() {
-        sender = new User();
-        sender.setId(10L);
+        sender = createUser(10L);
 
-        channel = new org.margin.server.social.channel.entities.Channel();
-        channel.setId(3L);
+        channel = createChannel(3L);
     }
 
     @Test
@@ -88,8 +88,7 @@ class StoredFileServiceTest {
 
     @Test
     void linkAttachmentsToMessage_rejectsFileOwnedByDifferentUser() {
-        User otherUser = new User();
-        otherUser.setId(999L);
+        User otherUser = createUser(999L);
         StoredFile f = file(1L, otherUser, channel);
         when(storedFileRepository.findAllById(List.of(1L))).thenReturn(List.of(f));
 
@@ -115,9 +114,7 @@ class StoredFileServiceTest {
 
     @Test
     void linkAttachmentsToMessage_rejectsFileFromDifferentChannel() {
-        org.margin.server.social.channel.entities.Channel otherChannel =
-                new org.margin.server.social.channel.entities.Channel();
-        otherChannel.setId(999L);
+        org.margin.server.social.channel.entities.Channel otherChannel = createChannel(999L);
         StoredFile f = file(1L, sender, otherChannel);
         when(storedFileRepository.findAllById(List.of(1L))).thenReturn(List.of(f));
 
@@ -129,15 +126,6 @@ class StoredFileServiceTest {
     }
 
     private StoredFile file(Long id, User owner, org.margin.server.social.channel.entities.Channel ch) {
-        StoredFile f = new StoredFile();
-        f.setId(id);
-        f.setScope(StoredFileScope.CHANNEL);
-        f.setUploadedBy(owner);
-        f.setChannel(ch);
-        f.setFileName("file.txt");
-        f.setContentType("text/plain");
-        f.setSizeBytes(10L);
-        f.setStorageUrl("/api/files/stored-files/uuid_file.txt");
-        return f;
+        return channelFile(id, null, ch, owner);
     }
 }
