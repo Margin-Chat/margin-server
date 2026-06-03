@@ -47,9 +47,9 @@ public class ConversationTestUtils {
         return conversationController.getConversationMessagesForChannel(channelId, user, 50, null);
     }
 
-    public static DirectConversationDTO sendInvite(User sender, String recipientHandle) {
+    public static DirectConversationDTO sendInvite(User sender, String recipientEmail) {
         return conversationController.sendConversationInvite(
-                new SendConversationInviteRequest(recipientHandle), sender);
+                new SendConversationInviteRequest(recipientEmail), sender);
     }
 
     public static List<ConversationInvitePayload> getPendingInvites(User user) {

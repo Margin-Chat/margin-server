@@ -1,7 +1,6 @@
 package org.margin.server.authentication.models;
 
 public record RegisterRequest(
-        String handle,
         String displayName,
         String email,
         String password,

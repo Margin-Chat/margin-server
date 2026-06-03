@@ -58,8 +58,8 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public UserDTO getCurrentUser(@AuthenticationPrincipal User user) {
-        return new UserDTO(user, connectionManager.isUserOnline(user.getId()));
+    public CurrentUserDTO getCurrentUser(@AuthenticationPrincipal User user) {
+        return new CurrentUserDTO(user, connectionManager.isUserOnline(user.getId()));
     }
 
     @PostMapping("/{userId}/keys")
@@ -116,13 +116,18 @@ public class UserController {
     }
 
     @GetMapping("/lookup")
-    public ResponseEntity<UserDTO> lookupByHandle(@RequestParam String handle) {
-        User user = userService.getByHandle(handle);
+    public ResponseEntity<UserDTO> lookupByEmail(@AuthenticationPrincipal User requester,
+                                                 @RequestParam String email) {
+        String key = "user_lookup:" + requester.getId();
+        if (!rateLimitService.tryConsume(key, RateLimitConfig.createMargin())) {
+            throw new TooManyRequestsException("Too many lookups. Try again later.");
+        }
+        User user = userService.getByEmail(email);
         return ResponseEntity.ok(userService.toDTO(user));
     }
 
     @PatchMapping("/update_user_info")
-    public UserDTO updateUserInfo(
+    public CurrentUserDTO updateUserInfo(
             @RequestParam(required = false) String displayName,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) MultipartFile file,
@@ -135,7 +140,7 @@ public class UserController {
             }
         }
         User updatedUser = userService.updateUser(displayName, email, user, file);
-        return new UserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
+        return new CurrentUserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
     }
 
     @PostMapping("/report_bug")

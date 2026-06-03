@@ -3,6 +3,9 @@ package org.margin.server.social.conversation.controllers;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.config.ratelimit.RateLimitConfig;
+import org.margin.server.config.ratelimit.RateLimitService;
+import org.margin.server.exceptions.TooManyRequestsException;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
@@ -26,16 +29,19 @@ public class ConversationController {
     private final UserService userService;
     private final ConversationAuthorizationService conversationAuthorizationService;
     private final MarginAuthorizationService marginAuthorizationService;
+    private final RateLimitService rateLimitService;
 
     public ConversationController(MessageService messageService,
                                   ConversationService conversationService, UserService userService,
                                   ConversationAuthorizationService conversationAuthorizationService,
-                                  MarginAuthorizationService marginAuthorizationService) {
+                                  MarginAuthorizationService marginAuthorizationService,
+                                  RateLimitService rateLimitService) {
         this.messageService = messageService;
         this.conversationService = conversationService;
         this.userService = userService;
         this.conversationAuthorizationService = conversationAuthorizationService;
         this.marginAuthorizationService = marginAuthorizationService;
+        this.rateLimitService = rateLimitService;
     }
 
     @GetMapping("/conversations")
@@ -129,7 +135,11 @@ public class ConversationController {
     public DirectConversationDTO sendConversationInvite(
             @RequestBody SendConversationInviteRequest request,
             @AuthenticationPrincipal User user) {
-        User recipient = userService.getByHandle(request.handle());
+        String key = "conversation_invite:" + user.getId();
+        if (!rateLimitService.tryConsume(key, RateLimitConfig.sendInvite())) {
+            throw new TooManyRequestsException("Too many invites. Try again later.");
+        }
+        User recipient = userService.getByEmail(request.email());
         return conversationService.sendConversationInvite(user, recipient);
     }
 

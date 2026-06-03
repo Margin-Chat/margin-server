@@ -106,8 +106,7 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public ActivationKey registerUser(String handle,
-                                      String displayName,
+    public ActivationKey registerUser(String displayName,
                                       String email,
                                       String password,
                                       String privateKey,
@@ -119,17 +118,12 @@ public class AuthenticationService {
             throw new IllegalArgumentException("Email already in use");
         }
 
-        if (userRepository.findByHandle(handle.toLowerCase()).isPresent()) {
-            throw new IllegalArgumentException("Handle already exists");
-        }
-
         String profilePictureUrl = null;
         if (profilePicture != null && !profilePicture.isEmpty()) {
             profilePictureUrl = storageService.saveProfilePicture(profilePicture);
         }
 
         User user = new User();
-        user.setHandle(handle.toLowerCase());
         user.setDisplayName(displayName);
         user.setEmail(email.toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
@@ -155,7 +149,7 @@ public class AuthenticationService {
 
         if (!requireEmailActivation) {
             activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
-            log.info("Email activation disabled — user {} auto-activated", user.getHandle());
+            log.info("Email activation disabled — user {} auto-activated", user.getEmail());
             return activationKey;
         }
 
@@ -166,7 +160,7 @@ public class AuthenticationService {
             throw new RegistrationException("Failed to send activation email for margin");
         }
 
-        log.info("Email registration sent for user {}", user.getHandle());
+        log.info("Email registration sent for user {}", user.getEmail());
 
         return activationKey;
     }

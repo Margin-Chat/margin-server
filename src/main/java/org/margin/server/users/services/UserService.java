@@ -5,6 +5,7 @@ import org.margin.server.storage.StorageService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
+import org.margin.server.users.models.dtos.CurrentUserDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.models.dtos.UserSearchResultDTO;
 import org.margin.server.users.repositories.UserRepository;
@@ -54,8 +55,8 @@ public class UserService {
         return userCacheService.getById(id);
     }
 
-    public User getByHandle(String handle) {
-        return userRepository.findByHandle(handle).orElseThrow(UserNotFoundException::new);
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email.toLowerCase()).orElseThrow(UserNotFoundException::new);
     }
 
     public void savePublicPrivateKeysForUser(Long userId, String publicKey, String encryptedPrivateKey) {
@@ -93,6 +94,10 @@ public class UserService {
 
     public UserDTO toDTO(User user) {
         return new UserDTO(user, connectionManager.isUserOnline(user.getId()));
+    }
+
+    public CurrentUserDTO toCurrentUserDTO(User user) {
+        return new CurrentUserDTO(user, connectionManager.isUserOnline(user.getId()));
     }
 
     public User updateUser(String displayName, String email, User user, MultipartFile file) {
@@ -147,7 +152,6 @@ public class UserService {
         encryption.setIv(null);
         encryption.setSalt(null);
         user.setEncryption(encryption);
-        user.setHandle(DELETED_USER + user.getId());
         user.setDisplayName("Deleted User");
         user.setEmail(DELETED_USER + user.getId() + "@margin.chat");
         user.setProfilePictureUrl(null);

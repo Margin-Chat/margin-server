@@ -65,11 +65,10 @@ public class AuthenticationController {
             @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) {
         rateLimitRegistration(httpServletRequest);
 
-        log.info("Registration attempt for handle: {}", request.handle());
+        log.info("Registration attempt for email: {}", request.email());
 
         try {
             authenticationService.registerUser(
-                    request.handle(),
                     request.displayName(),
                     request.email(),
                     request.password(),
@@ -80,11 +79,11 @@ public class AuthenticationController {
                     profilePicture);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Registration failed for handle {}: {}", request.handle(), e.getMessage());
+            log.warn("Registration failed for email {}: {}", request.email(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
         } catch (Exception e) {
-            log.error("Unexpected error during registration for handle {}: {}", request.handle(), e.getMessage(), e);
+            log.error("Unexpected error during registration for email {}: {}", request.email(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
         }

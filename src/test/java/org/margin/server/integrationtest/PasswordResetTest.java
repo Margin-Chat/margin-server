@@ -120,9 +120,9 @@ class PasswordResetTest extends MarginTestRunner {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
-    private static User registerAndActivate(String handle, String email) {
+    private static User registerAndActivate(String displayName, String email) {
         BetaKey key = AuthTestUtils.createBetaKey();
-        ActivationKey activationKey = AuthTestUtils.register(handle, email, "password", key.getKey());
+        ActivationKey activationKey = AuthTestUtils.register(displayName, email, "password", key.getKey());
         ActivationTestUtils.activate(activationKey.getToken());
         return activationKey.getUser();
     }

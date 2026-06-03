@@ -11,17 +11,16 @@ public class UserTestUtils {
         return user;
     }
 
-    public static User createUser(Long id, String handle) {
+    public static User createUser(Long id, String displayName) {
         User user = new User();
         user.setId(id);
-        user.setHandle(handle);
+        user.setDisplayName(displayName);
         return user;
     }
 
-    public static User createUser(Long id, String handle, String displayName, String email) {
+    public static User createUser(Long id, String displayName, String email) {
         User user = new User();
         user.setId(id);
-        user.setHandle(handle);
         user.setDisplayName(displayName);
         user.setEmail(email);
         return user;

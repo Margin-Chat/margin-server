@@ -12,6 +12,7 @@ import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.CurrentUserDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,32 +32,32 @@ class UserTest extends MarginTestRunner {
 
     @Test
     void getCurrentUser_returnsAuthenticatedUser() {
-        UserDTO dto = UserTestUtils.getCurrentUser(user);
+        CurrentUserDTO dto = UserTestUtils.getCurrentUser(user);
 
         assertEquals(user.getId(), dto.id());
-        assertEquals("lucas", dto.handle());
+        assertEquals("lucas", dto.displayName());
         assertEquals("lucas@margin.chat", dto.email());
     }
 
     @Test
-    void lookupByHandle_returnsUser() {
-        ResponseEntity<UserDTO> response = UserTestUtils.lookupByHandle("lucas");
+    void lookupByEmail_returnsUser() {
+        ResponseEntity<UserDTO> response = UserTestUtils.lookupByEmail(user, "lucas@margin.chat");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("lucas", response.getBody().handle());
+        assertEquals("lucas", response.getBody().displayName());
     }
 
     @Test
-    void lookupByHandle_nonExistentUser_throws() {
+    void lookupByEmail_nonExistentUser_throws() {
         assertThrows(Exception.class, () ->
-                UserTestUtils.lookupByHandle("nonexistent")
+                UserTestUtils.lookupByEmail(user, "nonexistent@margin.chat")
         );
     }
 
     @Test
     void updateDisplayName() {
-        UserDTO updated = UserTestUtils.updateUser("New Name", null, user);
+        CurrentUserDTO updated = UserTestUtils.updateUser("New Name", null, user);
 
         assertEquals("New Name", updated.displayName());
         assertEquals("lucas@margin.chat", updated.email());
@@ -64,7 +65,7 @@ class UserTest extends MarginTestRunner {
 
     @Test
     void updateEmail() {
-        UserDTO updated = UserTestUtils.updateUser(null, "newemail@margin.chat", user);
+        CurrentUserDTO updated = UserTestUtils.updateUser(null, "newemail@margin.chat", user);
 
         assertEquals("newemail@margin.chat", updated.email());
         assertEquals("lucas", updated.displayName());
@@ -72,7 +73,7 @@ class UserTest extends MarginTestRunner {
 
     @Test
     void updateDisplayNameAndEmail() {
-        UserDTO updated = UserTestUtils.updateUser("Updated", "updated@margin.chat", user);
+        CurrentUserDTO updated = UserTestUtils.updateUser("Updated", "updated@margin.chat", user);
 
         assertEquals("Updated", updated.displayName());
         assertEquals("updated@margin.chat", updated.email());
@@ -80,7 +81,7 @@ class UserTest extends MarginTestRunner {
 
     @Test
     void updateWithNullsChangesNothing() {
-        UserDTO updated = UserTestUtils.updateUser(null, null, user);
+        CurrentUserDTO updated = UserTestUtils.updateUser(null, null, user);
 
         assertEquals("lucas", updated.displayName());
         assertEquals("lucas@margin.chat", updated.email());
@@ -95,7 +96,6 @@ class UserTest extends MarginTestRunner {
         User deleted = UserTestUtils.findById(userId);
         assertNotNull(deleted.getDeletedAt());
         assertEquals("Deleted User", deleted.getDisplayName());
-        assertTrue(deleted.getHandle().startsWith("deleted_user_"));
         assertTrue(deleted.getEmail().startsWith("deleted_user_"));
         assertNull(deleted.getProfilePictureUrl());
     }
@@ -118,7 +118,7 @@ class UserTest extends MarginTestRunner {
         UserTestUtils.deleteUser(user);
 
         assertThrows(Exception.class, () ->
-                UserTestUtils.lookupByHandle("lucas")
+                UserTestUtils.lookupByEmail(user, "lucas@margin.chat")
         );
     }
 

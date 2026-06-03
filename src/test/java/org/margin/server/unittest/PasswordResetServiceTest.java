@@ -144,7 +144,7 @@ class PasswordResetServiceTest {
     }
 
     private static User makeUser() {
-        User user = createUser(1L, null, "Alice", "alice@margin.chat");
+        User user = createUser(1L, "Alice", "alice@margin.chat");
         user.setEncryption(createEncryption("old-public", "old-encrypted-private", "old-salt", "old-iv"));
         return user;
     }

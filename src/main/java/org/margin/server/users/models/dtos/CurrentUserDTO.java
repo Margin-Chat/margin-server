@@ -4,18 +4,20 @@ import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
-public record UserDTO(
+public record CurrentUserDTO(
         Long id,
         String displayName,
+        String email,
         String profilePictureUrl,
         Instant createdAt,
         Instant lastSeenAt,
         boolean isOnline
 ) {
-    public UserDTO(User user, boolean online) {
+    public CurrentUserDTO(User user, boolean online) {
         this(
                 user.getId(),
                 user.getDisplayName(),
+                user.getEmail(),
                 user.getProfilePictureUrl(),
                 user.getCreatedAt(),
                 user.getLastSeenAt(),

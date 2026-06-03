@@ -118,7 +118,7 @@ class AuthenticationTest extends MarginTestRunner {
 
         User user = AuthTestUtils.findByEmail("henry@margin.chat");
         assertNotNull(user);
-        assertEquals("henry", user.getHandle());
+        assertEquals("henry", user.getDisplayName());
     }
 
     @Test
@@ -139,7 +139,7 @@ class AuthenticationTest extends MarginTestRunner {
 
         User user = AuthTestUtils.findByEmail("ivan@margin.chat");
         assertNotNull(user);
-        assertEquals("ivan", user.getHandle());
+        assertEquals("ivan", user.getDisplayName());
     }
 
     @Test
@@ -153,22 +153,12 @@ class AuthenticationTest extends MarginTestRunner {
     }
 
     @Test
-    void registerWithDuplicateHandle_throws() {
-        BetaKey key1 = AuthTestUtils.createBetaKey();
-        BetaKey key2 = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("mike", "mike@margin.chat", "password", key1.getKey());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                AuthTestUtils.register("mike", "mike2@margin.chat", "password", key2.getKey()));
-    }
-
-    @Test
-    void registerHandleIsStoredLowercase() {
+    void registerEmailIsStoredLowercase() {
         BetaKey key = AuthTestUtils.createBetaKey();
-        AuthTestUtils.register("NinaUpper", "nina@margin.chat", "password", key.getKey());
+        AuthTestUtils.register("Nina", "NinaUpper@Margin.chat", "password", key.getKey());
 
-        User user = AuthTestUtils.findByEmail("nina@margin.chat");
-        assertEquals("ninaupper", user.getHandle());
+        User user = AuthTestUtils.findByEmail("ninaupper@margin.chat");
+        assertEquals("ninaupper@margin.chat", user.getEmail());
     }
 
     @Test

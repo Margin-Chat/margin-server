@@ -32,7 +32,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void sendInvite_createsConversationWithAcceptedStatusForSender() {
-        DirectConversationDTO dto = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO dto = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         assertNotNull(dto);
         assertNotNull(dto.id());
@@ -42,7 +42,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void sendInvite_recipientSeesPendingInvite() {
-        ConversationTestUtils.sendInvite(sender, "recipient");
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
@@ -53,7 +53,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void sendInvite_senderHasNoPendingInvites() {
-        ConversationTestUtils.sendInvite(sender, "recipient");
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(sender);
 
@@ -61,24 +61,24 @@ class ConversationInviteTest extends MarginTestRunner {
     }
 
     @Test
-    void sendInvite_toNonExistentHandle_throws() {
+    void sendInvite_toNonExistentEmail_throws() {
         assertThrows(Exception.class, () ->
-                ConversationTestUtils.sendInvite(sender, "nobody"));
+                ConversationTestUtils.sendInvite(sender, "nobody@margin.chat"));
     }
 
     @Test
     void sendInvite_duplicateConversation_throws() {
-        ConversationTestUtils.sendInvite(sender, "recipient");
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                ConversationTestUtils.sendInvite(sender, "recipient"));
+                ConversationTestUtils.sendInvite(sender, "recipient@margin.chat"));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
     @Test
     void acceptInvite_removesFromPendingAndAllowsMessages() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         ConversationTestUtils.acceptInvite(invite.id(), recipient);
 
@@ -88,7 +88,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void acceptInvite_byNonRecipient_throws() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
         User outsider = UserTestUtils.createUser("outsider", "outsider@margin.chat");
 
         assertThrows(Exception.class, () ->
@@ -97,7 +97,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void acceptInvite_alreadyAccepted_throws() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
         ConversationTestUtils.acceptInvite(invite.id(), recipient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -108,7 +108,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void declineInvite_removesFromPendingList() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         ConversationTestUtils.declineInvite(invite.id(), recipient);
 
@@ -118,7 +118,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void declineInvite_alreadyDeclined_throws() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
         ConversationTestUtils.declineInvite(invite.id(), recipient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -129,7 +129,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void sendMessage_toPendingConversation_throws() {
-        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient");
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 ConversationTestUtils.getChannelMessages(invite.id(), sender));
@@ -141,8 +141,8 @@ class ConversationInviteTest extends MarginTestRunner {
     void multipleInvites_allAppearInPendingList() {
         User sender2 = UserTestUtils.createUser("sender2", "sender2@margin.chat");
 
-        ConversationTestUtils.sendInvite(sender, "recipient");
-        ConversationTestUtils.sendInvite(sender2, "recipient");
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+        ConversationTestUtils.sendInvite(sender2, "recipient@margin.chat");
 
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
@@ -154,8 +154,8 @@ class ConversationInviteTest extends MarginTestRunner {
     void acceptOneInvite_otherRemainsInPendingList() {
         User sender2 = UserTestUtils.createUser("sender2", "sender2@margin.chat");
 
-        DirectConversationDTO first = ConversationTestUtils.sendInvite(sender, "recipient");
-        ConversationTestUtils.sendInvite(sender2, "recipient");
+        DirectConversationDTO first = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+        ConversationTestUtils.sendInvite(sender2, "recipient@margin.chat");
 
         ConversationTestUtils.acceptInvite(first.id(), recipient);
 
@@ -166,7 +166,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
     @Test
     void pendingInvite_includesConversationAndFromUser() {
-        ConversationTestUtils.sendInvite(sender, "recipient");
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
 
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 

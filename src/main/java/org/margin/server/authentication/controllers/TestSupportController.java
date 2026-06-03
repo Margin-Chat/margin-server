@@ -24,13 +24,20 @@ import java.time.Instant;
 @Slf4j
 class TestSupportController {
 
-    record ActivateTestRequest(String email, String secret) {}
+    record ActivateTestRequest(String email, String secret) {
+    }
 
     record CreateTestUserRequest(
-            String email, String password, String handle, String displayName,
-            String publicKey, String encryptedPrivateKey, String salt, String iv,
+            String email,
+            String password,
+            String displayName,
+            String publicKey,
+            String encryptedPrivateKey,
+            String salt,
+            String iv,
             String secret
-    ) {}
+    ) {
+    }
 
     private final UserRepository userRepository;
     private final ActivationKeyRepository activationKeyRepository;
@@ -47,7 +54,6 @@ class TestSupportController {
         this.env = env;
     }
 
-    // Activate an already-registered account without going through email.
     @PostMapping("/activate-test")
     ResponseEntity<Void> activateForTest(@RequestBody ActivateTestRequest request) {
         if (!validSecret(request.secret())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -69,15 +75,12 @@ class TestSupportController {
         return ResponseEntity.ok().build();
     }
 
-    // Register + immediately activate in one call, bypassing the rate limiter.
-    // Returns 200 on success, 409 if the user already exists (caller can proceed to login).
     @PostMapping("/register-and-activate-test")
     ResponseEntity<Void> registerAndActivateForTest(@RequestBody CreateTestUserRequest request) {
         if (!validSecret(request.secret())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         try {
             ActivationKey key = authenticationService.registerUser(
-                    request.handle(),
                     request.displayName(),
                     request.email(),
                     request.password(),
@@ -91,7 +94,6 @@ class TestSupportController {
             activationKeyRepository.save(key);
             log.info("Test-created and activated user: {}", request.email());
         } catch (IllegalArgumentException e) {
-            // User already exists — caller can proceed to login
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 

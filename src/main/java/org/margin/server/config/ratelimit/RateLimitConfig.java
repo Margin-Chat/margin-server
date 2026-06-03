@@ -43,4 +43,11 @@ public final class RateLimitConfig {
                 .refillGreedy(3, Duration.ofHours(1))
                 .build();
     }
+
+    public static Bandwidth sendInvite() {
+        return Bandwidth.builder()
+                .capacity(20)
+                .refillGreedy(20, Duration.ofHours(1))
+                .build();
+    }
 }

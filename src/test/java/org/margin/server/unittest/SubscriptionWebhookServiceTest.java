@@ -389,7 +389,7 @@ class SubscriptionWebhookServiceTest {
     }
 
     private Subscription localSubscriptionWithOwner() {
-        User owner = createUser(99L, null, "Owner", "owner@test.com");
+        User owner = createUser(99L, "Owner", "owner@test.com");
 
         MarginMember ownerMember = new MarginMember();
         ownerMember.setUser(owner);

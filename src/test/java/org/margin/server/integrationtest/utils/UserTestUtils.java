@@ -4,6 +4,7 @@ import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
+import org.margin.server.users.models.dtos.CurrentUserDTO;
 import org.margin.server.users.models.dtos.KeyUploadRequest;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
@@ -25,11 +26,10 @@ public class UserTestUtils {
         UserTestUtils.userController = userController;
     }
 
-    public static User createUser(String handle, String email) {
+    public static User createUser(String displayName, String email) {
         User user = new User();
-        user.setHandle(handle);
         user.setEmail(email);
-        user.setDisplayName(handle);
+        user.setDisplayName(displayName);
         user.setPassword("hashed-password");
         user.setCreatedAt(Instant.now());
 
@@ -44,16 +44,16 @@ public class UserTestUtils {
         return userRepository.save(user);
     }
 
-    public static UserDTO getCurrentUser(User user) {
+    public static CurrentUserDTO getCurrentUser(User user) {
         return userController.getCurrentUser(user);
     }
 
-    public static UserDTO updateUser(String displayName, String email, User user) {
+    public static CurrentUserDTO updateUser(String displayName, String email, User user) {
         return userController.updateUserInfo(displayName, email, null, user);
     }
 
-    public static ResponseEntity<UserDTO> lookupByHandle(String handle) {
-        return userController.lookupByHandle(handle);
+    public static ResponseEntity<UserDTO> lookupByEmail(User requester, String email) {
+        return userController.lookupByEmail(requester, email);
     }
 
     public static ResponseEntity<Void> uploadKeys(Long userId, String publicKey, String encryptedPrivateKey, User user) {

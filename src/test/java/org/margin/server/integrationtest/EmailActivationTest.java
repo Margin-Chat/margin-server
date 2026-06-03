@@ -76,8 +76,8 @@ class EmailActivationTest extends MarginTestRunner {
         assertFalse(ActivationTestUtils.isUserActivated(activationKey.getUser()));
     }
 
-    private static ActivationKey registerAndFetch(String handle, String email) {
+    private static ActivationKey registerAndFetch(String displayName, String email) {
         BetaKey key = AuthTestUtils.createBetaKey();
-        return AuthTestUtils.register(handle, email, "password", key.getKey());
+        return AuthTestUtils.register(displayName, email, "password", key.getKey());
     }
 }

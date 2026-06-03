@@ -106,7 +106,7 @@ class MarginInviteControllerTest {
     @Test
     void createDirectInvite_shouldReturnInvite() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
-        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
+        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
@@ -123,14 +123,14 @@ class MarginInviteControllerTest {
     }
 
     @Test
-    void createDirectInvite_withEmptyHandle_shouldThrow400() {
+    void createDirectInvite_withEmptyEmail_shouldThrow400() {
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "", adminUser))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createDirectInvite_whenUserAlreadyMember_shouldThrow409() {
-        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
+        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", adminUser))
@@ -139,7 +139,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_whenPendingInviteExists_shouldThrow409() {
-        when(userService.getByHandle("targetUser")).thenReturn(targetUser);
+        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(true);
 

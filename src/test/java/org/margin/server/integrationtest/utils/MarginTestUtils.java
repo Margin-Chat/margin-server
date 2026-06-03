@@ -47,7 +47,7 @@ public class MarginTestUtils {
 
     public static void addUserToMargin(Long marginId, User addingUser, User userToAdd) {
         MarginInviteDTO invite =
-                marginInviteController.createDirectInvite(marginId, userToAdd.getHandle(), addingUser).getBody();
+                marginInviteController.createDirectInvite(marginId, userToAdd.getEmail(), addingUser).getBody();
         Assertions.assertNotNull(invite, "Invite was successfully created");
         marginInviteController.acceptDirectInvite(invite.id(), userToAdd);
 

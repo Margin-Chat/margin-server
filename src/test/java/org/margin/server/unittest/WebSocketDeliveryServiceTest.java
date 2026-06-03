@@ -42,8 +42,6 @@ class WebSocketDeliveryServiceTest {
         return new UserDTO(
                 1L,
                 "jdoe",
-                "jdoe",
-                "jdoe@example.com",
                 "https://cdn.margin.org/pfp/1.png",
                 Instant.now(),
                 null,

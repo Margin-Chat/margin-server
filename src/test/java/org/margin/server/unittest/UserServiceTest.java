@@ -38,22 +38,22 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    @DisplayName("getByHandle should return user when found")
-    void getByHandle_Found() {
-        User user = createUser(null, "alice");
-        when(userRepository.findByHandle("alice")).thenReturn(Optional.of(user));
+    @DisplayName("getByEmail should return user when found")
+    void getByEmail_Found() {
+        User user = createUser(null, "Alice", "alice@margin.org");
+        when(userRepository.findByEmail("alice@margin.org")).thenReturn(Optional.of(user));
 
-        User result = userService.getByHandle("alice");
+        User result = userService.getByEmail("alice@margin.org");
 
-        assertEquals("alice", result.getHandle());
+        assertEquals("alice@margin.org", result.getEmail());
     }
 
     @Test
-    @DisplayName("getByHandle should throw exception when not found")
-    void getByHandle_NotFound() {
-        when(userRepository.findByHandle("unknown")).thenReturn(Optional.empty());
+    @DisplayName("getByEmail should throw exception when not found")
+    void getByEmail_NotFound() {
+        when(userRepository.findByEmail("unknown@margin.org")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> userService.getByHandle("unknown"));
+        assertThrows(RuntimeException.class, () -> userService.getByEmail("unknown@margin.org"));
     }
 
     @Test
@@ -76,7 +76,7 @@ class UserServiceTest {
     @Test
     @DisplayName("searchUsers should return grouped results with shared margins")
     void searchUsers_WithSharedMargins_ReturnsGroupedResults() {
-        User user = createUser(2L, "bob", null, "bob@margin.org");
+        User user = createUser(2L, "bob", "bob@margin.org");
         user.setCreatedAt(Instant.now());
 
         Long searcherId = 1L;
@@ -91,7 +91,7 @@ class UserServiceTest {
         List<UserSearchResultDTO> result = userService.searchUsersWithSharedMargins(searcherId, "bo");
 
         assertEquals(1, result.size());
-        assertEquals("bob", result.getFirst().user().handle());
+        assertEquals("bob", result.getFirst().user().displayName());
         assertTrue(result.getFirst().user().isOnline());
         assertEquals(List.of("Team Alpha", "Team Beta"), result.getFirst().sharedMargins());
     }

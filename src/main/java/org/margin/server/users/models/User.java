@@ -29,11 +29,6 @@ public class User implements UserDetails {
 
     @NotBlank
     @Size(max = 50)
-    @Column(unique = true, nullable = false)
-    private String handle;
-
-    @NotBlank
-    @Size(max = 50)
     private String displayName;
 
     @NotBlank
