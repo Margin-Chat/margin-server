@@ -1,8 +1,7 @@
 package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.UserAddedToMarginEvent;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
@@ -23,6 +22,7 @@ import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +46,7 @@ public class MarginService implements MarginLookup {
     private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final SubscriptionService subscriptionService;
     private final SubscriptionValidationService subscriptionValidationService;
 
@@ -56,7 +56,7 @@ public class MarginService implements MarginLookup {
                          UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
-                         NotificationService notificationService,
+                         ApplicationEventPublisher eventPublisher,
                          SubscriptionService subscriptionService,
                          SubscriptionValidationService subscriptionValidationService) {
         this.marginRepository = marginRepository;
@@ -65,7 +65,7 @@ public class MarginService implements MarginLookup {
         this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.subscriptionService = subscriptionService;
         this.subscriptionValidationService = subscriptionValidationService;
     }
@@ -163,13 +163,7 @@ public class MarginService implements MarginLookup {
                 });
 
         if (!isNewlyCreated) {
-            notificationService.createForUsers(
-                    Collections.singletonList(user),
-                    addingUser,
-                    NotificationType.ADDED_TO_MARGIN,
-                    null,
-                    marginId
-            );
+            eventPublisher.publishEvent(new UserAddedToMarginEvent(user, addingUser, marginId));
         }
 
         subscriptionValidationService.notifyIfApproachingMemberLimit(margin);

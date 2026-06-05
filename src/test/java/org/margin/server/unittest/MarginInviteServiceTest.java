@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.UserInvitedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.MarginRole;
@@ -14,11 +14,13 @@ import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -50,7 +52,7 @@ class MarginInviteServiceTest {
     @Mock
     private SpacesService spacesService;
     @Mock
-    private NotificationService notificationService;
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MarginInviteService marginInviteService;
@@ -116,6 +118,11 @@ class MarginInviteServiceTest {
         assertThat(result.getInvitedUser()).isEqualTo(targetUser);
         assertThat(result.getMaxUses()).isEqualTo(1);
         verify(webSocketDeliveryService).notifyMarginInvite(result.getInviteCode(), targetUser.getId());
+        ArgumentCaptor<UserInvitedToMarginEvent> captor = ArgumentCaptor.forClass(UserInvitedToMarginEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getInvitedUser()).isEqualTo(targetUser);
+        assertThat(captor.getValue().getInvitedBy()).isEqualTo(admin);
+        assertThat(captor.getValue().getMarginId()).isEqualTo(margin.getId());
     }
 
     @Test

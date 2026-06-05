@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.email.EmailService;
 import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -29,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openapitools.jackson.nullable.JsonNullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -59,7 +60,7 @@ class SubscriptionWebhookServiceTest {
     @Mock
     private WebSocketMessageBuilder wsMessageBuilder;
     @Mock
-    private NotificationService notificationService;
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private MarginService marginService;
 
@@ -79,7 +80,7 @@ class SubscriptionWebhookServiceTest {
                 Map.of(SubscriptionTier.SMALL, smallConfig));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
                 subscriptionService, mollie, pricing, emailService, connectionManager, wsMessageBuilder,
-                notificationService, marginService, null);
+                eventPublisher, marginService, null);
         ReflectionTestUtils.setField(service, "self", service);
     }
 
@@ -215,12 +216,12 @@ class SubscriptionWebhookServiceTest {
 
         assertThat(subscription.getPendingPaymentId()).isNull();
         verify(subscriptionRepository).save(subscription);
-        verify(notificationService).createForUsers(
-                eq(List.of(ownerUserOf(subscription))),
-                isNull(),
-                eq(NotificationType.SUBSCRIPTION_PAYMENT_FAILED),
-                isNull(),
-                eq(subscription.getMargin().getId()));
+        ArgumentCaptor<SubscriptionStatusChangedEvent> failedCaptor =
+                ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(failedCaptor.capture());
+        assertThat(failedCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
+        assertThat(failedCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(failedCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
         verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
     }
 
@@ -239,12 +240,12 @@ class SubscriptionWebhookServiceTest {
 
         service.handleWebhook(PAYMENT_ID);
 
-        verify(notificationService).createForUsers(
-                eq(List.of(ownerUserOf(subscription))),
-                isNull(),
-                eq(NotificationType.SUBSCRIPTION_UPGRADED),
-                isNull(),
-                eq(subscription.getMargin().getId()));
+        ArgumentCaptor<SubscriptionStatusChangedEvent> upgradedCaptor =
+                ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(upgradedCaptor.capture());
+        assertThat(upgradedCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_UPGRADED);
+        assertThat(upgradedCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(upgradedCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
         verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
     }
 

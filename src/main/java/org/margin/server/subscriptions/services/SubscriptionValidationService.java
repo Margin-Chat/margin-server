@@ -1,8 +1,7 @@
 package org.margin.server.subscriptions.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.MemberLimitWarningEvent;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
@@ -11,9 +10,11 @@ import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
+import org.margin.server.users.models.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -23,14 +24,14 @@ public class SubscriptionValidationService {
     private static final long BYTES_PER_GB = 1024L * 1024 * 1024;
 
     private final SubscriptionService subscriptionService;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final StoredFileRepository storedFileRepository;
 
     public SubscriptionValidationService(SubscriptionService subscriptionService,
-                                         NotificationService notificationService,
+                                         ApplicationEventPublisher eventPublisher,
                                          StoredFileRepository storedFileRepository) {
         this.subscriptionService = subscriptionService;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.storedFileRepository = storedFileRepository;
     }
 
@@ -57,23 +58,16 @@ public class SubscriptionValidationService {
             return;
         }
 
-        margin.getMembers().stream()
+        List<User> recipients = margin.getMembers().stream()
                 .filter(m -> m.getRole() == MarginRole.OWNER || m.getRole() == MarginRole.ADMIN)
                 .map(MarginMember::getUser)
-                .forEach(user -> {
-                    try {
-                        notificationService.createForUsers(
-                                Collections.singletonList(user),
-                                null,
-                                NotificationType.SUBSCRIPTION_LIMIT_WARNING,
-                                null,
-                                margin.getId()
-                        );
-                    } catch (Exception e) {
-                        log.warn("Failed to send limit warning to user {} for margin {}",
-                                user.getId(), margin.getId(), e);
-                    }
-                });
+                .toList();
+
+        try {
+            eventPublisher.publishEvent(new MemberLimitWarningEvent(recipients, margin.getId()));
+        } catch (Exception e) {
+            log.warn("Failed to send limit warning for margin {}", margin.getId(), e);
+        }
     }
 
     public int getMaxCallParticipants(Channel channel) {

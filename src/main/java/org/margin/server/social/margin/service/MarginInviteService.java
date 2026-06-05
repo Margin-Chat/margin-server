@@ -1,8 +1,6 @@
 package org.margin.server.social.margin.service;
 
-import lombok.RequiredArgsConstructor;
-import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.UserInvitedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.MarginRole;
@@ -11,17 +9,16 @@ import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class MarginInviteService {
 
     private final MarginInviteRepository marginInviteRepository;
@@ -29,7 +26,21 @@ public class MarginInviteService {
     private final MarginMemberRepository marginMemberRepository;
     private final MarginService marginService;
     private final SpacesService spacesService;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public MarginInviteService(MarginInviteRepository marginInviteRepository,
+                               WebSocketDeliveryService webSocketDeliveryService,
+                               MarginMemberRepository marginMemberRepository,
+                               MarginService marginService,
+                               SpacesService spacesService,
+                               ApplicationEventPublisher eventPublisher) {
+        this.marginInviteRepository = marginInviteRepository;
+        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.marginMemberRepository = marginMemberRepository;
+        this.marginService = marginService;
+        this.spacesService = spacesService;
+        this.eventPublisher = eventPublisher;
+    }
 
     @Transactional
     public MarginInvite createLinkInvite(Margin margin, Integer maxUses, User invitedBy) {
@@ -65,13 +76,8 @@ public class MarginInviteService {
         MarginInvite saved = marginInviteRepository.save(marginInvite);
 
         webSocketDeliveryService.notifyMarginInvite(saved.getInviteCode(), targetUser.getId());
-        notificationService.createForUsers(
-                Collections.singletonList(targetUser),
-                invitedBy,
-                NotificationType.INVITED_TO_MARGIN,
-                saved.getId(),
-                margin.getId()
-        );
+        eventPublisher.publishEvent(
+                new UserInvitedToMarginEvent(targetUser, invitedBy, saved.getId(), margin.getId()));
 
         return saved;
     }

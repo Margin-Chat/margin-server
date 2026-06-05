@@ -10,7 +10,7 @@ import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
 import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.notifications.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.service.MarginService;
@@ -25,6 +25,7 @@ import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.openapitools.jackson.nullable.JsonNullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +53,7 @@ public class SubscriptionWebhookService {
     private final EmailService emailService;
     private final ConnectionManager connectionManager;
     private final WebSocketMessageBuilder wsMessageBuilder;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final MarginService marginService;
     private final SubscriptionWebhookService self;
 
@@ -65,7 +65,7 @@ public class SubscriptionWebhookService {
                                       EmailService emailService,
                                       ConnectionManager connectionManager,
                                       WebSocketMessageBuilder wsMessageBuilder,
-                                      NotificationService notificationService,
+                                      ApplicationEventPublisher eventPublisher,
                                       MarginService marginService,
                                       @Lazy SubscriptionWebhookService self) {
         this.mollieClient = mollieClient;
@@ -76,7 +76,7 @@ public class SubscriptionWebhookService {
         this.emailService = emailService;
         this.connectionManager = connectionManager;
         this.wsMessageBuilder = wsMessageBuilder;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.marginService = marginService;
         this.self = self;
     }
@@ -269,13 +269,8 @@ public class SubscriptionWebhookService {
     private void notifyOwner(Subscription subscription, NotificationType type) {
         try {
             MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
-            notificationService.createForUsers(
-                    Collections.singletonList(owner.getUser()),
-                    null,
-                    type,
-                    null,
-                    subscription.getMargin().getId()
-            );
+            eventPublisher.publishEvent(new SubscriptionStatusChangedEvent(
+                    owner.getUser(), type, subscription.getMargin().getId()));
         } catch (Exception e) {
             log.warn("Failed to send {} notification for subscription {}", type, subscription.getId(), e);
         }
