@@ -11,6 +11,7 @@ public record StoredFileDTO(
         StoredFileScope scope,
         Long marginId,
         Long channelId,
+        Long conversationId,
         String fileName,
         String contentType,
         long sizeBytes,
@@ -22,8 +23,9 @@ public record StoredFileDTO(
         return new StoredFileDTO(
                 f.getId(),
                 f.getScope(),
-                f.getMargin().getId(),
+                f.getMargin() != null ? f.getMargin().getId() : null,
                 f.getChannel() != null ? f.getChannel().getId() : null,
+                f.getConversation() != null ? f.getConversation().getId() : null,
                 f.getFileName(),
                 f.getContentType(),
                 f.getSizeBytes(),

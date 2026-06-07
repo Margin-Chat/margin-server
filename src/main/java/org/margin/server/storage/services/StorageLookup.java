@@ -1,4 +1,4 @@
-package org.margin.server.storage;
+package org.margin.server.storage.services;
 
 import org.margin.server.storage.dtos.StoredFileDTO;
 

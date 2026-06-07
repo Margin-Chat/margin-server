@@ -1,4 +1,4 @@
-package org.margin.server.storage;
+package org.margin.server.storage.services;
 
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,7 +22,7 @@ public interface StorageService {
     default Optional<String> presign(String url) {
         return presign(url, null);
     }
-    
+
     default Optional<String> presign(String url, String downloadFilename) {
         return Optional.empty();
     }

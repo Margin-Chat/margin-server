@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.users.models.User;
 
@@ -33,14 +34,17 @@ public class StoredFile {
     @Column(name = "scope", nullable = false)
     private StoredFileScope scope;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "margin_id", nullable = false)
+    @JoinColumn(name = "margin_id")
     private Margin margin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "channel_id")
     private Channel channel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id")
+    private Conversation conversation;
 
     @Column(name = "message_id")
     private Long messageId;

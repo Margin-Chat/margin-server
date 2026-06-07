@@ -3,10 +3,10 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.storage.StorageService;
-import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.repositories.StoredFileRepository;
+import org.margin.server.storage.services.StorageService;
+import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -22,19 +22,23 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
-import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
 import static org.margin.server.unittest.utils.StoredFileTestUtils.channelFile;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class StoredFileServiceTest {
 
-    @Mock private StoredFileRepository storedFileRepository;
-    @Mock private ConnectionManager connectionManager;
-    @Mock private StorageService storageService;
-    @Mock private SubscriptionValidationService subscriptionValidationService;
+    @Mock
+    private StoredFileRepository storedFileRepository;
+    @Mock
+    private ConnectionManager connectionManager;
+    @Mock
+    private StorageService storageService;
+    @Mock
+    private SubscriptionValidationService subscriptionValidationService;
 
     @InjectMocks
     private StoredFileService service;

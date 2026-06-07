@@ -6,16 +6,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
-import org.margin.server.storage.StorageService;
-import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.controllers.StoredFileController;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.models.StoredFile;
+import org.margin.server.storage.services.StorageService;
+import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
 import org.margin.server.subscriptions.models.SubscriptionTier;
@@ -37,11 +38,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.conversationFile;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.marginFile;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.margin.server.unittest.utils.UserTestUtils.createUser;
-import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
-import static org.margin.server.unittest.utils.StoredFileTestUtils.marginFile;
 
 @ExtendWith(MockitoExtension.class)
 class StoredFileControllerTest {
@@ -62,12 +64,15 @@ class StoredFileControllerTest {
     private MarginAuthorizationService marginAuthorizationService;
     @Mock
     private ConversationAuthorizationService conversationAuthorizationService;
+    @Mock
+    private ConversationService conversationService;
     @InjectMocks
     private StoredFileController controller;
 
     private User user;
     private Margin margin;
     private Channel channel;
+    private Conversation conversation;
 
     @BeforeEach
     void setUp() {
@@ -76,11 +81,11 @@ class StoredFileControllerTest {
         margin = new Margin();
         margin.setId(7L);
 
-        Conversation conv = new Conversation();
-        conv.setId(13L);
+        conversation = new Conversation();
+        conversation.setId(13L);
 
         channel = createChannel(3L);
-        channel.setConversation(conv);
+        channel.setConversation(conversation);
     }
 
     @Test
@@ -166,6 +171,61 @@ class StoredFileControllerTest {
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
                 controller.uploadChannelFile(3L, fakeFile("img.png", "image/png", "bytes"), false, user));
+    }
+
+    @Test
+    void uploadConversationFileDelegatesToService() {
+        when(conversationService.getById(13L)).thenReturn(conversation);
+        when(storedFileService.uploadConversationFile(eq(conversation), any(), eq(user), eq(true)))
+                .thenReturn(conversationFile(103L, "img.png", conversation, user));
+
+        ResponseEntity<StoredFileDTO> response = controller.uploadConversationFile(
+                13L, fakeFile("img.png", "image/png", "data"), true, user);
+
+        assertTrue(response.getStatusCode().is2xxSuccessful());
+        assertEquals("img.png", response.getBody().fileName());
+        assertNull(response.getBody().marginId());
+        assertEquals(13L, response.getBody().conversationId());
+        verify(storedFileService).uploadConversationFile(eq(conversation), any(), eq(user), eq(true));
+    }
+
+    @Test
+    void uploadConversationFileForbiddenForNonMember() {
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
+                .when(conversationAuthorizationService).requireConversationMember(13L, 42L);
+
+        assertThrows(ResponseStatusException.class, () -> controller.uploadConversationFile(
+                13L, fakeFile("img.png", "image/png", "data"), false, user));
+        verify(storedFileService, never()).uploadConversationFile(any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void downloadConversationFileForbiddenForNonMember() {
+        StoredFile file = conversationFile(55L, "doc.txt", conversation, user);
+        when(storedFileService.getById(55L)).thenReturn(file);
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
+                .when(conversationAuthorizationService).requireConversationMember(13L, 42L);
+
+        assertThrows(ResponseStatusException.class, () -> controller.download(55L, user));
+    }
+
+    @Test
+    void downloadConversationFileStreamsBytesOnLocalStorage() throws Exception {
+        StoredFile file = conversationFile(55L, "doc.txt", conversation, user);
+        file.setContentType("text/plain");
+        when(storedFileService.getById(55L)).thenReturn(file);
+        when(storageProperties.getType()).thenReturn("local");
+        when(storageService.getFile(file.getStorageUrl()))
+                .thenReturn(new ByteArrayResource("hello".getBytes()));
+
+        ResponseEntity<Resource> response = controller.download(55L, user);
+
+        assertTrue(response.getStatusCode().is2xxSuccessful());
+        String disposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertNotNull(disposition);
+        assertTrue(disposition.contains("doc.txt"));
+        verify(conversationAuthorizationService).requireConversationMember(13L, 42L);
+        verify(marginAuthorizationService, never()).requireMarginMember(anyLong(), anyLong());
     }
 
     @Test

@@ -1,5 +1,9 @@
-package org.margin.server.storage;
+package org.margin.server.storage.services;
 
+import org.margin.server.storage.StorageProperties;
+import org.margin.server.storage.exceptions.S3DeleteException;
+import org.margin.server.storage.exceptions.S3RetrievalException;
+import org.margin.server.storage.exceptions.S3UploadException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -16,10 +20,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-
-import org.margin.server.storage.exceptions.S3DeleteException;
-import org.margin.server.storage.exceptions.S3RetrievalException;
-import org.margin.server.storage.exceptions.S3UploadException;
 
 import java.net.URI;
 import java.time.Duration;

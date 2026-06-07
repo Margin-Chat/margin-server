@@ -2,16 +2,19 @@ package org.margin.server.storage.controllers;
 
 import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
-import org.margin.server.storage.StorageService;
-import org.margin.server.storage.StoredFileService;
+import org.margin.server.storage.StorageUtils;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
+import org.margin.server.storage.services.StorageService;
+import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.users.models.User;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +39,7 @@ public class StoredFileController {
     private final StoredFileService storedFileService;
     private final ChannelLookup channelLookup;
     private final ConversationAuthorizationService conversationAuthorizationService;
+    private final ConversationService conversationService;
     private final MarginAuthorizationService marginAuthorizationService;
     private final MarginLookup marginLookup;
 
@@ -44,6 +48,7 @@ public class StoredFileController {
                                 StoredFileService storedFileService,
                                 ChannelLookup channelLookup,
                                 ConversationAuthorizationService conversationAuthorizationService,
+                                ConversationService conversationService,
                                 MarginAuthorizationService marginAuthorizationService,
                                 MarginLookup marginLookup) {
         this.storageService = storageService;
@@ -51,6 +56,7 @@ public class StoredFileController {
         this.storedFileService = storedFileService;
         this.channelLookup = channelLookup;
         this.conversationAuthorizationService = conversationAuthorizationService;
+        this.conversationService = conversationService;
         this.marginAuthorizationService = marginAuthorizationService;
         this.marginLookup = marginLookup;
     }
@@ -95,6 +101,18 @@ public class StoredFileController {
         marginAuthorizationService.requireChannelMember(uploader.getId(), channelId);
         Channel channel = channelLookup.getById(channelId);
         StoredFile saved = storedFileService.uploadChannelFile(channel, file, uploader, inline);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, false));
+    }
+
+    @PostMapping("/conversations/{conversationId}/stored-files")
+    public ResponseEntity<StoredFileDTO> uploadConversationFile(@PathVariable Long conversationId,
+                                                                @RequestParam("file") MultipartFile file,
+                                                                @RequestParam(value = "inline", defaultValue = "false") boolean inline,
+                                                                @AuthenticationPrincipal User uploader) {
+        StorageUtils.requireConversationFileSize(file);
+        conversationAuthorizationService.requireConversationMember(conversationId, uploader.getId());
+        Conversation conversation = conversationService.getById(conversationId);
+        StoredFile saved = storedFileService.uploadConversationFile(conversation, file, uploader, inline);
         return ResponseEntity.ok(StoredFileDTO.from(saved, false));
     }
 
@@ -148,8 +166,10 @@ public class StoredFileController {
 
         if (f.getScope() == StoredFileScope.MARGIN) {
             marginAuthorizationService.requireMarginMember(viewer.getId(), f.getMargin().getId());
-        } else {
+        } else if (f.getScope() == StoredFileScope.CHANNEL) {
             marginAuthorizationService.requireChannelMember(viewer.getId(), f.getChannel().getId());
+        } else {
+            conversationAuthorizationService.requireConversationMember(f.getConversation().getId(), viewer.getId());
         }
 
         if ("s3".equals(storageProperties.getType())) {

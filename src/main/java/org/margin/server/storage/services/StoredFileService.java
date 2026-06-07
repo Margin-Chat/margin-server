@@ -1,6 +1,7 @@
-package org.margin.server.storage;
+package org.margin.server.storage.services;
 
 import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
@@ -64,6 +65,21 @@ public class StoredFileService implements StorageLookup {
         entity.setScope(StoredFileScope.CHANNEL);
         entity.setMargin(margin);
         entity.setChannel(channel);
+        entity.setFileName(file.getOriginalFilename());
+        entity.setContentType(file.getContentType());
+        entity.setSizeBytes(file.getSize());
+        entity.setStorageUrl(url);
+        entity.setUploadedBy(uploader);
+        entity.setInline(inline);
+        return storedFileRepository.save(entity);
+    }
+
+    @Transactional
+    public StoredFile uploadConversationFile(Conversation conversation, MultipartFile file, User uploader, boolean inline) {
+        String url = storageService.saveStoredFile(file);
+        StoredFile entity = new StoredFile();
+        entity.setScope(StoredFileScope.CONVERSATION);
+        entity.setConversation(conversation);
         entity.setFileName(file.getOriginalFilename());
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
