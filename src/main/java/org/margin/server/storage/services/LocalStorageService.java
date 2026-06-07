@@ -1,6 +1,7 @@
-package org.margin.server.storage;
+package org.margin.server.storage.services;
 
 import org.jspecify.annotations.NonNull;
+import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.exceptions.StorageException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;

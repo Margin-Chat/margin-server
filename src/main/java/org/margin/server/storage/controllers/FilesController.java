@@ -5,9 +5,10 @@ import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
-import org.margin.server.storage.StorageService;
-import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.models.StoredFile;
+import org.margin.server.storage.models.StoredFileScope;
+import org.margin.server.storage.services.StorageService;
+import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.users.models.User;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -79,8 +80,10 @@ public class FilesController {
         }
         StoredFile f = storedFileService.findByStoredFileName(fileName);
 
-        if (f.getChannel() != null && f.getChannel().getConversation() != null) {
+        if (f.getScope() == StoredFileScope.CHANNEL) {
             conversationAuthorizationService.requireConversationMember(f.getChannel().getConversation().getId(), viewer.getId());
+        } else if (f.getScope() == StoredFileScope.CONVERSATION) {
+            conversationAuthorizationService.requireConversationMember(f.getConversation().getId(), viewer.getId());
         } else {
             marginAuthorizationService.requireMarginMember(viewer.getId(), f.getMargin().getId());
         }

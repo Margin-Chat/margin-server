@@ -9,11 +9,11 @@ import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
-import org.margin.server.storage.StorageService;
-import org.margin.server.storage.StoredFileService;
 import org.margin.server.storage.controllers.FilesController;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
+import org.margin.server.storage.services.StorageService;
+import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -29,12 +29,11 @@ import java.nio.file.NoSuchFileException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
+import static org.margin.server.unittest.utils.StoredFileTestUtils.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-import static org.margin.server.unittest.utils.UserTestUtils.createUser;
-import static org.margin.server.unittest.utils.ChannelTestUtils.createChannel;
-import static org.margin.server.unittest.utils.StoredFileTestUtils.channelFile;
-import static org.margin.server.unittest.utils.StoredFileTestUtils.marginFile;
 
 @ExtendWith(MockitoExtension.class)
 class FilesControllerTest {
@@ -192,6 +191,33 @@ class FilesControllerTest {
     }
 
     @Test
+    void getStoredFileByName_requiresConversationMembershipForConversationFile() throws IOException {
+        StoredFile f = conversationStoredFile();
+        when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
+                .when(conversationAuthorizationService).requireConversationMember(77L, 1L);
+
+        assertThrows(ResponseStatusException.class,
+                () -> controller.getStoredFileByName("file.pdf", viewer));
+        verify(storageService, never()).getFile(anyString());
+    }
+
+    @Test
+    void getStoredFileByName_servesConversationFileAfterConversationAuthCheck() throws IOException {
+        StoredFile f = conversationStoredFile();
+        when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
+        when(storageProperties.getType()).thenReturn("local");
+        when(storageService.getFile(f.getStorageUrl()))
+                .thenReturn(new ByteArrayResource("data".getBytes()));
+
+        ResponseEntity<?> response = controller.getStoredFileByName("file.pdf", viewer);
+
+        assertTrue(response.getStatusCode().is2xxSuccessful());
+        verify(conversationAuthorizationService).requireConversationMember(77L, 1L);
+        verify(marginAuthorizationService, never()).requireMarginMember(anyLong(), anyLong());
+    }
+
+    @Test
     void getStoredFileByName_returnsNotFoundWhenFileDoesNotExist() {
         when(storedFileService.findByStoredFileName("missing.pdf"))
                 .thenThrow(new StoredFileNotFoundException("missing.pdf"));
@@ -272,5 +298,11 @@ class FilesControllerTest {
 
     private StoredFile marginStoredFile() {
         return marginFile(2L, "file.pdf", margin, viewer);
+    }
+
+    private StoredFile conversationStoredFile() {
+        Conversation conv = new Conversation();
+        conv.setId(77L);
+        return conversationFile(3L, "file.pdf", conv, viewer);
     }
 }
