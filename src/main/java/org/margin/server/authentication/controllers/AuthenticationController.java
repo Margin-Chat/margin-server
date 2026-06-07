@@ -2,11 +2,7 @@ package org.margin.server.authentication.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.authentication.models.ForgotPasswordRequest;
-import org.margin.server.authentication.models.LoginRequest;
-import org.margin.server.authentication.models.RegisterRequest;
-import org.margin.server.authentication.models.ResetPasswordRequest;
+import org.margin.server.authentication.models.*;
 import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.authentication.services.PasswordResetService;
@@ -42,8 +38,6 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public AuthResponse login(@RequestBody LoginRequest request) {
-        log.info("Login attempt for email: {}", request.email());
-
         return authenticationService.authenticateUser(
                 request.email(),
                 request.password());
@@ -51,10 +45,7 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal User user) {
-        log.info("Logout attempt for user: {}", user.getId());
-
         authenticationService.logoutUser(user);
-
         return ResponseEntity.ok().build();
     }
 
@@ -64,8 +55,6 @@ public class AuthenticationController {
             @RequestPart("data") RegisterRequest request,
             @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) {
         rateLimitRegistration(httpServletRequest);
-
-        log.info("Registration attempt for email: {}", request.email());
 
         try {
             authenticationService.registerUser(
@@ -107,7 +96,6 @@ public class AuthenticationController {
 
     @PostMapping(value = "/activate/{token}")
     public ResponseEntity<Void> activate(@PathVariable String token) {
-        log.info("Activate attempt for token: {}", token);
         activationKeyService.findAndConsumeActivationKey(token);
         return ResponseEntity.ok().build();
     }
@@ -116,11 +104,8 @@ public class AuthenticationController {
     public ResponseEntity<Void> updateEncryptionKeys(@RequestBody EncryptionKeysRequest request,
                                                      @AuthenticationPrincipal User user) {
         authenticationService.updateEncryptionKeys(user, request.publicKey(), request.encryptedPrivateKey(), request.salt(), request.iv());
-        log.info("Encryption keys updated for userId={}", user.getId());
         return ResponseEntity.ok().build();
     }
-
-    public record EncryptionKeysRequest(String publicKey, String encryptedPrivateKey, String salt, String iv) {}
 
     private void rateLimitRegistration(HttpServletRequest httpServletRequest) {
         String ip = httpServletRequest.getHeader("X-Forwarded-For");

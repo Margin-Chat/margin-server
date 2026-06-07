@@ -6,7 +6,7 @@ import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.email.EmailService;
-import org.margin.server.storage.StorageService;
+import org.margin.server.storage.services.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
