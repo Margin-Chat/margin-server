@@ -15,7 +15,7 @@ import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.StorageService;
+import org.margin.server.storage.services.StorageService;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;

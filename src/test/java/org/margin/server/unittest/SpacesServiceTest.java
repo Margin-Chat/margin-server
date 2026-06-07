@@ -21,11 +21,10 @@ import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesActions;
+import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.social.space.services.SpacesCreationService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,8 +53,6 @@ class SpacesServiceTest {
     private ChannelService channelService;
     @Mock
     private MarginMemberRepository marginMemberRepository;
-    @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private SpacesCreationService spacesCreationService;
     @Mock

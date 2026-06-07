@@ -25,15 +25,7 @@ public class CallTestUtils {
     }
 
     public static Call createCall(User caller, User receiver) {
-        return callService.createCall(caller, receiver, CallStatus.OFFERED, CallType.AUDIO);
-    }
-
-    public static Call createCall(User caller, User receiver, CallStatus status) {
-        return callService.createCall(caller, receiver, status, CallType.AUDIO);
-    }
-
-    public static Call createCall(User caller, User receiver, CallStatus status, CallType type) {
-        return callService.createCall(caller, receiver, status, type);
+        return callService.createCall(caller, receiver.getId(), CallStatus.OFFERED, CallType.AUDIO, generateRandomSdp());
     }
 
     public static Call findById(Long callId) {
@@ -100,6 +92,10 @@ public class CallTestUtils {
     }
 
     public static String responseFrame(User caller, Long callId) {
-        return responseFrame(caller, callId, "v=0\r\no=- 456 2 IN IP4 127.0.0.1\r\n");
+        return responseFrame(caller, callId, generateRandomSdp());
+    }
+
+    public static String generateRandomSdp() {
+        return "v=0\r\no=- 123 2 IN IP4 127.0.0.1\r\n";
     }
 }

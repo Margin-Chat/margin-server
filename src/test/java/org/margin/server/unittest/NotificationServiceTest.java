@@ -7,7 +7,7 @@ import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -28,7 +28,7 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private NotificationService notificationService;

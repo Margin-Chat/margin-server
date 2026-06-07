@@ -12,10 +12,13 @@ import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
+import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
+import org.margin.server.social.conversation.events.ConversationInviteEvent;
+import org.margin.server.social.conversation.events.ConversationReadEvent;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -37,7 +40,7 @@ public class ConversationService {
     private final UserRepository userRepository;
     private final ConversationService self;
     private final ConnectionManager connectionManager;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final UserService userService;
 
     @Autowired
@@ -47,7 +50,7 @@ public class ConversationService {
                                UserRepository userRepository,
                                @Lazy ConversationService self,
                                ConnectionManager connectionManager,
-                               WebSocketDeliveryService webSocketDeliveryService,
+                               ApplicationEventPublisher eventPublisher,
                                UserService userService) {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
@@ -55,7 +58,7 @@ public class ConversationService {
         this.userRepository = userRepository;
         this.self = self;
         this.connectionManager = connectionManager;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
         this.userService = userService;
     }
 
@@ -170,7 +173,7 @@ public class ConversationService {
                     .filter(member -> !member.getUser().getId().equals(userId))
                     .findFirst();
             otherUser.ifPresent(conversationMember ->
-                    webSocketDeliveryService.notifyConversationRead(conversationId, conversationMember.getUser().getId(), now));
+                    eventPublisher.publishEvent(new ConversationReadEvent(conversationId, conversationMember.getUser().getId(), now)));
         }
 
     }
@@ -260,7 +263,7 @@ public class ConversationService {
                 ConversationInviteStatus.ACCEPTED
         );
 
-        webSocketDeliveryService.notifyConversationInvite(
+        eventPublisher.publishEvent(new ConversationInviteEvent(
                 new DirectConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
@@ -270,7 +273,7 @@ public class ConversationService {
                 ),
                 sender,
                 recipient.getId()
-        );
+        ));
 
         return dto;
     }
@@ -294,10 +297,10 @@ public class ConversationService {
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
-        webSocketDeliveryService.notifyConversationInviteAccepted(
+        eventPublisher.publishEvent(new ConversationInviteAcceptedEvent(
                 this.getConversationDTO(conversation, user.getId()),
                 userService.toDTO(member.getUser()),
-                otherMember.getId().getUserId());
+                otherMember.getId().getUserId()));
     }
 
     @Transactional

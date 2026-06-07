@@ -14,7 +14,8 @@ import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.social.space.events.UserJoinedSpaceEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,7 @@ public class SpacesActions {
     private final MarginMemberRepository marginMemberRepository;
     private final SpacesCreationService spacesCreationService;
     private final ConversationService conversationService;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final SpacesRepository spacesRepository;
     private final ChannelService channelService;
 
@@ -37,14 +38,14 @@ public class SpacesActions {
                          MarginMemberRepository marginMemberRepository,
                          SpacesCreationService spacesCreationService,
                          ConversationService conversationService,
-                         WebSocketDeliveryService webSocketDeliveryService,
+                         ApplicationEventPublisher eventPublisher,
                          SpacesRepository spacesRepository,
                          ChannelService channelService) {
         this.spaceMemberRepository = spaceMemberRepository;
         this.marginMemberRepository = marginMemberRepository;
         this.spacesCreationService = spacesCreationService;
         this.conversationService = conversationService;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
         this.spacesRepository = spacesRepository;
         this.channelService = channelService;
     }
@@ -62,10 +63,10 @@ public class SpacesActions {
         SpaceMember spaceMember = spacesCreationService.createMember(user, space, role);
         space.getChannels().forEach(c -> conversationService.createNewConversationMember(c.getConversation(), user));
 
-        webSocketDeliveryService.notifyUserJoinedSpace(
+        eventPublisher.publishEvent(new UserJoinedSpaceEvent(
                 space.getMembers().stream().map(SpaceMember::getUser).toList(),
                 user,
-                space.getId());
+                space.getId()));
 
         return spaceMember;
     }

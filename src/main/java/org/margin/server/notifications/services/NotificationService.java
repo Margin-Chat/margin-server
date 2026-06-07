@@ -4,7 +4,8 @@ import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.notifications.events.NotificationDeliveryEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +17,12 @@ import java.util.stream.Collectors;
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public NotificationService(NotificationRepository notificationRepository,
-                               WebSocketDeliveryService webSocketDeliveryService) {
+                               ApplicationEventPublisher eventPublisher) {
         this.notificationRepository = notificationRepository;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -44,7 +45,7 @@ public class NotificationService {
 
         notificationRepository.saveAll(notifications);
 
-        notifications.forEach(webSocketDeliveryService::notifyNotification);
+        notifications.forEach(n -> eventPublisher.publishEvent(new NotificationDeliveryEvent(n)));
     }
 
     @Transactional

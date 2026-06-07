@@ -11,12 +11,10 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.StorageService;
+import org.margin.server.storage.services.StorageService;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -28,8 +26,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.Mockito.*;
-import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class MarginServiceTest {
@@ -49,8 +47,6 @@ class MarginServiceTest {
     private UserService userService;
     @Mock
     private MarginMapper marginMapper;
-    @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private NotificationService notificationService;
     @Mock

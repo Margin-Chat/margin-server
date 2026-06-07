@@ -7,6 +7,7 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -17,10 +18,10 @@ import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.messages.services.MessageValidationService;
-import org.margin.server.storage.StorageLookup;
+import org.margin.server.storage.services.StorageLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,12 +33,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.margin.server.unittest.utils.ChannelTestUtils.createChannelWithSpaceAndMargin;
+import static org.margin.server.unittest.utils.ConversationTestUtils.createConversation;
+import static org.margin.server.unittest.utils.MessageTestUtils.createSavedMessage;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.margin.server.unittest.utils.UserTestUtils.*;
-import static org.margin.server.unittest.utils.ConversationTestUtils.*;
-import static org.margin.server.unittest.utils.ChannelTestUtils.*;
-import static org.margin.server.unittest.utils.MessageTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
@@ -55,11 +56,13 @@ class MessageServiceTest {
     @Mock
     private ConnectionManager connectionManager;
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private MessageActions messageActions;
     @Mock
     private MessageValidationService messageValidationService;
+    @Mock
+    private ConversationValidationService conversationValidationService;
     @InjectMocks
     private MessageService messageService;
 
@@ -151,11 +154,10 @@ class MessageServiceTest {
         messageService.sendMessage(fromUser, content, dmConversation, attachmentIds);
 
         verify(messageActions).createMessage(fromUser, dmConversation, content, attachmentIds);
-        verify(webSocketDeliveryService).notifyMessage(
-                argThat(msg -> msg.content().equals(content)),
-                argThat(recipients -> recipients.contains(toUser)),
-                eq(ConversationType.DIRECT)
-        );
+        verify(eventPublisher).publishEvent(argThat(e ->
+                e instanceof org.margin.server.social.messages.events.MessageSentEvent evt
+                && evt.getMessage().content().equals(content)
+                && evt.getRecipients().contains(toUser)));
     }
 
     @Test
@@ -226,10 +228,12 @@ class MessageServiceTest {
         MessageReaction saved = new MessageReaction(message, user, "👍");
         saved.setId(1L);
 
+        when(conversationService.getById(conversation.getId())).thenReturn(conversation);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user));
         when(messageRepository.findById(100L)).thenReturn(Optional.of(message));
         when(messageActions.createMessageReaction(any(), any(), any())).thenReturn(saved);
 
-        MessageReactionDTO dto = messageService.addReaction(user, 100L, "👍", conversation);
+        MessageReactionDTO dto = messageService.addReaction(user, conversation.getId(), 100L, "👍");
 
         assertNotNull(dto);
         assertEquals("👍", dto.emoji());
@@ -244,11 +248,12 @@ class MessageServiceTest {
         User user = createUser(1L, "reactor");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
+        when(conversationService.getById(conversation.getId())).thenReturn(conversation);
         doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Reaction already exists"))
                 .when(messageValidationService).validateDuplicateEmojiForMessage(user, 100L, "👍");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> messageService.addReaction(user, 100L, "👍", conversation));
+                () -> messageService.addReaction(user, conversation.getId(), 100L, "👍"));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(messageReactionRepository, never()).save(any());
@@ -264,10 +269,12 @@ class MessageServiceTest {
         MessageReaction reaction = new MessageReaction(message, user, "👍");
         reaction.setId(1L);
 
+        when(conversationService.getById(conversation.getId())).thenReturn(conversation);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user));
         when(messageReactionRepository.findByMessageIdAndUserIdAndEmoji(100L, 1L, "👍"))
                 .thenReturn(Optional.of(reaction));
 
-        MessageReactionDTO dto = messageService.removeReaction(user, 100L, "👍", conversation);
+        MessageReactionDTO dto = messageService.removeReaction(user, 100L, "👍", conversation.getId());
 
         assertNotNull(dto);
         assertEquals("👍", dto.emoji());
@@ -280,11 +287,12 @@ class MessageServiceTest {
         User user = createUser(1L, "reactor");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
+        when(conversationService.getById(conversation.getId())).thenReturn(conversation);
         when(messageReactionRepository.findByMessageIdAndUserIdAndEmoji(100L, 1L, "👍"))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> messageService.removeReaction(user, 100L, "👍", conversation));
+                () -> messageService.removeReaction(user, 100L, "👍", conversation.getId()));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(messageReactionRepository, never()).delete(any());

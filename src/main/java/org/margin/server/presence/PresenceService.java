@@ -1,9 +1,11 @@
 package org.margin.server.presence;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.events.UserConnectedEvent;
+import org.margin.server.presence.events.UserDisconnectedEvent;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -12,23 +14,23 @@ import java.time.Instant;
 @Service
 public class PresenceService {
 
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
 
-    public PresenceService(WebSocketDeliveryService webSocketDeliveryService,
+    public PresenceService(ApplicationEventPublisher eventPublisher,
                            UserRepository userRepository) {
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
     }
 
     public void userConnected(User user) {
-        webSocketDeliveryService.notifyUserOnline(user);
-        log.info("User {} came online", user.getId());
+        eventPublisher.publishEvent(new UserConnectedEvent(user));
+        log.debug("User {} came online", user.getId());
     }
 
     public void userDisconnected(User user) {
-        webSocketDeliveryService.notifyUserOffline(user);
-        log.info("User {} went offline", user.getId());
+        eventPublisher.publishEvent(new UserDisconnectedEvent(user));
+        log.debug("User {} went offline", user.getId());
     }
 
     public void stampLastSeen(Long userId) {

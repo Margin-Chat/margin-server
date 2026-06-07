@@ -8,24 +8,33 @@ import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
 import org.margin.server.social.calls.services.CallService;
+import org.margin.server.social.calls.services.CallValidationService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.services.UserService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class CallServiceTest {
     @Mock
     private CallRepository callRepository;
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
+    @Mock
+    private UserService userService;
+    @Mock
+    private CallValidationService callValidationService;
 
     @InjectMocks
     private CallService callService;
@@ -35,12 +44,19 @@ class CallServiceTest {
         User fromUser = createUser(1L, "caller");
         User toUser = createUser(2L, "receiver");
 
-        Call savedCall = new Call(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO);
-        savedCall.setId(100L);
+        when(userService.getById(toUser.getId())).thenReturn(toUser);
+        when(callRepository.save(any(Call.class))).thenAnswer(inv -> {
+            Call c = inv.getArgument(0);
+            c.setId(100L);
+            return c;
+        });
 
-        when(callRepository.save(any(Call.class))).thenReturn(savedCall);
-
-        Call result = callService.createCall(fromUser, toUser, CallStatus.RINGING, CallType.VIDEO);
+        Call result = callService.createCall(
+                fromUser,
+                toUser.getId(),
+                CallStatus.RINGING,
+                CallType.VIDEO,
+                "v=0\r\no=- 123 2 IN IP4 127.0.0.1\r\n");
 
         assertNotNull(result);
         assertEquals(100L, result.getId());
@@ -76,11 +92,14 @@ class CallServiceTest {
 
     @Test
     void endCall_updatesCallWithEndDetails() {
+        User caller = createUser(1L, "caller");
         Call call = new Call();
         call.setId(1L);
         call.setStatus(CallStatus.ACCEPTED);
 
-        callService.endCall(call, 120);
+        when(callRepository.findById(1L)).thenReturn(Optional.of(call));
+
+        callService.endCall(caller, 1L, 120, 2L);
 
         ArgumentCaptor<Call> captor = ArgumentCaptor.forClass(Call.class);
         verify(callRepository).save(captor.capture());
@@ -93,10 +112,11 @@ class CallServiceTest {
 
     @Test
     void rejectCall_throwsExceptionWhenCallNotFound() {
+        User caller = createUser(1L, "caller");
         when(callRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(CallNotFoundException.class,
-                () -> callService.rejectCall(999L));
+                () -> callService.rejectCall(999L, 2L, caller));
     }
 
 }

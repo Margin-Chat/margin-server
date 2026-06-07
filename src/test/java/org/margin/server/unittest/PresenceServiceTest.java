@@ -6,7 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.presence.events.UserDisconnectedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -27,7 +28,7 @@ import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 class PresenceServiceTest {
 
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private UserRepository userRepository;
 
@@ -71,12 +72,14 @@ class PresenceServiceTest {
     }
 
     @Test
-    @DisplayName("userDisconnected broadcasts USER_LOGOUT via delivery service")
-    void userDisconnected_broadcastsOffline() {
+    @DisplayName("userDisconnected publishes UserDisconnectedEvent")
+    void userDisconnected_publishesEvent() {
         User user = createUser(3L);
 
         presenceService.userDisconnected(user);
 
-        verify(webSocketDeliveryService).notifyUserOffline(user);
+        ArgumentCaptor<UserDisconnectedEvent> captor = ArgumentCaptor.forClass(UserDisconnectedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertNotNull(captor.getValue());
     }
 }

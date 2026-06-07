@@ -13,7 +13,6 @@ import org.margin.server.social.margin.service.MarginInviteService;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -30,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,8 +43,6 @@ class MarginInviteServiceTest {
 
     @Mock
     private MarginInviteRepository marginInviteRepository;
-    @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
     @Mock
     private MarginMemberRepository marginMemberRepository;
     @Mock
@@ -117,11 +115,11 @@ class MarginInviteServiceTest {
         assertThat(result.getType()).isEqualTo(MarginInvite.InviteType.DIRECT);
         assertThat(result.getInvitedUser()).isEqualTo(targetUser);
         assertThat(result.getMaxUses()).isEqualTo(1);
-        verify(webSocketDeliveryService).notifyMarginInvite(result.getInviteCode(), targetUser.getId());
         ArgumentCaptor<UserInvitedToMarginEvent> captor = ArgumentCaptor.forClass(UserInvitedToMarginEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().getInvitedUser()).isEqualTo(targetUser);
         assertThat(captor.getValue().getInvitedBy()).isEqualTo(admin);
+        assertThat(captor.getValue().getInviteCode()).isEqualTo(result.getInviteCode());
         assertThat(captor.getValue().getMarginId()).isEqualTo(margin.getId());
     }
 

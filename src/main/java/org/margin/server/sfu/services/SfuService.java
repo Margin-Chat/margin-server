@@ -7,9 +7,10 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
+import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -25,7 +26,7 @@ import java.util.Objects;
 @Service
 public class SfuService {
 
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ConnectionManager connectionManager;
     private final UserService userService;
     private final UserRepository userRepository;
@@ -41,8 +42,8 @@ public class SfuService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public SfuService(WebSocketDeliveryService webSocketDeliveryService, ConnectionManager connectionManager, UserService userService, UserRepository userRepository) {
-        this.webSocketDeliveryService = webSocketDeliveryService;
+    public SfuService(ApplicationEventPublisher eventPublisher, ConnectionManager connectionManager, UserService userService, UserRepository userRepository) {
+        this.eventPublisher = eventPublisher;
         this.connectionManager = connectionManager;
         this.userService = userService;
         this.userRepository = userRepository;
@@ -72,12 +73,12 @@ public class SfuService {
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
                 channelId, new UserDTO(user, connectionManager.isUserOnline(userId))
         );
-        webSocketDeliveryService.notifySpaceMembersByChannelId(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload);
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload));
     }
 
     public void notifyUserLeft(Long channelId, Long userId) {
-        webSocketDeliveryService.notifySpaceMembersByChannelId(channelId, WebSocketMessageType.USER_LEFT_VOICE,
-                new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId))));
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_LEFT_VOICE,
+                new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId)))));
     }
 
     public List<UserDTO> getVoiceParticipants(Long channelId) {

@@ -8,7 +8,6 @@ import org.margin.server.social.margin.repositories.MarginInviteRepository;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,20 +21,17 @@ import java.util.Optional;
 public class MarginInviteService {
 
     private final MarginInviteRepository marginInviteRepository;
-    private final WebSocketDeliveryService webSocketDeliveryService;
     private final MarginMemberRepository marginMemberRepository;
     private final MarginService marginService;
     private final SpacesService spacesService;
     private final ApplicationEventPublisher eventPublisher;
 
     public MarginInviteService(MarginInviteRepository marginInviteRepository,
-                               WebSocketDeliveryService webSocketDeliveryService,
                                MarginMemberRepository marginMemberRepository,
                                MarginService marginService,
                                SpacesService spacesService,
                                ApplicationEventPublisher eventPublisher) {
         this.marginInviteRepository = marginInviteRepository;
-        this.webSocketDeliveryService = webSocketDeliveryService;
         this.marginMemberRepository = marginMemberRepository;
         this.marginService = marginService;
         this.spacesService = spacesService;
@@ -75,9 +71,8 @@ public class MarginInviteService {
 
         MarginInvite saved = marginInviteRepository.save(marginInvite);
 
-        webSocketDeliveryService.notifyMarginInvite(saved.getInviteCode(), targetUser.getId());
         eventPublisher.publishEvent(
-                new UserInvitedToMarginEvent(targetUser, invitedBy, saved.getId(), margin.getId()));
+                new UserInvitedToMarginEvent(targetUser, invitedBy, saved.getId(), saved.getInviteCode(), margin.getId()));
 
         return saved;
     }
