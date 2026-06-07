@@ -1,7 +1,8 @@
 package org.margin.server.users.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.margin.events.RemoveUserFromMarginEvent;
-import org.margin.server.storage.StorageService;
+import org.margin.server.storage.services.StorageService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -11,8 +12,6 @@ import org.margin.server.users.models.dtos.UserSearchResultDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
 import org.margin.server.websocket.connection.ConnectionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,9 +26,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class UserService {
     public static final String DELETED_USER = "deleted_user_";
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
     private final ConnectionManager connectionManager;
