@@ -84,7 +84,7 @@ public class AuthenticationService {
 
             resetFailedAttempts(user);
             String token = jwtService.generateToken(email, user.getId());
-            log.info("Login successful for userId={}", user.getId());
+            log.info("Login successful for userId {}", user.getId());
 
             return new AuthResponse(
                     true,
