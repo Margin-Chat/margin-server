@@ -55,7 +55,7 @@ storage:
     bucket-name: margin
     access-key: ${S3_ACCESS_KEY}
     secret-key: ${S3_SECRET_KEY}
-    base-url: https://files.margin.chat
+    base-url: ${APP_BASE_URL}/api/files
     presign-ttl-seconds: 600
   local:
     upload-dir: /var/margin/uploads/profile-pictures
