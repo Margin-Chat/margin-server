@@ -88,7 +88,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void getNonexistentChannel_returns404NotInternalServerError() throws Exception {
         User user = UserTestUtils.createUser("alice_sec", "alice_sec@margin.chat");
-        String token = jwtService.generateToken(user.getEmail(), user.getId());
+        String token = jwtService.generateToken(user.getEmail(), user.getId(), user.getSecurity().getTokenVersion());
 
         HttpResponse<String> response = client.send(
                 HttpRequest.newBuilder(URI.create(base() +"/api/channels/9999999"))
@@ -102,5 +102,36 @@ class SecurityIntegrationTest extends MarginTestRunner {
                 "Missing channel must produce a 404, not a 500. Body: " + response.body());
         assertTrue(response.body().contains("Channel not found"),
                 "Expected ProblemDetail to mention 'Channel not found', got: " + response.body());
+    }
+
+    @Test
+    void tokenIsRejectedAfterLogout() throws Exception {
+        User user = UserTestUtils.createUser("logout_sec", "logout_sec@margin.chat");
+        String token = jwtService.generateToken(user.getEmail(), user.getId(), user.getSecurity().getTokenVersion());
+
+        assertEquals(200, get("/api/users/me", token).statusCode(),
+                "Token must be accepted before logout");
+
+        HttpResponse<String> logout = client.send(
+                HttpRequest.newBuilder(URI.create(base() + "/api/auth/logout"))
+                        .header("Authorization", "Bearer " + token)
+                        .POST(HttpRequest.BodyPublishers.noBody())
+                        .build(),
+                HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, logout.statusCode());
+
+        assertEquals(401, get("/api/users/me", token).statusCode(),
+                "The same token must be revoked (401) after logout bumps the token version");
+    }
+
+    private HttpResponse<String> get(String path, String token) throws Exception {
+        return client.send(
+                HttpRequest.newBuilder(URI.create(base() + path))
+                        .header("Authorization", "Bearer " + token)
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.ofString()
+        );
     }
 }

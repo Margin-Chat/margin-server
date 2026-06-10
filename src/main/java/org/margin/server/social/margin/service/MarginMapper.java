@@ -8,6 +8,7 @@ import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.storage.services.StorageUrls;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,7 @@ public class MarginMapper {
                 .toList();
 
         return new MarginDTO(margin.getId(), margin.getName(), margin.getDescription(),
-                margin.getVisibility(), margin.getIconUrl(), members, spaces);
+                margin.getVisibility(), StorageUrls.publicUrl(margin.getIconUrl()), members, spaces);
     }
 
     public SpaceDTO spaceToDto(Space space) {

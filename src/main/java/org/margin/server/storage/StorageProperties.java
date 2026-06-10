@@ -23,6 +23,7 @@ public class StorageProperties {
         private String accessKey;
         private String secretKey;
         private String baseUrl;
+        private String cdnBaseUrl;
         private long presignTtlSeconds = 600;
     }
 

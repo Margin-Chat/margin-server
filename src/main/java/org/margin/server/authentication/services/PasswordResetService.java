@@ -7,6 +7,7 @@ import org.margin.server.authentication.repositories.PasswordResetTokenRepositor
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserCacheService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,15 +27,18 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final UserCacheService userCacheService;
 
     public PasswordResetService(UserRepository userRepository,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
-                                EmailService emailService) {
+                                EmailService emailService,
+                                UserCacheService userCacheService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.userCacheService = userCacheService;
     }
 
     @Transactional
@@ -82,6 +86,7 @@ public class PasswordResetService {
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
         user.getEncryption().setPublicKey(null);
         user.getEncryption().setEncryptedPrivateKey(null);
         user.getEncryption().setSalt(null);
@@ -89,6 +94,7 @@ public class PasswordResetService {
         log.info("Encryption keys cleared for userId {} — will be regenerated on next login", user.getId());
 
         userRepository.save(user);
+        userCacheService.evictUserCache(user.getId());
 
         resetToken.setUsedAt(Instant.now());
         tokenRepository.save(resetToken);

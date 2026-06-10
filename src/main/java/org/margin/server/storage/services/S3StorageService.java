@@ -165,6 +165,11 @@ public class S3StorageService implements StorageService {
                 return entry.getValue() + "/" + url.substring(idx + marker.length());
             }
         }
+        String bucketMarker = "/" + s3Props.getBucketName() + "/";
+        int bucketIdx = url.indexOf(bucketMarker);
+        if (bucketIdx >= 0) {
+            return url.substring(bucketIdx + bucketMarker.length());
+        }
         throw new IllegalArgumentException("Unrecognized storage URL: " + url);
     }
 }

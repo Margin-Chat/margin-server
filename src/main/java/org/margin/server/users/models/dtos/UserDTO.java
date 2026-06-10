@@ -1,5 +1,6 @@
 package org.margin.server.users.models.dtos;
 
+import org.margin.server.storage.services.StorageUrls;
 import org.margin.server.users.models.User;
 
 import java.time.Instant;
@@ -16,7 +17,7 @@ public record UserDTO(
         this(
                 user.getId(),
                 user.getDisplayName(),
-                user.getProfilePictureUrl(),
+                StorageUrls.publicUrl(user.getProfilePictureUrl()),
                 user.getCreatedAt(),
                 user.getLastSeenAt(),
                 online

@@ -45,6 +45,7 @@ storage:
     access-key: minioadmin
     secret-key: minioadmin
     base-url: http://localhost:8080/api/files
+    cdn-base-url: ""
     presign-ttl-seconds: 600
 
 jwt:
@@ -54,6 +55,7 @@ sfu:
   url: http://localhost:3000
   internal-api-key: ${INTERNAL_API_KEY:dev-internal-api-key-not-for-production-use-only}
   token-secret: ${SFU_SECRET:dev-secret-sfu-key-not-for-production-use-only}
+  public-url: ${SFU_PUBLIC_URL:ws://localhost:3000}
 
 management:
   endpoints:

@@ -8,7 +8,9 @@ import org.margin.server.authentication.repositories.PasswordResetTokenRepositor
 import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserCacheService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -34,6 +36,7 @@ class PasswordResetServiceTest {
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
+    @Mock private UserCacheService userCacheService;
 
     @InjectMocks
     private PasswordResetService passwordResetService;
@@ -103,6 +106,8 @@ class PasswordResetServiceTest {
         assertNull(user.getEncryption().getSalt());
         assertNull(user.getEncryption().getIv());
         verify(userRepository).save(user);
+        assertEquals(1, user.getSecurity().getTokenVersion(), "reset must bump token version to revoke existing JWTs");
+        verify(userCacheService).evictUserCache(1L);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
     }
@@ -146,6 +151,7 @@ class PasswordResetServiceTest {
     private static User makeUser() {
         User user = createUser(1L, "Alice", "alice@margin.chat");
         user.setEncryption(createEncryption("old-public", "old-encrypted-private", "old-salt", "old-iv"));
+        user.setSecurity(new UserSecurity());
         return user;
     }
 

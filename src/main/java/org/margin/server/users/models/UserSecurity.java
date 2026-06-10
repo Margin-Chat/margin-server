@@ -29,4 +29,7 @@ public class UserSecurity {
 
     @Column(name = "account_locked_until")
     private Instant accountLockedUntil;
+
+    @Column(name = "token_version", nullable = false)
+    private Integer tokenVersion = 0;
 }

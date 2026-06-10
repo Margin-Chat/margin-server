@@ -11,6 +11,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.services.UserCacheService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +41,7 @@ public class AuthenticationService {
     private final ConnectionManager connectionManager;
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
+    private final UserCacheService userCacheService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -49,7 +51,8 @@ public class AuthenticationService {
             StorageService storageService,
             ConnectionManager connectionManager,
             ActivationKeyService activationKeyService,
-            EmailService emailService) {
+            EmailService emailService,
+            UserCacheService userCacheService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -58,6 +61,7 @@ public class AuthenticationService {
         this.connectionManager = connectionManager;
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
+        this.userCacheService = userCacheService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
@@ -83,7 +87,7 @@ public class AuthenticationService {
             );
 
             resetFailedAttempts(user);
-            String token = jwtService.generateToken(email, user.getId());
+            String token = jwtService.generateToken(email, user.getId(), user.getSecurity().getTokenVersion());
             log.info("Login successful for userId {}", user.getId());
 
             return new AuthResponse(
@@ -196,7 +200,11 @@ public class AuthenticationService {
         }
     }
 
+    @Transactional
     public void logoutUser(User user) {
+        user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
+        userRepository.save(user);
+        userCacheService.evictUserCache(user.getId());
         connectionManager.closeAllSessions(user.getId());
     }
 

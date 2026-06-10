@@ -7,8 +7,8 @@ spring:
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:2525}
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    username: ${SMTP_USERNAME:test}
+    password: ${SMTP_PASSWORD:test}
     properties:
       mail:
         smtp:
@@ -26,11 +26,28 @@ margin:
     log-only: true
   websocket:
     port: 8082
-  jwt:
-    secret: integration-test-secret-that-is-long-enough
+
+jwt:
+  secret: integration-test-secret-that-is-long-enough
 
 storage:
   type: local
+  s3:
+    endpoint: http://localhost:9000
+    access-key: integration-test-access-key
+    secret-key: integration-test-secret-key
+    base-url: http://localhost:8080/api/files
   local:
     upload-dir: ${java.io.tmpdir}/margin-integration-uploads
     base-url: http://localhost:8080/api/files
+
+sfu:
+  url: http://localhost:3000
+  public-url: ws://localhost:3000
+  internal-api-key: integration-test-internal-api-key
+  token-secret: integration-sfu-secret-that-is-long-enough
+
+mollie:
+  api-key: test_integrationdummymolliekey
+  webhook-base-url: http://localhost:8080
+  redirect-base-url: http://localhost:4173

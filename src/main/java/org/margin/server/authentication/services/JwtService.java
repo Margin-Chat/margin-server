@@ -34,10 +34,16 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String email, Long userId) {
+    public String generateToken(String email, Long userId, int tokenVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("tv", tokenVersion);
         return createToken(claims, email);
+    }
+
+    public int extractTokenVersion(String token) {
+        Integer tv = extractAllClaims(token).get("tv", Integer.class);
+        return tv == null ? 0 : tv;
     }
 
     public Claims extractAllClaims(String token) {
@@ -82,6 +88,12 @@ public class JwtService {
             User user = userService.getById(
                     extractAllClaims(token).get("userId", Long.class)
             );
+
+            if (user.getSecurity().getTokenVersion() != extractTokenVersion(token)) {
+                log.warn("Revoked (token version mismatch) JWT for userId {}", user.getId());
+                return Optional.empty();
+            }
+
             return Optional.of(user);
         } catch (Exception e) {
             log.error("JWT validation failed: {}", e.getMessage());

@@ -1,0 +1,1 @@
+ALTER TABLE user_security ADD COLUMN token_version INT NOT NULL DEFAULT 0;
