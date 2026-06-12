@@ -226,6 +226,57 @@ class SubscriptionWebhookServiceTest {
     }
 
     @Test
+    void recurringPaymentFailed_marksSubscriptionPastDue() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setSubscriptionId(SUBSCRIPTION_ID);
+        subscription.setTier(SubscriptionTier.SMALL);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "failed", CUSTOMER_ID, "recurring");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getStatus()).isEqualTo(SubscriptionStatus.PAST_DUE);
+        assertThat(subscription.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        verify(subscriptionRepository).save(subscription);
+        verify(subscriptionService, never()).applyTier(any(), any());
+    }
+
+    @Test
+    void firstPaymentFailed_doesNotMarkPastDue() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setPendingPaymentId(PAYMENT_ID);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "failed", CUSTOMER_ID, "first");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+    }
+
+    @Test
+    void recurringPaymentPaidAfterPastDue_reactivatesSubscription() {
+        Subscription subscription = localSubscriptionWithOwner();
+        subscription.setSubscriptionId(SUBSCRIPTION_ID);
+        subscription.setTier(SubscriptionTier.SMALL);
+        subscription.setStatus(SubscriptionStatus.PAST_DUE);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "paid", CUSTOMER_ID, "recurring");
+        lenient().when(payment.amount()).thenReturn(Amount.builder().value("9.99").currency("EUR").build());
+        SubscriptionResponse mollieSub = mockSubscriptionResponse(SUBSCRIPTION_ID, "2026-07-11");
+
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+        when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
+        when(mollieClient.getSubscription(CUSTOMER_ID, SUBSCRIPTION_ID)).thenReturn(mollieSub);
+
+        service.handleWebhook(PAYMENT_ID);
+
+        assertThat(subscription.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+    }
+
+    @Test
     void firstPaymentPaid_sendsUpgradeNotificationAndWsPush() {
         Subscription subscription = localSubscriptionWithOwner();
         subscription.setPendingPaymentId(PAYMENT_ID);

@@ -150,6 +150,14 @@ public class SubscriptionWebhookService {
         if ("failed".equals(status) || "expired".equals(status) || "canceled".equals(status)) {
             subscription.setPendingPaymentId(null);
             subscription.setPendingTier(null);
+            if ("recurring".equals(sequenceType) && subscription.getStatus() == SubscriptionStatus.ACTIVE) {
+                // Renewal failed: keep paid limits until period end, then the
+                // expiry scheduler reverts to FREE. A later successful recurring
+                // payment sets the subscription back to ACTIVE.
+                subscription.setStatus(SubscriptionStatus.PAST_DUE);
+                log.info("Recurring payment {} failed, subscription {} marked PAST_DUE",
+                        paymentId, subscription.getId());
+            }
             subscriptionRepository.save(subscription);
             notifyOwner(subscription, NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
             pushSubscriptionUpdate(subscription);

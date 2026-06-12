@@ -2,6 +2,6 @@ package org.margin.server.subscriptions.models;
 
 public enum SubscriptionStatus {
     ACTIVE,
-    EXPIRED,
+    PAST_DUE,
     CANCELLED
 }

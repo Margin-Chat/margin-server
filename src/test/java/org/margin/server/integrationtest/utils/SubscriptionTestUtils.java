@@ -16,6 +16,8 @@ import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Component
 public class SubscriptionTestUtils {
     private static SubscriptionRepository subscriptionRepository;
@@ -62,6 +64,13 @@ public class SubscriptionTestUtils {
         Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
         subscription.setPendingPaymentId(paymentId);
         subscription.setPendingTier(tier);
+        subscriptionRepository.save(subscription);
+    }
+
+    public static void setStatusAndPeriodEnd(Margin margin, SubscriptionStatus status, Instant currentPeriodEnd) {
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        subscription.setStatus(status);
+        subscription.setCurrentPeriodEnd(currentPeriodEnd);
         subscriptionRepository.save(subscription);
     }
 

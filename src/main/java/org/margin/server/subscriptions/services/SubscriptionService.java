@@ -104,6 +104,17 @@ public class SubscriptionService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Margin cannot be upgrade without a checkout");
         }
 
+        if (newTier == SubscriptionTier.FREE) {
+            self.cancelSubscription(margin);
+            return self.getSubscriptionDtoForMargin(margin);
+        }
+
+        SubscriptionPricingProperties.TierConfig config = subscriptionPricingProperties.tiers().get(newTier);
+        if (config == null || config.price() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Tier %s has no price configured".formatted(newTier));
+        }
+
         if (subscription.getSubscriptionId() != null) {
             try {
                 mollieClient.cancelSubscription(subscription.getMollieCustomerId(), subscription.getSubscriptionId());
@@ -112,7 +123,7 @@ public class SubscriptionService {
             }
         }
 
-        BigDecimal price = subscriptionPricingProperties.tiers().get(newTier).price();
+        BigDecimal price = config.price();
         String startDate = subscription.getCurrentPeriodEnd() != null
                 ? SubscriptionUtils.getNextSubscriptionDate(subscription).toString()
                 : null;
@@ -158,7 +169,12 @@ public class SubscriptionService {
 
     @Transactional
     public String createCheckout(Margin margin, SubscriptionTier targetTier, User user) {
-        BigDecimal price = subscriptionPricingProperties.tiers().get(targetTier).price();
+        SubscriptionPricingProperties.TierConfig config = subscriptionPricingProperties.tiers().get(targetTier);
+        if (config == null || config.price() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Tier %s cannot be purchased".formatted(targetTier));
+        }
+        BigDecimal price = config.price();
 
         Subscription subscription = getByMargin(margin);
 
@@ -203,7 +219,7 @@ public class SubscriptionService {
         List<Subscription> expiredSubscriptions = subscriptionRepository.findExpiredSubscriptions(Instant.now());
         if (expiredSubscriptions.isEmpty()) return;
 
-        log.info("Reverting {} expired cancelled subscriptions to FREE", expiredSubscriptions.size());
+        log.info("Reverting {} lapsed subscriptions to FREE", expiredSubscriptions.size());
         for (Subscription subscription : expiredSubscriptions) {
             self.applyTier(subscription, SubscriptionTier.FREE);
             subscription.setStatus(SubscriptionStatus.ACTIVE);

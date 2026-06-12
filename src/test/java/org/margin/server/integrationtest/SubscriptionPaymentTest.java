@@ -15,6 +15,7 @@ import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.CheckoutRequest;
+import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
 import org.margin.server.users.models.User;
 import org.mockito.Mockito;
@@ -22,12 +23,15 @@ import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +46,9 @@ class SubscriptionPaymentTest extends MarginTestRunner {
 
     @Autowired
     private SubscriptionController subscriptionController;
+
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     private User owner;
     private Margin margin;
@@ -182,6 +189,107 @@ class SubscriptionPaymentTest extends MarginTestRunner {
 
         assertThrows(ResponseStatusException.class, () ->
                 subscriptionController.cancelSubscription(margin.getId(), nonOwner));
+    }
+
+    @Test
+    void changeTier_upgradeWithoutCheckout_forbidden() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.SMALL);
+
+        assertThrows(ResponseStatusException.class, () ->
+                subscriptionController.changeTier(margin.getId(), Map.of("tier", "MEDIUM"), owner));
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(25);
+    }
+
+    @Test
+    void changeTier_downgradeAppliesNewTierAndLimitsImmediately() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.MEDIUM);
+        SubscriptionTestUtils.setStatusAndPeriodEnd(margin, SubscriptionStatus.ACTIVE,
+                Instant.now().plus(20, ChronoUnit.DAYS));
+        SubscriptionResponse mollieSub = SubscriptionTestUtils.mockSubscriptionResponse("sub_new", "2026-07-01");
+        when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), any()))
+                .thenReturn(mollieSub);
+
+        subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), owner);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(25);
+        assertThat(sub.getSubscriptionId()).isEqualTo("sub_new");
+        verify(mollieClient).cancelSubscription(CUSTOMER_ID, "sub_old");
+    }
+
+    @Test
+    void changeTier_toFree_cancelsInsteadOfCreatingMollieSubscription() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
+
+        subscriptionController.changeTier(margin.getId(), Map.of("tier", "FREE"), owner);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(25);
+        verify(mollieClient).cancelSubscription(CUSTOMER_ID, "sub_old");
+        verify(mollieClient, never()).createSubscription(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateExpiredSubscriptions_revertsExpiredCancelledToFree() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.SMALL);
+        SubscriptionTestUtils.setStatusAndPeriodEnd(margin, SubscriptionStatus.CANCELLED,
+                Instant.now().minus(1, ChronoUnit.DAYS));
+
+        subscriptionService.updateExpiredSubscriptions();
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.FREE);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(10);
+        assertThat(sub.getCurrentPeriodEnd()).isNull();
+    }
+
+    @Test
+    void updateExpiredSubscriptions_revertsExpiredPastDueToFree() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.MEDIUM);
+        SubscriptionTestUtils.setStatusAndPeriodEnd(margin, SubscriptionStatus.PAST_DUE,
+                Instant.now().minus(1, ChronoUnit.DAYS));
+
+        subscriptionService.updateExpiredSubscriptions();
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.FREE);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(10);
+    }
+
+    @Test
+    void updateExpiredSubscriptions_keepsPaidTierUntilPeriodEnd() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.SMALL);
+        SubscriptionTestUtils.setStatusAndPeriodEnd(margin, SubscriptionStatus.CANCELLED,
+                Instant.now().plus(10, ChronoUnit.DAYS));
+
+        subscriptionService.updateExpiredSubscriptions();
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+        assertThat(sub.getLimits().getMaxMembers()).isEqualTo(25);
+    }
+
+    @Test
+    void webhookRecurringPaymentFailed_marksSubscriptionPastDue() {
+        SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.SMALL);
+        PaymentResponse payment = mockPayment(PAYMENT_ID, "failed", CUSTOMER_ID, "recurring");
+        when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
+
+        subscriptionWebhookService.handleWebhook(PAYMENT_ID);
+
+        Subscription sub = SubscriptionTestUtils.getForMargin(margin);
+        assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.PAST_DUE);
+        assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
+        assertThat(NotificationTestUtils.hasNotification(owner, NotificationType.SUBSCRIPTION_PAYMENT_FAILED)).isTrue();
     }
 
     @Test
