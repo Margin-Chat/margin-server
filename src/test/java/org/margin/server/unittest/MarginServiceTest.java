@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
+import org.margin.server.social.margin.models.MarginRole;
+import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
 import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
@@ -14,6 +17,8 @@ import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.storage.services.StorageService;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
+import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -21,7 +26,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -178,5 +185,36 @@ class MarginServiceTest {
         );
 
         verify(marginRepository, never()).save(any());
+    }
+
+    @Test
+    void promotingMemberToOwner_demotesPreviousOwnerToAdmin() {
+        Margin margin = new Margin();
+        margin.setId(1L);
+
+        User ownerUser = createUser(1L, "owner");
+        User targetUser = createUser(2L, "target");
+
+        MarginMember owner = new MarginMember();
+        owner.setUser(ownerUser);
+        owner.setMargin(margin);
+        owner.setRole(MarginRole.OWNER);
+
+        MarginMember target = new MarginMember();
+        target.setUser(targetUser);
+        target.setMargin(margin);
+        target.setRole(MarginRole.MEMBER);
+
+        margin.setMembers(new ArrayList<>(List.of(owner, target)));
+
+        when(marginRepository.findById(1L)).thenReturn(Optional.of(margin));
+        when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MarginMemberDTO dto = new MarginMemberDTO(new UserDTO(targetUser, false), MarginRole.OWNER, Instant.now());
+
+        marginService.updateMarginMemberRole(1L, 1L, dto);
+
+        assertThat(target.getRole()).isEqualTo(MarginRole.OWNER);
+        assertThat(owner.getRole()).isEqualTo(MarginRole.ADMIN);
     }
 }

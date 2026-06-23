@@ -13,6 +13,7 @@ import org.margin.server.subscriptions.models.dtos.TierPriceDTO;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
 import org.margin.server.users.models.User;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @RestController
@@ -30,17 +32,20 @@ public class SubscriptionController {
     private final MarginAuthorizationService marginAuthorizationService;
     private final SubscriptionPricingProperties pricingProperties;
     private final MarginLookup marginLookup;
+    private final Executor webhookExecutor;
 
     public SubscriptionController(SubscriptionService subscriptionService,
                                   SubscriptionWebhookService subscriptionWebhookService,
                                   MarginAuthorizationService marginAuthorizationService,
                                   SubscriptionPricingProperties pricingProperties,
-                                  MarginLookup marginLookup) {
+                                  MarginLookup marginLookup,
+                                  @Qualifier("webhookExecutor") Executor webhookExecutor) {
         this.subscriptionService = subscriptionService;
         this.subscriptionWebhookService = subscriptionWebhookService;
         this.marginAuthorizationService = marginAuthorizationService;
         this.pricingProperties = pricingProperties;
         this.marginLookup = marginLookup;
+        this.webhookExecutor = webhookExecutor;
     }
 
     @GetMapping("/margin/{marginId}")
@@ -127,7 +132,7 @@ public class SubscriptionController {
             } catch (Exception e) {
                 log.error("Failed to process Mollie webhook for payment {}", paymentId, e);
             }
-        });
+        }, webhookExecutor);
         return ResponseEntity.ok().build();
     }
 }

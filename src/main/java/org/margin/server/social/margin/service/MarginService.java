@@ -203,6 +203,9 @@ public class MarginService implements MarginLookup {
         }
 
         target.setRole(memberDTO.role());
+        if (memberDTO.role() == MarginRole.OWNER) {
+            requester.setRole(MarginRole.ADMIN);
+        }
         marginRepository.save(margin);
 
         return new MarginMemberDTO(

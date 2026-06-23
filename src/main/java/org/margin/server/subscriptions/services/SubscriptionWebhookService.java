@@ -6,7 +6,6 @@ import com.mollie.mollie.models.components.Metadata;
 import com.mollie.mollie.models.components.PaymentResponse;
 import com.mollie.mollie.models.components.SubscriptionResponse;
 import com.mollie.mollie.models.errors.APIException;
-import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
 import org.margin.server.notifications.NotificationType;
@@ -317,7 +316,7 @@ public class SubscriptionWebhookService {
                     "Payment receipt — " + subscription.getMargin().getName(),
                     html
             );
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.warn("Failed to send invoice email for subscription {}", subscription.getId(), e);
             // TODO: Handle failed email
         }
