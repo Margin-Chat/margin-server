@@ -70,9 +70,13 @@ public class MessageService {
                 recipients);
     }
 
-    public void editMessage(Long recipientId, Long messageId, String content) {
+    public void editMessage(User editor, Long recipientId, Long messageId, String content) {
         Conversation conversation = conversationService.getById(recipientId);
-        Message message = messageActions.editMessage(getById(messageId), content);
+        Message message = getById(messageId);
+        if (!message.getFromUser().getId().equals(editor.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's message");
+        }
+        message = messageActions.editMessage(message, content);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
         MessageResult result = new MessageResult(
                 MessageDTO.from(message)

@@ -1,0 +1,1 @@
+ALTER TABLE conversations ADD COLUMN is_encrypted BOOLEAN NOT NULL DEFAULT FALSE;
