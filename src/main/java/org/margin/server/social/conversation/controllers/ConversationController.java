@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -91,6 +92,23 @@ public class ConversationController {
         );
     }
 
+    @GetMapping("/conversations/{conversationId}/messages")
+    public GetConversationMessagesResponse getConversationMessages(
+            @PathVariable Long conversationId,
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false, defaultValue = "50") int limit,
+            @RequestParam(required = false) Long before) {
+
+        conversationAuthorizationService.requireConversationMember(conversationId, user.getId());
+
+        Conversation conversation = conversationService.getById(conversationId);
+
+        return new GetConversationMessagesResponse(
+                messageService.getConversationMessages(conversation, limit, before),
+                conversationService.getConversationDTO(conversation, user.getId())
+        );
+    }
+
     @PostMapping("/conversations/create_private")
     public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
                                                        @AuthenticationPrincipal User user) {
@@ -98,7 +116,7 @@ public class ConversationController {
         Conversation existing = conversationService.findDirectConversationBetweenUsers(user.getId(), recipientUser.getId());
         Conversation directConversation = existing != null
                 ? existing
-                : conversationService.createNewDirectConversation(user, recipientUser);
+                : conversationService.createNewDirectConversation(user, recipientUser, request.encrypted());
         messageService.sendMessage(user, request.encryptedContent(), directConversation, null);
         return conversationService.getConversationDTO(directConversation, user.getId());
     }
@@ -109,8 +127,10 @@ public class ConversationController {
             @AuthenticationPrincipal User user) {
 
         Conversation conversation = conversationService.createGroupConversation(
-                request.userIds(),
-                request.name()
+                user,
+                request.memberEmails(),
+                request.name(),
+                request.encrypted()
         );
 
         return conversationService.getConversationDTO(conversation, user.getId());
@@ -140,7 +160,7 @@ public class ConversationController {
             throw new TooManyRequestsException("Too many invites. Try again later.");
         }
         User recipient = userService.getByEmail(request.email());
-        return conversationService.sendConversationInvite(user, recipient);
+        return conversationService.sendConversationInvite(user, recipient, request.isEncrypted());
     }
 
     @GetMapping("/conversations/pending_invites")
@@ -174,9 +194,13 @@ public class ConversationController {
 
         conversationAuthorizationService.requireConversationTypeGroup(conversation);
 
+        if (request.userId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot add yourself to a group");
+        }
+
         conversationAuthorizationService.requireConversationMember(conversationId, user.getId());
 
-        conversationService.addMember(conversationId, request.userId());
+        conversationService.addMember(conversationId, request.userId(), user);
         return ResponseEntity.ok().build();
     }
 
@@ -196,5 +220,12 @@ public class ConversationController {
 
         conversationService.removeMember(conversationId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conversations/{conversationId}/member-public-keys")
+    public Map<Long, String> getMemberPublicKeys(
+            @PathVariable Long conversationId,
+            @AuthenticationPrincipal User user) {
+        return conversationService.getMemberPublicKeys(conversationId, user.getId());
     }
 }

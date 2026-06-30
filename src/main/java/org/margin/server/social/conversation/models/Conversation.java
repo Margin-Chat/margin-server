@@ -46,6 +46,9 @@ public class Conversation {
     @OneToMany(mappedBy = "conversation", fetch = FetchType.LAZY)
     private List<ConversationMember> members = new ArrayList<>();
 
+    @Column(name = "is_encrypted", nullable = false)
+    private boolean isEncrypted = false;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;

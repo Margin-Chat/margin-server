@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
+import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.models.dtos.ConversationDTO;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
@@ -113,39 +114,42 @@ class ConversationServiceTest {
     }
 
     @Test
-    @DisplayName("Should create group and add both creator and invited members")
+    @DisplayName("Should create group, add creator as member and invite others")
     void createGroupConversation_Success() {
-        User user1 = createUser(1L);
-        User user2 = createUser(2L);
+        User creator = createUser(1L);
+        creator.setEmail("creator@example.com");
+        User invitee = createUser(2L);
+        invitee.setEmail("invitee@example.com");
 
         Conversation conversation = createConversation(99L, ConversationType.GROUP);
         conversation.setName("New Group");
 
-        when(conversationCreationService.createGroupConversation("New Group")).thenReturn(conversation);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(user2));
+        when(conversationCreationService.createGroupConversation("New Group", false)).thenReturn(conversation);
+        when(userRepository.findByEmail("invitee@example.com")).thenReturn(Optional.of(invitee));
 
-        Conversation result = conversationService.createGroupConversation(List.of(1L, 2L), "New Group");
+        Conversation result = conversationService.createGroupConversation(
+                creator, List.of("invitee@example.com"), "New Group", false);
 
         assertNotNull(result);
         assertEquals(99L, result.getId());
-        verify(conversationCreationService).createGroupConversation("New Group");
-        verify(conversationCreationService).createConversationMember(conversation, user1);
-        verify(conversationCreationService).createConversationMember(conversation, user2);
+        verify(conversationCreationService).createGroupConversation("New Group", false);
+        // Creator added as ACCEPTED member
+        verify(conversationCreationService).createConversationMember(conversation, creator);
     }
 
     @Test
-    @DisplayName("addMember should use self.getById and succeed")
+    @DisplayName("addMember should invite with PENDING status and fire invite event")
     void addMember_Success() {
         Conversation conv = createConversation(1L, ConversationType.GROUP);
-        User user = createUser(2L);
+        User adder = createUser(1L);
+        User invitee = createUser(2L);
 
-        // Mock the self-call 'getById'
         doReturn(conv).when(conversationService).getById(1L);
-        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(invitee));
 
-        assertDoesNotThrow(() -> conversationService.addMember(1L, 2L));
-        verify(conversationCreationService).createConversationMember(conv, user);
+        assertDoesNotThrow(() -> conversationService.addMember(1L, 2L, adder));
+        verify(conversationCreationService).createConversationMemberWithStatus(
+                conv, invitee, ConversationInviteStatus.PENDING);
     }
 
     @Test

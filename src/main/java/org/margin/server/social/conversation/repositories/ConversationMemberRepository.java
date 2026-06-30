@@ -16,8 +16,15 @@ import java.util.List;
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, ConversationMemberId> {
     @Query("SELECT cm.user " +
             "FROM ConversationMember cm " +
-            "WHERE cm.conversation.id = :conversationId")
+            "WHERE cm.conversation.id = :conversationId " +
+            "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED")
     List<User> findUsersByConversationId(@Param("conversationId") Long conversationId);
+
+    @Query("SELECT cm.user " +
+            "FROM ConversationMember cm " +
+            "WHERE cm.conversation.id = :conversationId " +
+            "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.PENDING")
+    List<User> findPendingUsersByConversationId(@Param("conversationId") Long conversationId);
 
     @Query("""
             SELECT
@@ -46,7 +53,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             """)
     List<RecentChatUserProjection> findRecentChatUsers(@Param("userId") Long userId);
 
-    @Query("SELECT COUNT(cm) > 0 FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
+    @Query("SELECT COUNT(cm) > 0 FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED")
     boolean isUserMemberOfConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 
     @Query("""

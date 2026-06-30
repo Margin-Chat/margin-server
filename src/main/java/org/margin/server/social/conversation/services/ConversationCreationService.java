@@ -40,9 +40,10 @@ public class ConversationCreationService {
     }
 
     @Transactional
-    public Conversation createDirectConversation() {
+    public Conversation createDirectConversation(boolean encrypted) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.DIRECT);
+        conversation.setEncrypted(encrypted);
         conversation.setCreatedAt(Instant.now());
         conversation = conversationRepository.save(conversation);
         log.info("Direct Conversation has been created: {}", conversation.getId());
@@ -50,10 +51,11 @@ public class ConversationCreationService {
     }
 
     @Transactional
-    public Conversation createGroupConversation(String name) {
+    public Conversation createGroupConversation(String name, boolean encrypted) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.GROUP);
         conversation.setName(name);
+        conversation.setEncrypted(encrypted);
         conversation.setCreatedAt(Instant.now());
         conversation = conversationRepository.save(conversation);
         log.info("Group Conversation has been created: {}", conversation.getId());
@@ -80,6 +82,5 @@ public class ConversationCreationService {
         log.info("Creation Conversation Member: {}, status: {}, for Conversation {}",
                 member.getUser().getId(), status, conversation.getId());
         conversationMemberRepository.save(member);
-        conversation.getMembers().add(member);
     }
 }

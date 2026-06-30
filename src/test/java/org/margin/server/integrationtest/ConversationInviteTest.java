@@ -38,6 +38,15 @@ class ConversationInviteTest extends MarginTestRunner {
         assertNotNull(dto.id());
         assertEquals(ConversationInviteStatus.ACCEPTED, dto.inviteStatus());
         assertEquals(recipient.getId(), dto.otherUserId());
+        assertFalse(dto.encrypted());
+    }
+
+    @Test
+    void sendEncryptedInvite_setsEncryptedFlag() {
+        DirectConversationDTO dto = ConversationTestUtils.sendEncryptedInvite(sender, "recipient@margin.chat");
+
+        assertNotNull(dto);
+        assertTrue(dto.encrypted());
     }
 
     @Test
@@ -47,8 +56,9 @@ class ConversationInviteTest extends MarginTestRunner {
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
         assertEquals(1, pending.size());
-        assertEquals(ConversationInviteStatus.PENDING, pending.getFirst().conversation().inviteStatus());
-        assertEquals(sender.getId(), pending.getFirst().conversation().otherUserId());
+        DirectConversationDTO conv = (DirectConversationDTO) pending.getFirst().conversation();
+        assertEquals(ConversationInviteStatus.PENDING, conv.inviteStatus());
+        assertEquals(sender.getId(), conv.otherUserId());
     }
 
     @Test
@@ -147,7 +157,9 @@ class ConversationInviteTest extends MarginTestRunner {
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
 
         assertEquals(2, pending.size());
-        assertTrue(pending.stream().allMatch(p -> p.conversation().inviteStatus() == ConversationInviteStatus.PENDING));
+        assertTrue(pending.stream()
+                .map(p -> (DirectConversationDTO) p.conversation())
+                .allMatch(c -> c.inviteStatus() == ConversationInviteStatus.PENDING));
     }
 
     @Test
@@ -161,7 +173,7 @@ class ConversationInviteTest extends MarginTestRunner {
 
         List<ConversationInvitePayload> pending = ConversationTestUtils.getPendingInvites(recipient);
         assertEquals(1, pending.size());
-        assertEquals(sender2.getId(), pending.getFirst().conversation().otherUserId());
+        assertEquals(sender2.getId(), ((DirectConversationDTO) pending.getFirst().conversation()).otherUserId());
     }
 
     @Test

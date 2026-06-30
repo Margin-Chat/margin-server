@@ -8,9 +8,11 @@ public record GroupConversationDTO(
         String type,
         Instant createdAt,
         String name,
-        List<Long> memberIds
+        List<Long> memberIds,
+        List<Long> pendingMemberIds,
+        boolean encrypted
 ) implements ConversationDTO {
-    public GroupConversationDTO(Long id, Instant createdAt, String name, List<Long> memberIds) {
-        this(id, "GROUP", createdAt, name, memberIds);
+    public GroupConversationDTO(Long id, Instant createdAt, String name, List<Long> memberIds, List<Long> pendingMemberIds, boolean encrypted) {
+        this(id, "GROUP", createdAt, name, memberIds, pendingMemberIds, encrypted);
     }
 }
