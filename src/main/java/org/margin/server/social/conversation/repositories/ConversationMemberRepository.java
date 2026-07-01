@@ -46,9 +46,12 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                             SELECT cm2.conversation.id
                             FROM ConversationMember cm2
                             WHERE cm2.user.id = :userId
+                            AND cm2.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED
                         )
                         AND u.id != :userId
                         AND cm.conversation.type IN ('DIRECT', 'GROUP')
+                        AND (cm.conversation.type != org.margin.server.social.conversation.models.ConversationType.DIRECT
+                            OR cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED)
                         ORDER BY m.createdAt DESC
             """)
     List<RecentChatUserProjection> findRecentChatUsers(@Param("userId") Long userId);
@@ -79,6 +82,15 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user WHERE cm.user.id = :userId AND cm.inviteStatus = :status")
     List<ConversationMember> findByUserIdAndInviteStatus(@Param("userId") Long userId,
                                                          @Param("status") ConversationInviteStatus status);
+
+    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user " +
+            "WHERE cm.conversation.type = org.margin.server.social.conversation.models.ConversationType.DIRECT " +
+            "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.PENDING " +
+            "AND EXISTS (SELECT 1 FROM ConversationMember sender " +
+            "WHERE sender.conversation.id = cm.conversation.id " +
+            "AND sender.user.id = :senderId " +
+            "AND sender.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED)")
+    List<ConversationMember> findSentDirectInvitesBySenderId(@Param("senderId") Long senderId);
 
     @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
     java.util.Optional<ConversationMember> findByConversationIdAndUserId(@Param("conversationId") Long conversationId,

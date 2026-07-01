@@ -12,6 +12,7 @@ import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -166,6 +167,11 @@ public class ConversationController {
     @GetMapping("/conversations/pending_invites")
     public List<ConversationInvitePayload> getPendingInvites(@AuthenticationPrincipal User user) {
         return conversationService.getPendingInvites(user.getId());
+    }
+
+    @GetMapping("/conversations/sent_invites")
+    public List<SentConversationInvitePayload> getSentInvites(@AuthenticationPrincipal User user) {
+        return conversationService.getSentInvites(user.getId());
     }
 
     @PostMapping("/conversations/{conversationId}/invite/accept")
