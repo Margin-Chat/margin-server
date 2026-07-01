@@ -22,6 +22,9 @@ public enum WebSocketMessageType {
     RECEIVE_REMOVE_REACTION(String.class),
     CONVERSATION_READ(ConversationReadPayload.class),
     CONVERSATION_INVITE_ACCEPTED(ConversationAcceptedPayload.class),
+    CONVERSATION_INVITE_DECLINED(ConversationDeclinedPayload.class),
+    SEND_TYPING_INDICATOR(TypingIndicatorPayload.class),
+    RECEIVE_TYPING_INDICATOR(String.class),
 
     // Call
     CALL_OFFER(IncomingCallOfferPayload.class),

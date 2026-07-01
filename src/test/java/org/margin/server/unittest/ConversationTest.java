@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.conversation.events.TypingIndicatorEvent;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
@@ -158,6 +159,47 @@ class ConversationServiceTest {
         when(conversationRepository.findByIdWithAssociations(1L)).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, () -> conversationService.getById(1L));
+    }
+
+    @Test
+    @DisplayName("notifyTyping should publish a TypingIndicatorEvent excluding the sender")
+    void notifyTyping_publishesEventExcludingSender() {
+        User sender = createUser(1L, "sender");
+        User other = createUser(2L, "other");
+        Conversation conversation = createConversation(10L, ConversationType.GROUP);
+
+        when(conversationMemberRepository.findUsersByConversationId(10L))
+                .thenReturn(List.of(sender, other));
+
+        conversationService.notifyTyping(sender, conversation, true);
+
+        org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
+                org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+
+        TypingIndicatorEvent event = captor.getValue();
+        assertEquals(10L, event.getConversationId());
+        assertEquals(sender, event.getUser());
+        assertTrue(event.isTyping());
+        assertEquals(List.of(other), event.getRecipients());
+    }
+
+    @Test
+    @DisplayName("notifyTyping should forward isTyping:false unchanged")
+    void notifyTyping_forwardsIsTypingFalse() {
+        User sender = createUser(1L, "sender");
+        User other = createUser(2L, "other");
+        Conversation conversation = createConversation(10L, ConversationType.DIRECT);
+
+        when(conversationMemberRepository.findUsersByConversationId(10L))
+                .thenReturn(List.of(sender, other));
+
+        conversationService.notifyTyping(sender, conversation, false);
+
+        org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
+                org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertFalse(captor.getValue().isTyping());
     }
 
 }
