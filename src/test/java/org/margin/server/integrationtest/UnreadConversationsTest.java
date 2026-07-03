@@ -74,6 +74,35 @@ class UnreadConversationsTest extends MarginTestRunner {
     }
 
     @Test
+    void groupConversationWithUnreadMessage_appearsInGroupList() {
+        var group = ConversationTestUtils.createGroupConversation(
+                bob, java.util.List.of(alice.getEmail()), "unread group", false);
+        ConversationTestUtils.acceptInvite(group.id(), alice);
+        Conversation conv = ConversationTestUtils.getConversationById(group.id());
+        MessageTestUtils.saveMessage(conv, bob, "hey group", false);
+
+        UnreadConversationsDTO unread = ConversationTestUtils.getUnreadConversations(alice);
+
+        assertTrue(unread.groupConversationIds().contains(group.id()),
+                "Group conversation with unread message should appear in groupConversationIds");
+        assertFalse(unread.directConversationIds().contains(group.id()),
+                "Group conversation must not leak into directConversationIds");
+    }
+
+    @Test
+    void groupConversationWithOnlyOwnMessages_notInGroupList() {
+        var group = ConversationTestUtils.createGroupConversation(
+                bob, java.util.List.of(alice.getEmail()), "quiet group", false);
+        ConversationTestUtils.acceptInvite(group.id(), alice);
+        Conversation conv = ConversationTestUtils.getConversationById(group.id());
+        MessageTestUtils.saveMessage(conv, alice, "just me", false);
+
+        UnreadConversationsDTO unread = ConversationTestUtils.getUnreadConversations(alice);
+
+        assertFalse(unread.groupConversationIds().contains(group.id()));
+    }
+
+    @Test
     void channelConversationWithUnreadMessage_appearsInChannelUnreads() {
         User admin = UserTestUtils.createUser("admin", "admin@margin.chat");
         Margin margin = MarginTestUtils.createMargin("TestMargin", admin);

@@ -239,13 +239,18 @@ public class ConversationService {
                 .map(UnreadConversationProjection::getConversationId)
                 .toList();
 
+        List<Long> group = projections.stream()
+                .filter(p -> "GROUP".equals(p.getType()))
+                .map(UnreadConversationProjection::getConversationId)
+                .toList();
+
         List<UnreadConversationsDTO.ChannelUnread> channelUnreads = projections.stream()
                 .filter(p -> "CHANNEL".equals(p.getType()))
                 .map(p ->
                         new UnreadConversationsDTO.ChannelUnread(p.getConversationId(), p.getMarginId()))
                 .toList();
 
-        return new UnreadConversationsDTO(direct, channelUnreads);
+        return new UnreadConversationsDTO(direct, group, channelUnreads);
     }
 
     @Transactional(readOnly = true)
