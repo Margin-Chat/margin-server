@@ -8,8 +8,11 @@ import org.margin.server.social.conversation.models.dtos.*;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,14 +26,17 @@ public class ConversationTestUtils {
     private static ConversationRepository conversationRepository;
     private static ConversationMemberRepository conversationMemberRepository;
     private static ConversationController conversationController;
+    private static UserController userController;
 
     @Autowired
     public ConversationTestUtils(ConversationRepository conversationRepository,
                                  ConversationMemberRepository conversationMemberRepository,
-                                 ConversationController conversationController) {
+                                 ConversationController conversationController,
+                                 UserController userController) {
         ConversationTestUtils.conversationRepository = conversationRepository;
         ConversationTestUtils.conversationMemberRepository = conversationMemberRepository;
         ConversationTestUtils.conversationController = conversationController;
+        ConversationTestUtils.userController = userController;
     }
 
     public static Conversation createDirectConversation(User userA, User userB) {
@@ -68,6 +74,14 @@ public class ConversationTestUtils {
 
     public static List<ConversationInvitePayload> getPendingInvites(User user) {
         return conversationController.getPendingInvites(user);
+    }
+
+    public static List<SentConversationInvitePayload> getSentInvites(User user) {
+        return conversationController.getSentInvites(user);
+    }
+
+    public static List<RecentChatUsersDTO> getRecentChatUsers(User user) {
+        return userController.getRecentChatUsers(user);
     }
 
     public static UnreadConversationsDTO getUnreadConversations(User user) {

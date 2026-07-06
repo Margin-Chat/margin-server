@@ -8,7 +8,9 @@ import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -188,5 +190,103 @@ class ConversationInviteTest extends MarginTestRunner {
         assertNotNull(invite.conversation().id(), "conversation.id must not be null");
         assertNotNull(invite.fromUser(), "fromUser must not be null");
         assertEquals(sender.getId(), invite.fromUser().id());
+    }
+
+    @Test
+    void sendInvite_senderSeesSentInvite() {
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        List<SentConversationInvitePayload> sent = ConversationTestUtils.getSentInvites(sender);
+
+        assertEquals(1, sent.size());
+        SentConversationInvitePayload invite = sent.getFirst();
+        DirectConversationDTO conv = (DirectConversationDTO) invite.conversation();
+        assertEquals(ConversationInviteStatus.ACCEPTED, conv.inviteStatus());
+        assertEquals(recipient.getId(), conv.otherUserId());
+        assertEquals(recipient.getId(), invite.toUser().id());
+    }
+
+    @Test
+    void sendInvite_recipientHasNoSentInvites() {
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        List<SentConversationInvitePayload> sent = ConversationTestUtils.getSentInvites(recipient);
+
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    void acceptInvite_removesFromSenderSentInvites() {
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        ConversationTestUtils.acceptInvite(invite.id(), recipient);
+
+        List<SentConversationInvitePayload> sent = ConversationTestUtils.getSentInvites(sender);
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    void declineInvite_removesFromSenderSentInvites() {
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        ConversationTestUtils.declineInvite(invite.id(), recipient);
+
+        List<SentConversationInvitePayload> sent = ConversationTestUtils.getSentInvites(sender);
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    void multipleSentInvites_allAppearInSentList() {
+        User recipient2 = UserTestUtils.createUser("recipient2", "recipient2@margin.chat");
+
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+        ConversationTestUtils.sendInvite(sender, "recipient2@margin.chat");
+
+        List<SentConversationInvitePayload> sent = ConversationTestUtils.getSentInvites(sender);
+
+        assertEquals(2, sent.size());
+        assertTrue(sent.stream()
+                .map(p -> (DirectConversationDTO) p.conversation())
+                .allMatch(c -> c.inviteStatus() == ConversationInviteStatus.ACCEPTED));
+    }
+
+    @Test
+    void pendingInvite_doesNotAppearInSenderRecentChatUsers() {
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        List<RecentChatUsersDTO> recent = ConversationTestUtils.getRecentChatUsers(sender);
+
+        assertTrue(recent.isEmpty());
+    }
+
+    @Test
+    void pendingInvite_doesNotAppearInRecipientRecentChatUsers() {
+        ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+
+        List<RecentChatUsersDTO> recent = ConversationTestUtils.getRecentChatUsers(recipient);
+
+        assertTrue(recent.isEmpty());
+    }
+
+    @Test
+    void acceptedInvite_appearsInBothRecentChatUsersLists() {
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+        ConversationTestUtils.acceptInvite(invite.id(), recipient);
+
+        List<RecentChatUsersDTO> senderRecent = ConversationTestUtils.getRecentChatUsers(sender);
+        List<RecentChatUsersDTO> recipientRecent = ConversationTestUtils.getRecentChatUsers(recipient);
+
+        assertEquals(1, senderRecent.size());
+        assertEquals(1, recipientRecent.size());
+    }
+
+    @Test
+    void declinedInvite_doesNotAppearInSenderRecentChatUsers() {
+        DirectConversationDTO invite = ConversationTestUtils.sendInvite(sender, "recipient@margin.chat");
+        ConversationTestUtils.declineInvite(invite.id(), recipient);
+
+        List<RecentChatUsersDTO> recent = ConversationTestUtils.getRecentChatUsers(sender);
+
+        assertTrue(recent.isEmpty());
     }
 }

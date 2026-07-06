@@ -73,7 +73,7 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-        log.info("Created subscription for margin {}", subscription.getSubscriptionId());
+        log.info("Created subscription for margin {}", margin.getId());
     }
 
     @Transactional(readOnly = true)

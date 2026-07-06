@@ -13,10 +13,13 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
+import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.events.ConversationReadEvent;
+import org.margin.server.social.conversation.events.TypingIndicatorEvent;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
@@ -70,6 +73,13 @@ public class ConversationService {
 
     public List<User> getConversationMembers(Long conversationId) {
         return conversationMemberRepository.findUsersByConversationId(conversationId);
+    }
+
+    public void notifyTyping(User user, Conversation conversation, boolean isTyping) {
+        List<User> recipients = getConversationMembers(conversation.getId()).stream()
+                .filter(member -> !member.getId().equals(user.getId()))
+                .toList();
+        eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), user, isTyping, recipients));
     }
 
     public List<User> getPendingConversationMembers(Long conversationId) {
@@ -229,15 +239,21 @@ public class ConversationService {
                 .map(UnreadConversationProjection::getConversationId)
                 .toList();
 
+        List<Long> group = projections.stream()
+                .filter(p -> "GROUP".equals(p.getType()))
+                .map(UnreadConversationProjection::getConversationId)
+                .toList();
+
         List<UnreadConversationsDTO.ChannelUnread> channelUnreads = projections.stream()
                 .filter(p -> "CHANNEL".equals(p.getType()))
                 .map(p ->
                         new UnreadConversationsDTO.ChannelUnread(p.getConversationId(), p.getMarginId()))
                 .toList();
 
-        return new UnreadConversationsDTO(direct, channelUnreads);
+        return new UnreadConversationsDTO(direct, group, channelUnreads);
     }
 
+    @Transactional(readOnly = true)
     public List<RecentChatUsersDTO> getRecentChatUsers(Long userId) {
         return conversationMemberRepository.findRecentChatUsers(userId)
                 .stream()
@@ -375,6 +391,14 @@ public class ConversationService {
         } else {
             member.setInviteStatus(ConversationInviteStatus.DECLINED);
             conversationMemberRepository.save(member);
+
+            ConversationMember sender = conversation.getMembers().stream()
+                    .filter(m -> !m.getUser().getId().equals(user.getId()))
+                    .findFirst()
+                    .orElseThrow(UserNotFoundException::new);
+
+            eventPublisher.publishEvent(new ConversationInviteDeclinedEvent(
+                    conversationId, userService.toDTO(user), sender.getId().getUserId()));
         }
     }
 
@@ -419,6 +443,29 @@ public class ConversationService {
                     }
                     return new ConversationInvitePayload(conversationDTO,
                             new UserDTO(sender, connectionManager.isUserOnline(sender.getId())));
+                })
+                .toList();
+    }
+
+    public List<SentConversationInvitePayload> getSentInvites(Long userId) {
+        return conversationMemberRepository
+                .findSentDirectInvitesBySenderId(userId)
+                .stream()
+                .map(member -> {
+                    Conversation conv = member.getConversation();
+                    User recipient = member.getUser();
+
+                    ConversationDTO conversationDTO = new DirectConversationDTO(
+                            conv.getId(),
+                            conv.getCreatedAt(),
+                            recipient.getId(),
+                            null,
+                            ConversationInviteStatus.ACCEPTED,
+                            conv.isEncrypted()
+                    );
+
+                    return new SentConversationInvitePayload(conversationDTO,
+                            new UserDTO(recipient, connectionManager.isUserOnline(recipient.getId())));
                 })
                 .toList();
     }
