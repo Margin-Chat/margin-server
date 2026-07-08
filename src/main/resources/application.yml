@@ -104,3 +104,12 @@ management:
       access: unrestricted
   server:
     port: 9090
+push:
+  fcm:
+    service-account-file: ${FCM_SERVICE_ACCOUNT_FILE:}
+  apns:
+    key-file: ${APNS_KEY_FILE:}
+    key-id: ${APNS_KEY_ID:}
+    team-id: ${APNS_TEAM_ID:}
+    bundle-id: ${APNS_BUNDLE_ID:}
+    production: ${APNS_PRODUCTION:false}
