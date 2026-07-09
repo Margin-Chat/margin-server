@@ -137,6 +137,7 @@ public class MessageService {
                 }));
     }
 
+    @Transactional
     public MessageReactionDTO addReaction(User user, Long recipientId, Long messageId, String emoji) {
         Conversation conversation = conversationService.getById(recipientId);
         conversationValidationService.validateUserIsInConversation(user, conversation);

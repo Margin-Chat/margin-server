@@ -111,7 +111,8 @@ public class NotificationEventListener {
                 reactor,
                 NotificationType.MESSAGE_REACTION,
                 reaction.messageId(),
-                marginId);
+                marginId,
+                conversation.getId());
     }
 
     @EventListener

@@ -28,6 +28,12 @@ public class NotificationService {
     @Transactional
     public void createForUsers(List<User> members, User sender, NotificationType type,
                                Long referenceId, Long marginId) {
+        createForUsers(members, sender, type, referenceId, marginId, null);
+    }
+
+    @Transactional
+    public void createForUsers(List<User> members, User sender, NotificationType type,
+                               Long referenceId, Long marginId, Long conversationId) {
         List<Notification> notifications = members.stream()
                 .filter(member -> sender == null || !member.getId().equals(sender.getId()))
                 .map(member -> {
@@ -37,6 +43,7 @@ public class NotificationService {
                     n.setType(type);
                     n.setReferenceId(referenceId);
                     n.setMarginId(marginId);
+                    n.setConversationId(conversationId);
                     n.setSeen(false);
                     n.setCreatedAt(Instant.now());
                     return n;
