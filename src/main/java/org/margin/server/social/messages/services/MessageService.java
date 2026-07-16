@@ -1,6 +1,7 @@
 package org.margin.server.social.messages.services;
 
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.events.*;
@@ -60,11 +61,12 @@ public class MessageService {
     public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content, List<Long> attachmentIds) {
         Message message = messageActions.createMessage(fromUser, conversation, content, attachmentIds);
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
+        Conversation channelScope = channelScopeOf(conversation);
         return new MessageResult(
                 MessageDTO.from(message)
                         .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
-                        .withChannelName(conversation.getChannel() == null ? null : conversation.getChannel().getName())
+                        .withChannelName(channelScope.getChannel() == null ? null : channelScope.getChannel().getName())
                         .withAttachments(attachmentsFor(message.getId()))
                         .build(),
                 recipients);
@@ -109,6 +111,7 @@ public class MessageService {
 
     public void sendMessage(User fromUser, String content, Conversation conversation, List<Long> attachmentIds) {
         messageValidationService.validateConversationIsNotPending(fromUser, conversation);
+        messageValidationService.validateNotThreadChannelConversation(conversation);
         MessageResult result = createMessageForUsers(fromUser, conversation, content, attachmentIds);
         eventPublisher.publishEvent(new MessageSentEvent(result.message(), result.recipients()));
     }
@@ -194,8 +197,20 @@ public class MessageService {
         return messageRepository.findById(messageId).orElseThrow();
     }
 
+    public List<Message> getByIds(List<Long> messageIds) {
+        return messageRepository.findAllById(messageIds);
+    }
+
     private Long getMarginId(Conversation conversation) {
-        if (conversation.getChannel() == null) return null;
-        return conversation.getChannel().getSpace().getMargin().getId();
+        Conversation scope = channelScopeOf(conversation);
+        if (scope.getChannel() == null) return null;
+        return scope.getChannel().getSpace().getMargin().getId();
+    }
+
+    private Conversation channelScopeOf(Conversation conversation) {
+        if (conversation.getType() == ConversationType.THREAD && conversation.getParentConversationId() != null) {
+            return conversationService.getById(conversation.getParentConversationId());
+        }
+        return conversation;
     }
 }

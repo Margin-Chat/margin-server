@@ -1,6 +1,7 @@
 package org.margin.server.social.conversation.repositories;
 
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.projections.ThreadSummaryProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,11 +36,37 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                 SELECT DISTINCT c FROM Conversation c
                 JOIN ConversationMember cm ON cm.conversation.id = c.id
                 WHERE cm.user.id = :userId
+                AND c.type <> 'THREAD'
                 ORDER BY c.createdAt DESC
             """)
     List<Conversation> findByUserId(@Param("userId") Long userId);
 
-    Optional<Conversation> findByChannelId(Long channelId);
+    @Query("""
+                SELECT c FROM Conversation c
+                WHERE c.parentConversationId = :parentConversationId
+                ORDER BY c.createdAt DESC
+            """)
+    List<Conversation> findByParentConversationId(@Param("parentConversationId") Long parentConversationId);
+
+    @Query("""
+                SELECT c.id AS threadConversationId,
+                       COUNT(m) AS messageCount,
+                       MAX(m.createdAt) AS lastReplyAt,
+                       MAX(CASE WHEN m.fromUser.id <> :userId THEN m.createdAt ELSE NULL END) AS lastOtherReplyAt,
+                       MIN(m.id) AS firstMessageId
+                FROM Conversation c
+                LEFT JOIN Message m ON m.conversation.id = c.id AND m.isDeleted = false
+                WHERE c.id IN :threadConversationIds
+                GROUP BY c.id
+            """)
+    List<ThreadSummaryProjection> findThreadSummariesForThreads(
+            @Param("threadConversationIds") List<Long> threadConversationIds,
+            @Param("userId") Long userId);
+
+    @Query("SELECT c FROM Conversation c " +
+            "LEFT JOIN FETCH c.channel " +
+            "WHERE c.channel.id = :channelId")
+    Optional<Conversation> findByChannelId(@Param("channelId") Long channelId);
 
     @Query("SELECT c FROM Conversation c " +
             "LEFT JOIN FETCH c.channel " +

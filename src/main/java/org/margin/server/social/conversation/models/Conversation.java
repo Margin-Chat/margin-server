@@ -49,6 +49,9 @@ public class Conversation {
     @Column(name = "is_encrypted", nullable = false)
     private boolean isEncrypted = false;
 
+    @Column(name = "parent_conversation_id", updatable = false)
+    private Long parentConversationId;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;

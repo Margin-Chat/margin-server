@@ -12,8 +12,12 @@ import org.margin.server.social.conversation.events.ConversationInviteAcceptedEv
 import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.models.Conversation;
+import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.Message;
+import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
@@ -22,6 +26,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.List;
 
 @Component
 public class NotificationEventListener {
@@ -29,12 +34,14 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final UserService userService;
     private final MessageService messageService;
+    private final ConversationService conversationService;
 
     public NotificationEventListener(NotificationService notificationService, UserService userService,
-                                     MessageService messageService) {
+                                     MessageService messageService, ConversationService conversationService) {
         this.notificationService = notificationService;
         this.userService = userService;
         this.messageService = messageService;
+        this.conversationService = conversationService;
     }
 
     @EventListener
@@ -113,6 +120,27 @@ public class NotificationEventListener {
                 reaction.messageId(),
                 marginId,
                 conversation.getId());
+    }
+
+    @EventListener
+    public void onMessageSent(MessageSentEvent event) {
+        MessageDTO message = event.getMessage();
+        if (message.conversationType() != ConversationType.THREAD) {
+            return;
+        }
+
+        List<User> followers = conversationService.getThreadFollowers(message.conversationId());
+        User sender = event.getRecipients().stream()
+                .filter(u -> u.getId().equals(message.user().id()))
+                .findFirst()
+                .orElse(null);
+
+        notificationService.createOrCollapseThreadReply(
+                followers,
+                sender,
+                message.id(),
+                message.marginId(),
+                message.conversationId());
     }
 
     @EventListener

@@ -56,6 +56,33 @@ public class NotificationService {
     }
 
     @Transactional
+    public void createOrCollapseThreadReply(List<User> recipients, User sender, Long referenceId,
+                                            Long marginId, Long threadConversationId) {
+        for (User recipient : recipients) {
+            if (sender != null && recipient.getId().equals(sender.getId())) {
+                continue;
+            }
+            Notification notification = notificationRepository
+                    .findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+                            recipient.getId(), NotificationType.THREAD_REPLY, threadConversationId)
+                    .orElseGet(() -> {
+                        Notification n = new Notification();
+                        n.setRecipient(recipient);
+                        n.setType(NotificationType.THREAD_REPLY);
+                        n.setConversationId(threadConversationId);
+                        n.setSeen(false);
+                        return n;
+                    });
+            notification.setSender(sender);
+            notification.setReferenceId(referenceId);
+            notification.setMarginId(marginId);
+            notification.setCreatedAt(Instant.now());
+            notification = notificationRepository.save(notification);
+            eventPublisher.publishEvent(new NotificationDeliveryEvent(notification));
+        }
+    }
+
+    @Transactional
     public void markNotificationAsSeen(Notification notification) {
         notification.setSeen(true);
         notificationRepository.save(notification);

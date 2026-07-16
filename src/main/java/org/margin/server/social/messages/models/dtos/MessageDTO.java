@@ -19,7 +19,8 @@ public record MessageDTO(
         Long marginId,
         String channelName,
         List<MessageReactionDTO> reactions,
-        List<StoredFileDTO> attachments
+        List<StoredFileDTO> attachments,
+        Long parentConversationId
 ) {
 
     public static Builder from(Message message) {
@@ -75,7 +76,8 @@ public record MessageDTO(
                     marginId,
                     channelName,
                     reactions,
-                    attachments
+                    attachments,
+                    message.getConversation().getParentConversationId()
             );
         }
     }

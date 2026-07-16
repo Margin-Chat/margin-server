@@ -51,6 +51,19 @@ public class ConversationCreationService {
     }
 
     @Transactional
+    public Conversation createThreadConversation(Conversation channelConversation, String title) {
+        Conversation conversation = new Conversation();
+        conversation.setType(ConversationType.THREAD);
+        conversation.setCreatedAt(Instant.now());
+        conversation.setName(title);
+        conversation.setParentConversationId(channelConversation.getId());
+        conversation = conversationRepository.save(conversation);
+        log.info("Thread post has been created: {} ('{}' in channel conversation {})",
+                conversation.getId(), title, channelConversation.getId());
+        return conversation;
+    }
+
+    @Transactional
     public Conversation createGroupConversation(String name, boolean encrypted) {
         Conversation conversation = new Conversation();
         conversation.setType(ConversationType.GROUP);

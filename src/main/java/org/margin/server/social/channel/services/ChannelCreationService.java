@@ -21,11 +21,16 @@ public class ChannelCreationService {
 
     @Transactional
     public Channel createChannel(Space space, String name, String description) {
+        return createChannel(space, name, description, ChannelType.Communication);
+    }
+
+    @Transactional
+    public Channel createChannel(Space space, String name, String description, ChannelType channelType) {
         Channel channel = new Channel();
         channel.setSpace(space);
         channel.setName(name);
         channel.setDescription(description);
-        channel.setChannelType(ChannelType.Communication);
+        channel.setChannelType(channelType != null ? channelType : ChannelType.Communication);
         channel.setCreatedAt(Instant.now());
 
         Channel savedChannel = channelRepository.save(channel);
