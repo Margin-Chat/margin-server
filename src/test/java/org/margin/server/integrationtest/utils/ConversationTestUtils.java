@@ -96,6 +96,10 @@ public class ConversationTestUtils {
         conversationController.acceptConversationInvite(conversationId, user);
     }
 
+    public static void markConversationAsRead(Long conversationId, User user) {
+        conversationController.markConversationAsRead(conversationId, user);
+    }
+
     public static void declineInvite(Long conversationId, User user) {
         conversationController.declineConversationInvite(conversationId, user);
     }

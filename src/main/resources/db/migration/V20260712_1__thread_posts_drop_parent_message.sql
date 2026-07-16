@@ -1,7 +1,4 @@
--- Threads are forum-style posts anchored to a thread channel's conversation
--- (parent_conversation_id); the earlier message-anchored design shipped to dev
--- in V20260711_1 and is rolled back here. Message-anchored THREAD conversations
--- only ever existed on dev databases — purge them before dropping their anchor.
+-- Rolls back V20260711_1's message-anchored threads (dev-only) in favour of posts anchored by parent_conversation_id.
 DELETE FROM message_reactions
 WHERE message_id IN (SELECT message_id
                      FROM messages

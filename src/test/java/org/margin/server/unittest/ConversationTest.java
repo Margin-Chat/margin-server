@@ -104,6 +104,7 @@ class ConversationServiceTest {
         Conversation conv = createConversation(20L, ConversationType.GROUP);
         conv.setName("Devs");
 
+        doReturn(conv).when(conversationService).getById(20L);
         when(conversationMemberRepository.findUsersByConversationId(20L))
                 .thenReturn(List.of(createUser(1L), createUser(2L)));
 
@@ -168,6 +169,7 @@ class ConversationServiceTest {
         User other = createUser(2L, "other");
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
 
+        doReturn(conversation).when(conversationService).getById(10L);
         when(conversationMemberRepository.findUsersByConversationId(10L))
                 .thenReturn(List.of(sender, other));
 
@@ -191,6 +193,7 @@ class ConversationServiceTest {
         User other = createUser(2L, "other");
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
+        doReturn(conversation).when(conversationService).getById(10L);
         when(conversationMemberRepository.findUsersByConversationId(10L))
                 .thenReturn(List.of(sender, other));
 
