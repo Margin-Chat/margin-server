@@ -22,12 +22,6 @@ import java.security.Signature;
 import java.time.Instant;
 import java.util.Base64;
 
-/**
- * Firebase Cloud Messaging via the HTTP v1 API, using a service-account JSON file
- * (`FCM_SERVICE_ACCOUNT_FILE`). Implemented directly against Google's OAuth2 JWT-bearer
- * flow rather than pulling in the firebase-admin SDK — the two requests involved don't
- * justify the dependency. Disabled (and harmless) when the env var is unset.
- */
 @Component
 public class FcmPushSender implements PushSender {
 

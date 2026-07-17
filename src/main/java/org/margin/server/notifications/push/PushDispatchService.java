@@ -9,14 +9,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-/**
- * Fans a [PushMessage] out to a user's registered devices — but only when the user has no
- * live WebSocket connection: an online client already receives the event in real time and
- * shows its own local notification, so pushing too would double-notify.
- *
- * Delivery runs on [pushExecutor] so slow platform HTTP calls never block the flow that
- * triggered the push (message send, invite, announcement).
- */
 @Service
 public class PushDispatchService {
 
@@ -59,7 +51,6 @@ public class PushDispatchService {
                             log.info("Removing dead {} push token for user {}", token.getPlatform(), userId);
                             pushTokenRepository.delete(token);
                         } catch (Exception e) {
-                            // Push is best-effort; never let it break the triggering flow.
                             log.warn("Push delivery failed for user {}: {}", userId, e.getMessage());
                         }
                     });

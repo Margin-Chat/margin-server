@@ -9,7 +9,6 @@ import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
-/** One registered device push endpoint (FCM registration token / APNs device token). */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

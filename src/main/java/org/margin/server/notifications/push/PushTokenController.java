@@ -28,7 +28,6 @@ public class PushTokenController {
         return ResponseEntity.ok().build();
     }
 
-    /** POST rather than DELETE so clients can send a JSON body portably. */
     @PostMapping("/unregister")
     public ResponseEntity<Void> unregister(@RequestBody PushTokenRequest request,
                                            @AuthenticationPrincipal User user) {

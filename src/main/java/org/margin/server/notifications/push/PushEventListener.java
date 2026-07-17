@@ -13,11 +13,6 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Turns domain events into pushes for recipients with no live WebSocket connection —
- * the same events the WS listeners consume, so online clients and offline devices are
- * fed from one source of truth.
- */
 @Component
 public class PushEventListener {
 
@@ -80,12 +75,6 @@ public class PushEventListener {
                 .forEach(id -> pushDispatchService.pushToUserIfOffline(id, push));
     }
 
-    /**
-     * Secret-chat messages arrive as ciphertext, which the server cannot (by design) turn
-     * into a preview — detected by the wire format (base64 of a JSON object with an `iv`
-     * field, same heuristic the Android client uses) since the DTO doesn't carry the
-     * conversation's encrypted flag and this domain shouldn't reach into conversations.
-     */
     private String previewBody(String content) {
         if (looksEncrypted(content)) {
             return "New message";

@@ -30,13 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The push pipeline end to end minus the platform HTTP call: the shared
- * [CapturingPushSenderConfig] stands in for FCM/APNs (which are env-gated off in tests),
- * everything else — token registry, domain events, offline gating, fan-out, dead-token
- * cleanup — is real. Recipients are "offline" simply by never opening a WebSocket
- * connection.
- */
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class PushNotificationTest extends MarginTestRunner {
 
@@ -61,8 +54,6 @@ class PushNotificationTest extends MarginTestRunner {
         bob = UserTestUtils.createUser("bob", "bob@margin.chat");
     }
 
-    // --- Token registry ---
-
     @Test
     void registeringSameTokenForAnotherUser_movesItToThatUser() {
         pushTokenService.register(alice, PushPlatform.ANDROID, "device-token-1");
@@ -84,8 +75,6 @@ class PushNotificationTest extends MarginTestRunner {
         pushTokenService.unregister(alice, "device-token-2");
         assertFalse(pushTokenRepository.findByToken("device-token-2").isPresent());
     }
-
-    // --- Message pushes ---
 
     @Test
     void offlineRecipient_receivesPush_senderDoesNot() {
@@ -128,8 +117,6 @@ class PushNotificationTest extends MarginTestRunner {
         assertEquals(0, CapturingPushSenderConfig.captured.size());
     }
 
-    // --- Invite pushes ---
-
     @Test
     void conversationInvite_pushesRecipient() {
         pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
@@ -142,8 +129,6 @@ class PushNotificationTest extends MarginTestRunner {
         assertEquals("invite", push.message().data().get("type"));
     }
 
-    // --- Announcement pushes ---
-
     @Test
     void announcement_pushesMembersButNotAuthor() {
         Margin margin = MarginTestUtils.createMargin("PushMargin", alice);
@@ -151,8 +136,6 @@ class PushNotificationTest extends MarginTestRunner {
         pushTokenService.register(alice, PushPlatform.ANDROID, "alice-device");
         pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
 
-        // The service walks margin.getMembers() lazily; web requests have an open session
-        // (OSIV), a direct test call needs an explicit transaction.
         new TransactionTemplate(transactionManager).executeWithoutResult(tx ->
                 announcementService.createAnnouncement(
                         new CreateAnnouncementRequest(margin.getId(), "Big news", "We shipped push"), alice));
@@ -163,11 +146,8 @@ class PushNotificationTest extends MarginTestRunner {
         assertEquals(String.valueOf(margin.getId()), push.message().data().get("marginId"));
     }
 
-    // --- helpers (dispatch happens on the async pushExecutor) ---
-
     private CapturedPush awaitSinglePush() {
         awaitCondition(() -> !CapturingPushSenderConfig.captured.isEmpty());
-        // Small grace period so an erroneous second push would be caught, not raced past.
         try {
             Thread.sleep(300);
         } catch (InterruptedException e) {

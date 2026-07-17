@@ -9,12 +9,6 @@ import org.springframework.context.annotation.Bean;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Test stand-in for the FCM/APNs senders (which are env-gated off in tests). Lives in the
- * shared [MarginTestRunner] context — a per-test-class `@Import` would fork a second
- * Spring context, which destabilizes the whole suite (context-cache eviction re-runs
- * expensive container/app startup mid-run).
- */
 @TestConfiguration
 public class CapturingPushSenderConfig {
 

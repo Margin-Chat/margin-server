@@ -21,12 +21,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 
-/**
- * Apple Push Notification service over its HTTP/2 API with an ES256 provider JWT
- * (`.p8` key from the Apple Developer portal). All JDK: `java.net.http` speaks HTTP/2 and
- * `SHA256withECDSAinP1363Format` produces the raw JOSE signature APNs expects. Disabled
- * (and harmless) until the APNS_* env vars are set.
- */
 @Component
 public class ApnsPushSender implements PushSender {
 
@@ -102,7 +96,6 @@ public class ApnsPushSender implements PushSender {
         }
     }
 
-    /** APNs provider tokens must be re-minted at least hourly; refresh at 50 minutes. */
     private synchronized String providerJwt() throws Exception {
         if (providerJwt != null && Duration.between(providerJwtIssuedAt, Instant.now()).toMinutes() < 50) {
             return providerJwt;

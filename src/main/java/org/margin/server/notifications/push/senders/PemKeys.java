@@ -5,7 +5,6 @@ import java.security.PrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
-/** Parses PKCS#8 PEM private keys (`-----BEGIN PRIVATE KEY-----`) for JWT signing. */
 final class PemKeys {
 
     private PemKeys() {

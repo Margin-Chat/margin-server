@@ -15,11 +15,6 @@ public class PushTokenService {
         this.pushTokenRepository = pushTokenRepository;
     }
 
-    /**
-     * Upserts by token: a device's token is stable across logins, so when a different
-     * account signs in on the same device the token must move to that account — otherwise
-     * the previous user would keep receiving the new user's notifications.
-     */
     @Transactional
     public void register(User user, PushPlatform platform, String token) {
         PushToken entity = pushTokenRepository.findByToken(token).orElseGet(PushToken::new);
@@ -33,8 +28,6 @@ public class PushTokenService {
         pushTokenRepository.save(entity);
     }
 
-    /** Only removes the token if it belongs to the caller — logout must not be able to
-     * silence another user's device. */
     @Transactional
     public void unregister(User user, String token) {
         pushTokenRepository.findByToken(token)
