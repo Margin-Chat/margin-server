@@ -2,11 +2,13 @@ package org.margin.server.sfu.services;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
+import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
@@ -74,6 +76,13 @@ public class SfuService {
                 channelId, new UserDTO(user, connectionManager.isUserOnline(userId))
         );
         eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload));
+    }
+
+    public void inviteToChannelCall(User inviter, Long recipientId, Long channelId, String channelName) {
+        ChannelCallInvitePayload payload = new ChannelCallInvitePayload(
+                channelId, channelName, new UserDTO(inviter, connectionManager.isUserOnline(inviter.getId()))
+        );
+        eventPublisher.publishEvent(new ChannelCallInviteEvent(recipientId, payload));
     }
 
     public void notifyUserLeft(Long channelId, Long userId) {

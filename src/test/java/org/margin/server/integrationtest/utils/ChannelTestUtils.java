@@ -20,8 +20,17 @@ public class ChannelTestUtils {
     }
 
     public static ChannelDTO createChannel(Long spaceId, String name, String description, User user) {
-        var dto = new ChannelDTO(null, name, description, spaceId, ChannelType.Communication, spaceId);
+        return createChannel(spaceId, name, description, ChannelType.Communication, user);
+    }
+
+    public static ChannelDTO createChannel(Long spaceId, String name, String description,
+                                           ChannelType channelType, User user) {
+        var dto = new ChannelDTO(null, name, description, spaceId, channelType, spaceId);
         return channelController.createChannel(user, dto);
+    }
+
+    public static ChannelDTO createThreadChannel(Long spaceId, String name, User user) {
+        return createChannel(spaceId, name, "Test thread channel", ChannelType.Thread, user);
     }
 
     public static ChannelDTO createChannel(Long spaceId, String name, User user) {

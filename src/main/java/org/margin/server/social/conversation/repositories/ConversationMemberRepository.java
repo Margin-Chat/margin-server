@@ -95,4 +95,8 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
     java.util.Optional<ConversationMember> findByConversationIdAndUserId(@Param("conversationId") Long conversationId,
                                                                          @Param("userId") Long userId);
+
+    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation " +
+            "WHERE cm.user.id = :userId AND cm.conversation.type = 'THREAD'")
+    List<ConversationMember> findThreadMembershipsByUserId(@Param("userId") Long userId);
 }

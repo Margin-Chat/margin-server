@@ -39,6 +39,9 @@ public class Notification {
     @Column(name = "reference_id")
     private Long referenceId;
 
+    @Column(name = "conversation_id")
+    private Long conversationId;
+
     @Column(nullable = false, name = "seen")
     private boolean seen = false;
 

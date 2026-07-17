@@ -1,9 +1,11 @@
 package org.margin.server.websocket.listeners;
 
+import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,13 @@ public class SfuWebSocketEventListener {
         this.messageBuilder = messageBuilder;
         this.connectionManager = connectionManager;
         this.spaceMemberRepository = spaceMemberRepository;
+    }
+
+    @EventListener
+    public void onChannelCallInvite(ChannelCallInviteEvent event) {
+        String json = messageBuilder.buildMessage(
+                WebSocketMessageType.CHANNEL_CALL_INVITE, event.getRecipientId(), event.getPayload());
+        connectionManager.sendToUser(event.getRecipientId(), json);
     }
 
     @EventListener

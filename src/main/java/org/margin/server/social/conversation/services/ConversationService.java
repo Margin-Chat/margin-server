@@ -3,6 +3,7 @@ package org.margin.server.social.conversation.services;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.*;
 import org.margin.server.social.conversation.models.dtos.*;
+import org.margin.server.social.conversation.models.projections.ThreadSummaryProjection;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
@@ -72,8 +73,21 @@ public class ConversationService {
     }
 
     public List<User> getConversationMembers(Long conversationId) {
-        return conversationMemberRepository.findUsersByConversationId(conversationId);
+        return conversationMemberRepository.findUsersByConversationId(resolveMembershipConversationId(conversationId));
     }
+
+    private Long resolveMembershipConversationId(Long conversationId) {
+        Conversation conversation = self.getById(conversationId);
+        if (conversation.getType() == ConversationType.THREAD && conversation.getParentConversationId() != null) {
+            return conversation.getParentConversationId();
+        }
+        return conversationId;
+    }
+
+    public List<User> getThreadFollowers(Long threadConversationId) {
+        return conversationMemberRepository.findUsersByConversationId(threadConversationId);
+    }
+
 
     public void notifyTyping(User user, Conversation conversation, boolean isTyping) {
         List<User> recipients = getConversationMembers(conversation.getId()).stream()
@@ -138,11 +152,29 @@ public class ConversationService {
                     conversation.getChannel() != null ? conversation.getChannel().getId() : null,
                     conversation.getName()
             );
+            case THREAD -> toThreadDTO(conversation, currentUserId);
         };
     }
 
+    public ThreadConversationDTO toThreadDTO(Conversation thread, Long currentUserId) {
+        Conversation parent = self.getById(thread.getParentConversationId());
+        Channel channel = parent.getChannel();
+        boolean following = currentUserId != null
+                && conversationMemberRepository.findByConversationIdAndUserId(thread.getId(), currentUserId).isPresent();
+        return new ThreadConversationDTO(
+                thread.getId(),
+                thread.getCreatedAt(),
+                parent.getId(),
+                channel != null ? channel.getId() : null,
+                channel != null ? channel.getSpace().getMargin().getId() : null,
+                thread.getName(),
+                following
+        );
+    }
+
     public boolean isUserMember(Long conversationId, Long userId) {
-        return conversationMemberRepository.isUserMemberOfConversation(conversationId, userId);
+        return conversationMemberRepository.isUserMemberOfConversation(
+                resolveMembershipConversationId(conversationId), userId);
     }
 
     public Conversation findDirectConversationBetweenUsers(Long userId1, Long userId2) {
@@ -250,7 +282,12 @@ public class ConversationService {
                         new UnreadConversationsDTO.ChannelUnread(p.getConversationId(), p.getMarginId()))
                 .toList();
 
-        return new UnreadConversationsDTO(direct, group, channelUnreads);
+        List<Long> threads = projections.stream()
+                .filter(p -> "THREAD".equals(p.getType()))
+                .map(UnreadConversationProjection::getConversationId)
+                .toList();
+
+        return new UnreadConversationsDTO(direct, group, channelUnreads, threads);
     }
 
     @Transactional(readOnly = true)

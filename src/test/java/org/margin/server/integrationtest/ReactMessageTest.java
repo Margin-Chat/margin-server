@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.*;
+import org.margin.server.notifications.Notification;
+import org.margin.server.notifications.NotificationType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
@@ -83,6 +85,47 @@ class ReactMessageTest extends MarginTestRunner {
 
         String echoText = echo.get(5, TimeUnit.SECONDS);
         assertTrue(echoText.contains("❤️"));
+    }
+
+    @Test
+    void addReaction_toAnotherUsersMessage_persistsAndDeliversToConversationMembers() throws Exception {
+        User author = UserTestUtils.createUser("author", "author@margin.chat");
+        User reactor = UserTestUtils.createUser("reactor", "reactor@margin.chat");
+        Conversation conversation = ConversationTestUtils.createDirectConversation(author, reactor);
+
+        Message message = sendAndPersistMessage(author, conversation, "React to me!");
+
+        CompletableFuture<String> authorReceived = new CompletableFuture<>();
+        CompletableFuture<String> reactorEcho = new CompletableFuture<>();
+        observerWs = WebSocketTestUtils.connect(author,
+                WebSocketTestUtils.listenerThatCompletes(authorReceived, "RECEIVE_ADD_REACTION"));
+        reactorWs = WebSocketTestUtils.connect(reactor,
+                WebSocketTestUtils.listenerThatCompletes(reactorEcho, "RECEIVE_ADD_REACTION"));
+
+        String frame = WebSocketFrameTestBuilder.ofType("SEND_ADD_REACTION")
+                .recipientId(conversation.getId())
+                .payload(WebSocketFrameTestBuilder.object()
+                        .put("messageId", message.getId())
+                        .put("emoji", "👍"))
+                .build();
+
+        reactorWs.sendText(frame, true).get(5, TimeUnit.SECONDS);
+
+        String echoText = reactorEcho.get(5, TimeUnit.SECONDS);
+        assertTrue(echoText.contains("👍"));
+        String authorText = authorReceived.get(5, TimeUnit.SECONDS);
+        assertTrue(authorText.contains("👍"));
+
+        List<MessageReaction> reactions = MessageReactionTestUtils.getReactionsForMessage(message.getId());
+        assertEquals(1, reactions.size());
+        assertEquals(reactor.getId(), reactions.getFirst().getUser().getId());
+
+        List<Notification> authorNotifications = NotificationTestUtils.getForUser(author).stream()
+                .filter(n -> n.getType() == NotificationType.MESSAGE_REACTION)
+                .toList();
+        assertEquals(1, authorNotifications.size());
+        assertEquals(message.getId(), authorNotifications.getFirst().getReferenceId());
+        assertEquals(conversation.getId(), authorNotifications.getFirst().getConversationId());
     }
 
     @Test

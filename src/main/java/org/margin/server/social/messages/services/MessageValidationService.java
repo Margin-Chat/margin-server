@@ -1,5 +1,6 @@
 package org.margin.server.social.messages.services;
 
+import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationType;
@@ -29,6 +30,15 @@ public class MessageValidationService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Cannot send messages until the invite is accepted");
             }
+        }
+    }
+
+    public void validateNotThreadChannelConversation(Conversation conversation) {
+        if (conversation.getType() == ConversationType.CHANNEL
+                && conversation.getChannel() != null
+                && conversation.getChannel().getChannelType() == ChannelType.Thread) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Thread channels only accept posts; reply inside a post instead");
         }
     }
 

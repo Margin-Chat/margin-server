@@ -16,9 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +121,50 @@ class NotificationServiceTest {
 
         assertThat(result).isEqualTo(expected);
         verify(notificationRepository).findByRecipient_IdOrderByCreatedAtDesc(recipient.getId());
+    }
+
+    @Test
+    void createOrCollapseThreadReply_createsNewNotificationPerRecipient() {
+        User sender = createUser(1L);
+        User author = createUser(2L);
+        User replier = createUser(3L);
+        when(notificationRepository.findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+                anyLong(), eq(NotificationType.THREAD_REPLY), eq(50L)))
+                .thenReturn(Optional.empty());
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        notificationService.createOrCollapseThreadReply(
+                List.of(sender, author, replier), sender, 200L, 10L, 50L);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .noneMatch(n -> n.getRecipient().getId().equals(sender.getId()))
+                .allMatch(n -> n.getType() == NotificationType.THREAD_REPLY)
+                .allMatch(n -> n.getConversationId().equals(50L))
+                .allMatch(n -> n.getReferenceId().equals(200L));
+    }
+
+    @Test
+    void createOrCollapseThreadReply_updatesExistingUnseenNotification() {
+        User sender = createUser(1L);
+        User author = createUser(2L);
+        Notification existing = unseenNotification(author, 10L);
+        existing.setType(NotificationType.THREAD_REPLY);
+        existing.setConversationId(50L);
+        existing.setReferenceId(150L);
+        when(notificationRepository.findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+                author.getId(), NotificationType.THREAD_REPLY, 50L))
+                .thenReturn(Optional.of(existing));
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        notificationService.createOrCollapseThreadReply(List.of(author), sender, 200L, 10L, 50L);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue()).isSameAs(existing);
+        assertThat(captor.getValue().getReferenceId()).isEqualTo(200L);
+        assertThat(captor.getValue().getSender()).isEqualTo(sender);
     }
 
     private Notification unseenNotification(User recipient, Long marginId) {
