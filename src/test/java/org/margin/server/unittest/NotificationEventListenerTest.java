@@ -102,6 +102,7 @@ class NotificationEventListenerTest {
         Channel channel = new Channel();
         channel.setSpace(space);
         Conversation conversation = new Conversation();
+        conversation.setId(5L);
         conversation.setType(ConversationType.CHANNEL);
         conversation.setChannel(channel);
 
@@ -116,7 +117,7 @@ class NotificationEventListenerTest {
         listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author, reactor), ConversationType.CHANNEL));
 
         verify(notificationService).createForUsers(
-                List.of(author), reactor, NotificationType.MESSAGE_REACTION, 10L, 99L);
+                List.of(author), reactor, NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
     }
 
     @Test
@@ -137,5 +138,6 @@ class NotificationEventListenerTest {
         listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author), ConversationType.DIRECT));
 
         verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any());
+        verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any(), any());
     }
 }

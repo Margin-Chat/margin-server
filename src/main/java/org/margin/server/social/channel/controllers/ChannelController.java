@@ -42,7 +42,8 @@ public class ChannelController {
     public ChannelDTO createChannel(@AuthenticationPrincipal User user,
                                     @RequestBody ChannelDTO channelDTO) {
         marginAuthorizationService.requireSpaceAdmin(user.getId(), channelDTO.spaceId());
-        return channelService.createChannelAsDto(channelDTO.spaceId(), channelDTO.name(), channelDTO.description());
+        return channelService.createChannelAsDto(channelDTO.spaceId(), channelDTO.name(),
+                channelDTO.description(), channelDTO.channelType());
     }
 
     @PostMapping("/update_channel")

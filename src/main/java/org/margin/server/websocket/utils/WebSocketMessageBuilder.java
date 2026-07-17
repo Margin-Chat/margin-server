@@ -34,7 +34,10 @@ public class WebSocketMessageBuilder {
                 notification.getType(),
                 notification.getReferenceId(),
                 notification.getMarginId(),
-                notification.getSender() != null ? new UserDTO(notification.getSender(), false) : null
+                notification.getConversationId(),
+                notification.getSender() != null ? new UserDTO(notification.getSender(), false) : null,
+                notification.getCreatedAt(),
+                notification.isSeen()
         );
         return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipient().getId(), payload);
     }

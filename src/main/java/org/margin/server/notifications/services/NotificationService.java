@@ -28,6 +28,12 @@ public class NotificationService {
     @Transactional
     public void createForUsers(List<User> members, User sender, NotificationType type,
                                Long referenceId, Long marginId) {
+        createForUsers(members, sender, type, referenceId, marginId, null);
+    }
+
+    @Transactional
+    public void createForUsers(List<User> members, User sender, NotificationType type,
+                               Long referenceId, Long marginId, Long conversationId) {
         List<Notification> notifications = members.stream()
                 .filter(member -> sender == null || !member.getId().equals(sender.getId()))
                 .map(member -> {
@@ -37,6 +43,7 @@ public class NotificationService {
                     n.setType(type);
                     n.setReferenceId(referenceId);
                     n.setMarginId(marginId);
+                    n.setConversationId(conversationId);
                     n.setSeen(false);
                     n.setCreatedAt(Instant.now());
                     return n;
@@ -46,6 +53,33 @@ public class NotificationService {
         notificationRepository.saveAll(notifications);
 
         notifications.forEach(n -> eventPublisher.publishEvent(new NotificationDeliveryEvent(n)));
+    }
+
+    @Transactional
+    public void createOrCollapseThreadReply(List<User> recipients, User sender, Long referenceId,
+                                            Long marginId, Long threadConversationId) {
+        for (User recipient : recipients) {
+            if (sender != null && recipient.getId().equals(sender.getId())) {
+                continue;
+            }
+            Notification notification = notificationRepository
+                    .findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+                            recipient.getId(), NotificationType.THREAD_REPLY, threadConversationId)
+                    .orElseGet(() -> {
+                        Notification n = new Notification();
+                        n.setRecipient(recipient);
+                        n.setType(NotificationType.THREAD_REPLY);
+                        n.setConversationId(threadConversationId);
+                        n.setSeen(false);
+                        return n;
+                    });
+            notification.setSender(sender);
+            notification.setReferenceId(referenceId);
+            notification.setMarginId(marginId);
+            notification.setCreatedAt(Instant.now());
+            notification = notificationRepository.save(notification);
+            eventPublisher.publishEvent(new NotificationDeliveryEvent(notification));
+        }
     }
 
     @Transactional

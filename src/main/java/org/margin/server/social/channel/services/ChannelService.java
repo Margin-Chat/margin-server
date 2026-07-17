@@ -53,8 +53,13 @@ public class ChannelService implements ChannelLookup {
 
     @Transactional
     public ChannelDTO createChannelAsDto(Long spaceId, String name, String description) {
+        return createChannelAsDto(spaceId, name, description, ChannelType.Communication);
+    }
+
+    @Transactional
+    public ChannelDTO createChannelAsDto(Long spaceId, String name, String description, ChannelType channelType) {
         Space space = spacesRepository.findById(spaceId).orElseThrow(() -> new SpaceNotFoundException(spaceId));
-        Channel channel = channelCreationService.createChannel(space, name, description);
+        Channel channel = channelCreationService.createChannel(space, name, description, channelType);
         List<User> users = space.getMembers().stream()
                 .map(SpaceMember::getUser)
                 .toList();
@@ -70,7 +75,6 @@ public class ChannelService implements ChannelLookup {
         Channel channel = getById(channelDTO.id());
         channel.setName(channelDTO.name());
         channel.setDescription(channelDTO.description());
-        channel.setChannelType(ChannelType.Communication);
         channel.setUpdatedAt(Instant.now());
         return marginMapper.channelToDto(channelRepository.save(channel));
     }

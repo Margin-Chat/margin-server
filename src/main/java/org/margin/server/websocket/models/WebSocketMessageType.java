@@ -36,6 +36,7 @@ public enum WebSocketMessageType {
     CALL_REJECTED(String.class),
     USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
     USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
+    CHANNEL_CALL_INVITE(String.class),
     CALL_MEDIA_STATE(CallMediaStatePayload.class),
 
     // Notification
