@@ -17,4 +17,9 @@ public class ExecutorConfig {
     public Executor webhookExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
+
+    @Bean(name = "pushExecutor")
+    public Executor pushExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
 }
