@@ -83,7 +83,7 @@ public class CallService {
 
         log.debug("Call {} ended (duration: {}s)", call.getId(), durationSeconds);
 
-        eventPublisher.publishEvent(new CallEndedEvent(recipientId));
+        eventPublisher.publishEvent(new CallEndedEvent(recipientId, call.getId()));
     }
 
     @Transactional
@@ -115,7 +115,7 @@ public class CallService {
 
         log.debug("Call {} was rejected", callId);
 
-        eventPublisher.publishEvent(new CallEndedEvent(recipientId));
+        eventPublisher.publishEvent(new CallEndedEvent(recipientId, call.getId()));
     }
 
     public Call getById(Long callId) {

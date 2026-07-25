@@ -83,7 +83,7 @@ public class CallWebSocketEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCallEnded(CallEndedEvent callEndedEvent) {
         String json = webSocketMessageBuilder.buildMessage(WebSocketMessageType.CALL_END,
-                callEndedEvent.getRecipientId(), null);
+                callEndedEvent.getRecipientId(), Map.of("callId", callEndedEvent.getCallId()));
         connectionManager.sendToUser(callEndedEvent.getRecipientId(), json);
     }
 
