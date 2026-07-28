@@ -1,4 +1,4 @@
-package org.margin.server.config.ratelimit;
+package org.margin.server.shared.ratelimit;
 
 import io.github.bucket4j.Bandwidth;
 

@@ -1,6 +1,6 @@
 package org.margin.server.unittest.utils;
 
-import org.margin.server.exceptions.GlobalExceptionHandler;
+import org.margin.server.shared.exceptions.GlobalExceptionHandler;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 

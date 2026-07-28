@@ -1,5 +1,3 @@
-Module 'authentication' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitConfig within module 'config'!
-Module 'authentication' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitService within module 'config'!
 Module 'authentication' depends on non-exposed type org.margin.server.storage.services.StorageService within module 'storage'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.UserEncryption within module 'users'!
@@ -10,19 +8,7 @@ Module 'authentication' depends on non-exposed type org.margin.server.users.serv
 Module 'authentication' depends on non-exposed type org.margin.server.websocket.connection.ConnectionManager within module 'websocket'!
 Module 'authentication' is part of a dependency cycle.
 Module 'bugs' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
-Module 'config' depends on non-exposed type org.margin.server.authentication.services.JwtService within module 'authentication'!
-Module 'config' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
-Module 'config' depends on non-exposed type org.margin.server.users.models.UserSecurity within module 'users'!
-Module 'config' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
-Module 'config' is part of a dependency cycle.
-Module 'exceptions' depends on non-exposed type org.margin.server.social.calls.exceptions.CallValidationException within module 'social'!
-Module 'exceptions' depends on non-exposed type org.margin.server.social.channel.exceptions.ChannelNotFoundException within module 'social'!
-Module 'exceptions' depends on non-exposed type org.margin.server.social.margin.exceptions.MarginNotFoundException within module 'social'!
-Module 'exceptions' depends on non-exposed type org.margin.server.storage.exceptions.StoredFileNotFoundException within module 'storage'!
-Module 'exceptions' depends on non-exposed type org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException within module 'subscriptions'!
-Module 'exceptions' depends on non-exposed type org.margin.server.subscriptions.exceptions.SubscriptionNotFoundException within module 'subscriptions'!
-Module 'exceptions' depends on non-exposed type org.margin.server.users.exceptions.UserNotFoundException within module 'users'!
-Module 'exceptions' is part of a dependency cycle.
+Module 'bugs' is part of a dependency cycle.
 Module 'notifications' depends on non-exposed type org.margin.server.social.channel.entities.Channel within module 'social'!
 Module 'notifications' depends on non-exposed type org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent within module 'social'!
 Module 'notifications' depends on non-exposed type org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent within module 'social'!
@@ -46,6 +32,7 @@ Module 'notifications' depends on non-exposed type org.margin.server.websocket.c
 Module 'notifications' is part of a dependency cycle.
 Module 'presence' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'presence' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
+Module 'presence' is part of a dependency cycle.
 Module 'sfu' depends on non-exposed type org.margin.server.social.channel.entities.Channel within module 'social'!
 Module 'sfu' depends on non-exposed type org.margin.server.social.channel.services.ChannelService within module 'social'!
 Module 'sfu' depends on non-exposed type org.margin.server.social.margin.validations.MarginAuthorizationService within module 'social'!
@@ -60,8 +47,6 @@ Module 'sfu' depends on non-exposed type org.margin.server.users.services.UserSe
 Module 'sfu' depends on non-exposed type org.margin.server.websocket.connection.ConnectionManager within module 'websocket'!
 Module 'sfu' depends on non-exposed type org.margin.server.websocket.models.WebSocketMessageType within module 'websocket'!
 Module 'sfu' is part of a dependency cycle.
-Module 'social' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitConfig within module 'config'!
-Module 'social' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitService within module 'config'!
 Module 'social' depends on non-exposed type org.margin.server.notifications.events.AnnouncementCreatedEvent within module 'notifications'!
 Module 'social' depends on non-exposed type org.margin.server.notifications.events.MissedCallEvent within module 'notifications'!
 Module 'social' depends on non-exposed type org.margin.server.notifications.events.UserAddedToMarginEvent within module 'notifications'!
@@ -120,8 +105,6 @@ Module 'subscriptions' depends on non-exposed type org.margin.server.websocket.m
 Module 'subscriptions' depends on non-exposed type org.margin.server.websocket.utils.WebSocketMessageBuilder within module 'websocket'!
 Module 'subscriptions' is part of a dependency cycle.
 Module 'users' depends on non-exposed type org.margin.server.bugs.services.BugReportService within module 'bugs'!
-Module 'users' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitConfig within module 'config'!
-Module 'users' depends on non-exposed type org.margin.server.config.ratelimit.RateLimitService within module 'config'!
 Module 'users' depends on non-exposed type org.margin.server.social.conversation.models.Conversation within module 'social'!
 Module 'users' depends on non-exposed type org.margin.server.social.conversation.models.dtos.ConversationDTO within module 'social'!
 Module 'users' depends on non-exposed type org.margin.server.social.conversation.services.ConversationService within module 'social'!

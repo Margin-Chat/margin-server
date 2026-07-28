@@ -1,8 +1,8 @@
 package org.margin.server.social.margin.controllers;
 
-import org.margin.server.config.ratelimit.RateLimitConfig;
-import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.TooManyRequestsException;
+import org.margin.server.shared.ratelimit.RateLimitConfig;
+import org.margin.server.shared.ratelimit.RateLimitService;
+import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;

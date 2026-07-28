@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.config.ratelimit.RateLimitService;
+import org.margin.server.shared.ratelimit.RateLimitService;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;

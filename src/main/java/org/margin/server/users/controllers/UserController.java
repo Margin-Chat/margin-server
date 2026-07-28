@@ -1,9 +1,9 @@
 package org.margin.server.users.controllers;
 
 import org.margin.server.bugs.services.BugReportService;
-import org.margin.server.config.ratelimit.RateLimitConfig;
-import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.TooManyRequestsException;
+import org.margin.server.shared.ratelimit.RateLimitConfig;
+import org.margin.server.shared.ratelimit.RateLimitService;
+import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.service.MarginService;

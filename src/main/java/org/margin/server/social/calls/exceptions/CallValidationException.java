@@ -1,7 +1,10 @@
 package org.margin.server.social.calls.exceptions;
 
-public class CallValidationException extends RuntimeException {
+import org.margin.server.shared.exceptions.DomainException;
+import org.springframework.http.HttpStatus;
+
+public class CallValidationException extends DomainException {
     public CallValidationException(Long callId, String message) {
-        super("Call " + callId + ": " + message);
+        super(HttpStatus.FORBIDDEN, "Call " + callId + ": " + message);
     }
 }

@@ -2,6 +2,7 @@ package org.margin.server.architecture;
 
 import org.junit.jupiter.api.Test;
 import org.margin.server.MarginServerApplication;
+import org.springframework.modulith.core.ApplicationModule;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.core.Violations;
 import org.springframework.modulith.docs.Documenter;
@@ -9,29 +10,20 @@ import org.springframework.modulith.docs.Documenter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-/**
- * Ratchet for the ongoing modulith migration.
- * <p>
- * {@link ApplicationModules#verify()} rejects cycles unconditionally, so an
- * {@code allowedDependencies} allowlist cannot express the current state of the codebase.
- * Instead the known violations are checked in as a baseline: the build fails on anything
- * new, and fails with an explicit instruction when the baseline has grown stale. Every
- * migration phase deletes lines from the baseline until it is empty and this test can be
- * replaced by a plain {@code verify()}.
- * <p>
- * Regenerate after a phase with {@code ./mvnw test -Dtest=ModularityTest -Dmodulith.baseline.regenerate=true}.
- */
 class ModularityTest {
 
     private static final Path BASELINE = Path.of("src/test/resources/modulith-violations-baseline.txt");
@@ -81,51 +73,60 @@ class ModularityTest {
     }
 
     private List<String> currentViolations() {
+        return Stream.concat(dependencyViolations(), cyclicModules())
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private Stream<String> dependencyViolations() {
         try {
             modules.verify();
-            return List.of();
+            return Stream.of();
         } catch (Violations violations) {
             return violations.getMessages().stream()
-                    .flatMap(ModularityTest::normalize)
-                    .distinct()
-                    .sorted()
-                    .toList();
+                    .filter(message -> !message.startsWith("Cycle detected:"))
+                    .map(ModularityTest::normalize)
+                    .toList()
+                    .stream();
         }
     }
 
-    private static final Pattern SLICE = Pattern.compile("Slice (\\w+)");
+    private Stream<String> cyclicModules() {
+        Map<String, Set<String>> graph = new HashMap<>();
 
-    /**
-     * Reduces a violation to a stable, comparable claim.
-     * <p>
-     * For dependency violations that means dropping the reference sites after the "!" — Modulith
-     * reports one violation per field, parameter, return type and call site, so keeping them would
-     * make the baseline thousands of lines long and churn on any edit inside an offending file.
-     * <p>
-     * Cycles cannot be baselined individually at all. The module graph is tangled enough to contain
-     * combinatorially many distinct cycles, and ArchUnit stops after the first 100 it happens to
-     * walk — a different, equally valid subset on every run. What is stable is <em>which modules
-     * are caught in a cycle</em>, so each cycle contributes one entry per participant. A module
-     * drops out of the baseline once it is no longer part of any tangle, which is exactly the
-     * signal each migration phase is trying to produce.
-     */
-    private static Stream<String> normalize(String message) {
-        String collapsed = message.replaceAll("\\s+", " ").trim();
+        modules.forEach(module -> graph.put(module.getName(), module.getDirectDependencies(modules)
+                .uniqueModules()
+                .map(ApplicationModule::getName)
+                .collect(Collectors.toSet())));
 
-        if (collapsed.startsWith("Cycle detected:")) {
-            String header = collapsed.split(" 1\\. Dependencies", 2)[0];
-            Matcher matcher = SLICE.matcher(header);
-            SortedSet<String> participants = new TreeSet<>();
+        return graph.keySet().stream()
+                .filter(module -> reaches(graph, module, module))
+                .map("Module '%s' is part of a dependency cycle."::formatted);
+    }
 
-            while (matcher.find()) {
-                participants.add(matcher.group(1));
+    private static boolean reaches(Map<String, Set<String>> graph, String from, String target) {
+        Deque<String> queue = new ArrayDeque<>(graph.getOrDefault(from, Set.of()));
+        Set<String> seen = new HashSet<>();
+
+        while (!queue.isEmpty()) {
+            String current = queue.pop();
+
+            if (current.equals(target)) {
+                return true;
             }
-
-            return participants.stream().map("Module '%s' is part of a dependency cycle."::formatted);
+            if (seen.add(current)) {
+                queue.addAll(graph.getOrDefault(current, Set.of()));
+            }
         }
 
+        return false;
+    }
+
+    private static String normalize(String message) {
+        String collapsed = message.replaceAll("\\s+", " ").trim();
         int endOfClaim = collapsed.indexOf("! ");
 
-        return Stream.of(endOfClaim < 0 ? collapsed : collapsed.substring(0, endOfClaim + 1));
+        return endOfClaim < 0 ? collapsed : collapsed.substring(0, endOfClaim + 1);
     }
 }

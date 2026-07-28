@@ -1,11 +1,14 @@
 package org.margin.server.social.margin.exceptions;
 
-public class MarginNotFoundException extends RuntimeException {
+import org.margin.server.shared.exceptions.DomainException;
+import org.springframework.http.HttpStatus;
+
+public class MarginNotFoundException extends DomainException {
     public MarginNotFoundException(Long id) {
-        super("Margin not found: " + id);
+        super(HttpStatus.NOT_FOUND, "Margin not found: " + id);
     }
 
     public MarginNotFoundException(String detail) {
-        super("Margin not found: " + detail);
+        super(HttpStatus.NOT_FOUND, "Margin not found: " + detail);
     }
 }

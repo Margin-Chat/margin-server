@@ -1,4 +1,4 @@
-package org.margin.server.config.filters;
+package org.margin.server.authentication.filters;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
