@@ -20,7 +20,7 @@ import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.messages.services.MessageValidationService;
 import org.margin.server.storage.services.StorageLookup;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -54,7 +54,7 @@ class MessageServiceTest {
     @Mock
     private ConversationService conversationService;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock

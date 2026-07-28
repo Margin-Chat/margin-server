@@ -1,6 +1,6 @@
 package org.margin.server.notifications.push;
 
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,22 +15,22 @@ public class PushDispatchService {
     private static final Logger log = LoggerFactory.getLogger(PushDispatchService.class);
 
     private final PushTokenRepository pushTokenRepository;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final List<PushSender> senders;
     private final Executor pushExecutor;
 
     public PushDispatchService(PushTokenRepository pushTokenRepository,
-                               ConnectionManager connectionManager,
+                               PresenceService presenceService,
                                List<PushSender> senders,
                                @Qualifier("pushExecutor") Executor pushExecutor) {
         this.pushTokenRepository = pushTokenRepository;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.senders = senders;
         this.pushExecutor = pushExecutor;
     }
 
     public void pushToUserIfOffline(Long userId, PushMessage message) {
-        if (connectionManager.isUserOnline(userId)) {
+        if (presenceService.isUserOnline(userId)) {
             return;
         }
         List<PushToken> tokens = pushTokenRepository.findByUserId(userId);

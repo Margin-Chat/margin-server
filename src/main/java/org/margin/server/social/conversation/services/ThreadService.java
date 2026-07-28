@@ -1,6 +1,7 @@
 package org.margin.server.social.conversation.services;
 
 import lombok.extern.log4j.Log4j2;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
@@ -19,7 +20,6 @@ import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -46,7 +46,7 @@ public class ThreadService {
     private final ConversationService conversationService;
     private final MessageService messageService;
     private final ChannelLookup channelLookup;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
 
     public ThreadService(ConversationRepository conversationRepository,
                          ConversationMemberRepository conversationMemberRepository,
@@ -54,14 +54,14 @@ public class ThreadService {
                          ConversationService conversationService,
                          MessageService messageService,
                          ChannelLookup channelLookup,
-                         ConnectionManager connectionManager) {
+                         PresenceService presenceService) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.conversationCreationService = conversationCreationService;
         this.conversationService = conversationService;
         this.messageService = messageService;
         this.channelLookup = channelLookup;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
     }
 
     public ThreadConversationDTO createPost(User user, Long channelId, String title, String body) {
@@ -188,7 +188,7 @@ public class ThreadService {
 
         UserDTO author = firstMessage != null
                 ? new UserDTO(firstMessage.getFromUser(),
-                connectionManager.isUserOnline(firstMessage.getFromUser().getId()))
+                presenceService.isUserOnline(firstMessage.getFromUser().getId()))
                 : null;
 
         return new ThreadSummaryDTO(

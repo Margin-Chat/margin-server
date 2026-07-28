@@ -1,6 +1,12 @@
 package org.margin.server.social.conversation.services;
 
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
+import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
+import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
+import org.margin.server.social.conversation.events.ConversationInviteEvent;
+import org.margin.server.social.conversation.events.ConversationReadEvent;
+import org.margin.server.social.conversation.events.TypingIndicatorEvent;
 import org.margin.server.social.conversation.models.*;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.margin.server.social.conversation.models.projections.ThreadSummaryProjection;
@@ -13,18 +19,12 @@ import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
-import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
-import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
-import org.margin.server.social.conversation.events.ConversationInviteEvent;
-import org.margin.server.social.conversation.events.ConversationReadEvent;
-import org.margin.server.social.conversation.events.TypingIndicatorEvent;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
 import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,7 @@ public class ConversationService {
     private final ConversationMemberRepository conversationMemberRepository;
     private final UserRepository userRepository;
     private final ConversationService self;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserService userService;
 
@@ -53,7 +53,7 @@ public class ConversationService {
                                ConversationMemberRepository conversationMemberRepository,
                                UserRepository userRepository,
                                @Lazy ConversationService self,
-                               ConnectionManager connectionManager,
+                               PresenceService presenceService,
                                ApplicationEventPublisher eventPublisher,
                                UserService userService) {
         this.conversationCreationService = conversationCreationService;
@@ -61,7 +61,7 @@ public class ConversationService {
         this.conversationMemberRepository = conversationMemberRepository;
         this.userRepository = userRepository;
         this.self = self;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.eventPublisher = eventPublisher;
         this.userService = userService;
     }
@@ -307,7 +307,7 @@ public class ConversationService {
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
                         getConversationDTO(p.conversation(), userId),
-                        new UserDTO(p.user(), connectionManager.isUserOnline(p.user().getId())),
+                        new UserDTO(p.user(), presenceService.isUserOnline(p.user().getId())),
                         p.lastMessage(),
                         p.lastMessageTime(),
                         p.lastMessageIncoming()
@@ -479,7 +479,7 @@ public class ConversationService {
                         );
                     }
                     return new ConversationInvitePayload(conversationDTO,
-                            new UserDTO(sender, connectionManager.isUserOnline(sender.getId())));
+                            new UserDTO(sender, presenceService.isUserOnline(sender.getId())));
                 })
                 .toList();
     }
@@ -502,7 +502,7 @@ public class ConversationService {
                     );
 
                     return new SentConversationInvitePayload(conversationDTO,
-                            new UserDTO(recipient, connectionManager.isUserOnline(recipient.getId())));
+                            new UserDTO(recipient, presenceService.isUserOnline(recipient.getId())));
                 })
                 .toList();
     }

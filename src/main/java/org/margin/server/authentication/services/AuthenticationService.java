@@ -3,6 +3,7 @@ package org.margin.server.authentication.services;
 import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.ActivationKey;
+import org.margin.server.authentication.events.UserSessionsRevokedEvent;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.email.EmailService;
@@ -12,8 +13,8 @@ import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserCacheService;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,7 +39,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final StorageService storageService;
-    private final ConnectionManager connectionManager;
+    private final ApplicationEventPublisher eventPublisher;
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
     private final UserCacheService userCacheService;
@@ -49,7 +50,7 @@ public class AuthenticationService {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             StorageService storageService,
-            ConnectionManager connectionManager,
+            ApplicationEventPublisher eventPublisher,
             ActivationKeyService activationKeyService,
             EmailService emailService,
             UserCacheService userCacheService) {
@@ -58,7 +59,7 @@ public class AuthenticationService {
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.storageService = storageService;
-        this.connectionManager = connectionManager;
+        this.eventPublisher = eventPublisher;
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
         this.userCacheService = userCacheService;
@@ -205,7 +206,7 @@ public class AuthenticationService {
         user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
         userRepository.save(user);
         userCacheService.evictUserCache(user.getId());
-        connectionManager.closeAllSessions(user.getId());
+        eventPublisher.publishEvent(new UserSessionsRevokedEvent(user.getId()));
     }
 
     @Transactional

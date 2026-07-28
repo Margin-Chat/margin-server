@@ -10,7 +10,7 @@ import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,15 +22,15 @@ public class SpaceTestUtils {
 
     private static SpacesController spacesController;
     private static SpacesService spacesService;
-    private static ConnectionManager connectionManager;
+    private static PresenceService presenceService;
 
     @Autowired
     public SpaceTestUtils(SpacesController spacesController,
                           SpacesService spacesService,
-                          ConnectionManager connectionManager) {
+                          PresenceService presenceService) {
         SpaceTestUtils.spacesController = spacesController;
         SpaceTestUtils.spacesService = spacesService;
-        SpaceTestUtils.connectionManager = connectionManager;
+        SpaceTestUtils.presenceService = presenceService;
     }
 
     public static SpaceDTO createSpace(String name, Long marginId, User user) {
@@ -45,7 +45,7 @@ public class SpaceTestUtils {
 
     public static SpaceMemberDTO addMember(Long spaceId, User userToAdd, SpaceRole role, User actingUser) {
         var memberDto = new SpaceMemberDTO(
-                new UserDTO(userToAdd, connectionManager.isUserOnline(userToAdd.getId())),
+                new UserDTO(userToAdd, presenceService.isUserOnline(userToAdd.getId())),
                 spaceId,
                 role,
                 Instant.now()

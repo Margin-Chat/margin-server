@@ -1,6 +1,7 @@
 package org.margin.server.users.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.margin.events.RemoveUserFromMarginEvent;
 import org.margin.server.storage.services.StorageService;
 import org.margin.server.users.exceptions.UserNotFoundException;
@@ -11,7 +12,6 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.models.dtos.UserSearchResultDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,20 +31,20 @@ public class UserService {
     public static final String DELETED_USER = "deleted_user_";
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final StorageService storageService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        UserCacheService userCacheService,
-                       ConnectionManager connectionManager,
+                       PresenceService presenceService,
                        StorageService storageService,
                        ApplicationEventPublisher applicationEventPublisher,
                        PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.storageService = storageService;
         this.applicationEventPublisher = applicationEventPublisher;
         this.passwordEncoder = passwordEncoder;
@@ -75,7 +75,7 @@ public class UserService {
                 .entrySet().stream()
                 .limit(20)
                 .map(entry -> new UserSearchResultDTO(
-                        new UserDTO(entry.getKey(), connectionManager.isUserOnline(entry.getKey().getId())),
+                        new UserDTO(entry.getKey(), presenceService.isUserOnline(entry.getKey().getId())),
                         entry.getValue()
                 ))
                 .toList();
@@ -92,11 +92,11 @@ public class UserService {
     }
 
     public UserDTO toDTO(User user) {
-        return new UserDTO(user, connectionManager.isUserOnline(user.getId()));
+        return new UserDTO(user, presenceService.isUserOnline(user.getId()));
     }
 
     public CurrentUserDTO toCurrentUserDTO(User user) {
-        return new CurrentUserDTO(user, connectionManager.isUserOnline(user.getId()));
+        return new CurrentUserDTO(user, presenceService.isUserOnline(user.getId()));
     }
 
     public User updateUser(String displayName, String email, User user, MultipartFile file) {

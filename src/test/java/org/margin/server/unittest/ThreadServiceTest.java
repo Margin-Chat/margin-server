@@ -19,7 +19,7 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -61,7 +61,7 @@ class ThreadServiceTest {
     @Mock
     private ChannelLookup channelLookup;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
 
     @InjectMocks
     private ThreadService threadService;

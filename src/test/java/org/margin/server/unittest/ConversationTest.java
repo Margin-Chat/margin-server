@@ -19,7 +19,7 @@ import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.Mock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,7 +44,7 @@ class ConversationServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
@@ -63,7 +63,7 @@ class ConversationServiceTest {
                 conversationMemberRepository,
                 userRepository,
                 null, // self placeholder
-                connectionManager,
+                presenceService,
                 eventPublisher,
                 userService
         );

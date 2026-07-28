@@ -1,5 +1,6 @@
 package org.margin.server.storage.services;
 
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.margin.entities.Margin;
@@ -10,7 +11,6 @@ import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +27,16 @@ public class StoredFileService implements StorageLookup {
     private static final int MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
     private final StoredFileRepository storedFileRepository;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final StorageService storageService;
     private final SubscriptionValidationService subscriptionValidationService;
 
     public StoredFileService(StoredFileRepository storedFileRepository,
-                             ConnectionManager connectionManager,
+                             PresenceService presenceService,
                              StorageService storageService,
                              SubscriptionValidationService subscriptionValidationService) {
         this.storedFileRepository = storedFileRepository;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.storageService = storageService;
         this.subscriptionValidationService = subscriptionValidationService;
     }
@@ -111,7 +111,7 @@ public class StoredFileService implements StorageLookup {
                 .collect(Collectors.groupingBy(
                         StoredFile::getMessageId,
                         Collectors.mapping(
-                                f -> StoredFileDTO.from(f, connectionManager.isUserOnline(f.getUploadedBy().getId())),
+                                f -> StoredFileDTO.from(f, presenceService.isUserOnline(f.getUploadedBy().getId())),
                                 Collectors.toList()
                         )
                 ));

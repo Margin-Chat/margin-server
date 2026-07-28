@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -16,11 +17,22 @@ public class PresenceService {
 
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
+    private final PresenceRegistry presenceRegistry;
 
     public PresenceService(ApplicationEventPublisher eventPublisher,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           PresenceRegistry presenceRegistry) {
         this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
+        this.presenceRegistry = presenceRegistry;
+    }
+
+    public boolean isUserOnline(Long userId) {
+        return presenceRegistry.isUserOnline(userId);
+    }
+
+    public Set<Long> getOnlineUserIds() {
+        return presenceRegistry.getOnlineUserIds();
     }
 
     public void userConnected(User user) {

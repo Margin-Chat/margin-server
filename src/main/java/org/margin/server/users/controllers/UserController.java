@@ -1,16 +1,16 @@
 package org.margin.server.users.controllers;
 
 import org.margin.server.bugs.services.BugReportService;
+import org.margin.server.presence.PresenceService;
+import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.shared.ratelimit.RateLimitConfig;
 import org.margin.server.shared.ratelimit.RateLimitService;
-import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.*;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,17 +23,17 @@ import java.util.List;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final UserService userService;
     private final ConversationService conversationService;
     private final MarginService marginService;
     private final RateLimitService rateLimitService;
     private final BugReportService bugReportService;
 
-    public UserController(ConnectionManager connectionManager,
+    public UserController(PresenceService presenceService,
                           UserService userService,
                           ConversationService conversationService, MarginService marginService, RateLimitService rateLimitService, BugReportService bugReportService) {
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.userService = userService;
         this.conversationService = conversationService;
         this.marginService = marginService;
@@ -49,7 +49,7 @@ public class UserController {
 
     @GetMapping("/get_all_users")
     public List<UserDTO> getAllOnlineUsersOnServer(@AuthenticationPrincipal User user) {
-        return connectionManager.getOnlineUserIds()
+        return presenceService.getOnlineUserIds()
                 .stream()
                 .map(userService::getById)
                 .filter(u -> !u.getId().equals(user.getId()))
@@ -59,7 +59,7 @@ public class UserController {
 
     @GetMapping("/me")
     public CurrentUserDTO getCurrentUser(@AuthenticationPrincipal User user) {
-        return new CurrentUserDTO(user, connectionManager.isUserOnline(user.getId()));
+        return new CurrentUserDTO(user, presenceService.isUserOnline(user.getId()));
     }
 
     @PostMapping("/{userId}/keys")
@@ -140,7 +140,7 @@ public class UserController {
             }
         }
         User updatedUser = userService.updateUser(displayName, email, user, file);
-        return new CurrentUserDTO(updatedUser, connectionManager.isUserOnline(updatedUser.getId()));
+        return new CurrentUserDTO(updatedUser, presenceService.isUserOnline(updatedUser.getId()));
     }
 
     @PostMapping("/report_bug")

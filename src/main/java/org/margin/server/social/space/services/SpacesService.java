@@ -2,6 +2,7 @@ package org.margin.server.social.space.services;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
@@ -19,7 +20,6 @@ import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +36,7 @@ public class SpacesService {
     private final MarginMemberRepository marginMemberRepository;
     private final SpacesCreationService spacesCreationService;
     private final MarginMapper marginMapper;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final SpacesActions spacesActions;
 
     public SpacesService(SpacesRepository spacesRepository,
@@ -45,7 +45,7 @@ public class SpacesService {
                          MarginMemberRepository marginMemberRepository,
                          SpacesCreationService spacesCreationService,
                          MarginMapper marginMapper,
-                         ConnectionManager connectionManager,
+                         PresenceService presenceService,
                          SpacesActions spacesActions) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
@@ -53,7 +53,7 @@ public class SpacesService {
         this.marginMemberRepository = marginMemberRepository;
         this.spacesCreationService = spacesCreationService;
         this.marginMapper = marginMapper;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.spacesActions = spacesActions;
     }
 
@@ -117,7 +117,7 @@ public class SpacesService {
         User memberUser = spaceMember.getUser();
 
         return new SpaceMemberDTO(
-                new UserDTO(memberUser, connectionManager.isUserOnline(memberUser.getId())),
+                new UserDTO(memberUser, presenceService.isUserOnline(memberUser.getId())),
                 spaceMember.getSpace().getId(),
                 spaceMember.getRole(),
                 spaceMember.getJoinedAt()
@@ -154,7 +154,7 @@ public class SpacesService {
         User user = saved.getUser();
 
         return new SpaceMemberDTO(
-                new UserDTO(user, connectionManager.isUserOnline(user.getId())),
+                new UserDTO(user, presenceService.isUserOnline(user.getId())),
                 saved.getSpace().getId(),
                 saved.getRole(),
                 saved.getJoinedAt()

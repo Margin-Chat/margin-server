@@ -2,18 +2,18 @@ package org.margin.server.sfu.services;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.PresenceService;
+import org.margin.server.sfu.events.ChannelCallInviteEvent;
+import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
-import org.margin.server.sfu.events.ChannelCallInviteEvent;
-import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ import java.util.Objects;
 public class SfuService {
 
     private final ApplicationEventPublisher eventPublisher;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final UserService userService;
     private final UserRepository userRepository;
 
@@ -44,9 +44,9 @@ public class SfuService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public SfuService(ApplicationEventPublisher eventPublisher, ConnectionManager connectionManager, UserService userService, UserRepository userRepository) {
+    public SfuService(ApplicationEventPublisher eventPublisher, PresenceService presenceService, UserService userService, UserRepository userRepository) {
         this.eventPublisher = eventPublisher;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.userService = userService;
         this.userRepository = userRepository;
     }
@@ -73,14 +73,14 @@ public class SfuService {
     public void notifyUserJoined(Long channelId, Long userId) {
         User user = userService.getById(userId);
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
-                channelId, new UserDTO(user, connectionManager.isUserOnline(userId))
+                channelId, new UserDTO(user, presenceService.isUserOnline(userId))
         );
         eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload));
     }
 
     public void inviteToChannelCall(User inviter, Long recipientId, Long channelId, String channelName) {
         ChannelCallInvitePayload payload = new ChannelCallInvitePayload(
-                channelId, channelName, new UserDTO(inviter, connectionManager.isUserOnline(inviter.getId()))
+                channelId, channelName, new UserDTO(inviter, presenceService.isUserOnline(inviter.getId()))
         );
         eventPublisher.publishEvent(new ChannelCallInviteEvent(recipientId, payload));
     }
@@ -104,7 +104,7 @@ public class SfuService {
             return peerIds.stream()
                     .map(id -> userRepository.findById(Long.parseLong(id)).orElse(null))
                     .filter(Objects::nonNull)
-                    .map(u -> new UserDTO(u, connectionManager.isUserOnline(u.getId())))
+                    .map(u -> new UserDTO(u, presenceService.isUserOnline(u.getId())))
                     .toList();
         } catch (Exception e) {
             log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());

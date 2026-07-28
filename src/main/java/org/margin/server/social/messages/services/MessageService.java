@@ -1,5 +1,6 @@
 package org.margin.server.social.messages.services;
 
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -15,7 +16,6 @@ import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.services.StorageLookup;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -33,7 +33,7 @@ public class MessageService {
     private final MessageReactionRepository messageReactionRepository;
     private final StorageLookup storageLookup;
     private final ConversationService conversationService;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final ApplicationEventPublisher eventPublisher;
     private final MessageActions messageActions;
     private final MessageValidationService messageValidationService;
@@ -43,7 +43,7 @@ public class MessageService {
                           MessageReactionRepository messageReactionRepository,
                           StorageLookup storageLookup,
                           ConversationService conversationService,
-                          ConnectionManager connectionManager,
+                          PresenceService presenceService,
                           ApplicationEventPublisher eventPublisher,
                           MessageActions messageActions,
                           MessageValidationService messageValidationService, ConversationValidationService conversationValidationService) {
@@ -51,7 +51,7 @@ public class MessageService {
         this.messageReactionRepository = messageReactionRepository;
         this.storageLookup = storageLookup;
         this.conversationService = conversationService;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.eventPublisher = eventPublisher;
         this.messageActions = messageActions;
         this.messageValidationService = messageValidationService;
@@ -64,7 +64,7 @@ public class MessageService {
         Conversation channelScope = channelScopeOf(conversation);
         return new MessageResult(
                 MessageDTO.from(message)
-                        .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                        .withOnline(presenceService.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
                         .withChannelName(channelScope.getChannel() == null ? null : channelScope.getChannel().getName())
                         .withAttachments(attachmentsFor(message.getId()))
@@ -82,7 +82,7 @@ public class MessageService {
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
         MessageResult result = new MessageResult(
                 MessageDTO.from(message)
-                        .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                        .withOnline(presenceService.isUserOnline(message.getFromUser().getId()))
                         .withMarginId(getMarginId(conversation))
                         .withAttachments(attachmentsFor(message.getId()))
                         .build(),
@@ -99,7 +99,7 @@ public class MessageService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         MessageDTO messageDTO = MessageDTO.from(message)
-                .withOnline(connectionManager.isUserOnline(message.getFromUser().getId()))
+                .withOnline(presenceService.isUserOnline(message.getFromUser().getId()))
                 .withMarginId(getMarginId(conversation))
                 .build();
 
@@ -129,7 +129,7 @@ public class MessageService {
         return messages.stream()
                 .map(msg ->
                         MessageDTO.from(msg)
-                                .withOnline(connectionManager.isUserOnline(msg.getFromUser().getId()))
+                                .withOnline(presenceService.isUserOnline(msg.getFromUser().getId()))
                                 .withMarginId(getMarginId(conversation))
                                 .withReactions(reactionsByMessageId.getOrDefault(msg.getId(), List.of()))
                                 .withAttachments(attachmentsByMessageId.getOrDefault(msg.getId(), List.of()))

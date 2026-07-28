@@ -1,5 +1,6 @@
 package org.margin.server.social.margin.service;
 
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
@@ -10,23 +11,22 @@ import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.storage.services.StorageUrls;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class MarginMapper {
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
 
-    public MarginMapper(ConnectionManager connectionManager) {
-        this.connectionManager = connectionManager;
+    public MarginMapper(PresenceService presenceService) {
+        this.presenceService = presenceService;
     }
 
     public MarginDTO marginToDto(Margin margin) {
         List<MarginMemberDTO> members = margin.getMembers().stream()
                 .map(m -> new MarginMemberDTO(
-                        new UserDTO(m.getUser(), connectionManager.isUserOnline(m.getUser().getId())),
+                        new UserDTO(m.getUser(), presenceService.isUserOnline(m.getUser().getId())),
                         m.getRole(),
                         m.getJoinedAt()
                 ))
@@ -46,7 +46,7 @@ public class MarginMapper {
                 .map(m -> new SpaceMemberDTO(
                         new UserDTO(
                                 m.getUser(),
-                                connectionManager.isUserOnline(m.getUser().getId())),
+                                presenceService.isUserOnline(m.getUser().getId())),
                         m.getSpace().getId(),
                         m.getRole(),
                         m.getJoinedAt()

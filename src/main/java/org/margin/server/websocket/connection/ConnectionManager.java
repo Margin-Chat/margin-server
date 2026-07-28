@@ -2,6 +2,7 @@ package org.margin.server.websocket.connection;
 
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.PresenceRegistry;
 import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class ConnectionManager {
+public class ConnectionManager implements PresenceRegistry {
 
     private final Map<Long, Set<ClientConnection>> connections = new ConcurrentHashMap<>();
 
@@ -32,6 +33,7 @@ public class ConnectionManager {
         return false;
     }
 
+    @Override
     public boolean isUserOnline(Long userId) {
         Set<ClientConnection> sessions = connections.get(userId);
         return sessions != null && sessions.stream().anyMatch(ClientConnection::isActive);
@@ -70,6 +72,7 @@ public class ConnectionManager {
         connections.clear();
     }
 
+    @Override
     public Set<Long> getOnlineUserIds() {
         return new HashSet<>(connections.keySet());
     }
