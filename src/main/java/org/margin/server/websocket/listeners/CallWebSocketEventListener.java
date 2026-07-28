@@ -31,7 +31,7 @@ public class CallWebSocketEventListener {
     }
 
     @EventListener
-    public void onMissedCall(org.margin.server.notifications.events.MissedCallEvent missedCallEvent) {
+    public void onMissedCall(MissedCallEvent missedCallEvent) {
         String json = webSocketMessageBuilder.buildMessage(
                 WebSocketMessageType.CALL_NO_ANSWER,
                 missedCallEvent.getRecipient().getId(),
