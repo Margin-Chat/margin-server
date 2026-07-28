@@ -1,7 +1,7 @@
 package org.margin.server.social.calls.events;
 
 import lombok.Getter;
-import org.margin.server.websocket.models.payloads.CallSessionDescription;
+import org.margin.server.social.calls.models.CallSessionDescription;
 import org.springframework.context.ApplicationEvent;
 
 @Getter

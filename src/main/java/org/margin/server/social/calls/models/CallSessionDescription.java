@@ -1,4 +1,4 @@
-package org.margin.server.websocket.models.payloads;
+package org.margin.server.social.calls.models;
 
 public record CallSessionDescription(
         String sdp,

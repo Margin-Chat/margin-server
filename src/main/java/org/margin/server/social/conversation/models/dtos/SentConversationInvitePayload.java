@@ -1,6 +1,5 @@
-package org.margin.server.websocket.models.payloads;
+package org.margin.server.social.conversation.models.dtos;
 
-import org.margin.server.social.conversation.models.dtos.ConversationDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 
 public record SentConversationInvitePayload(ConversationDTO conversation, UserDTO toUser) {

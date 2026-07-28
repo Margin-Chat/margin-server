@@ -1,6 +1,9 @@
 package org.margin.server.websocket.models;
 
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
+import org.margin.server.social.calls.models.CallCandidate;
+import org.margin.server.social.calls.models.CallMediaState;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.websocket.models.payloads.*;
 
@@ -29,7 +32,7 @@ public enum WebSocketMessageType {
     // Call
     CALL_OFFER(IncomingCallOfferPayload.class),
     CALL_RESPONSE(IncomingCallResponsePayload.class),
-    CALL_CANDIDATE(IncomingCallCandidatePayload.class),
+    CALL_CANDIDATE(CallCandidate.class),
     CALL_CREATED(null),
     CALL_END(IncomingCallEndPayload.class),
     CALL_NO_ANSWER(String.class),
@@ -37,7 +40,7 @@ public enum WebSocketMessageType {
     USER_JOINED_VOICE(ChannelVoiceParticipantPayload.class),
     USER_LEFT_VOICE(ChannelVoiceParticipantPayload.class),
     CHANNEL_CALL_INVITE(String.class),
-    CALL_MEDIA_STATE(CallMediaStatePayload.class),
+    CALL_MEDIA_STATE(CallMediaState.class),
 
     // Notification
     NOTIFICATION(NotificationPayload.class),

@@ -11,7 +11,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.models.WebSocketMessageType;
+import org.margin.server.sfu.models.VoiceParticipantChange;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
@@ -75,7 +75,7 @@ public class SfuService {
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
                 channelId, new UserDTO(user, presenceService.isUserOnline(userId))
         );
-        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload));
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.JOINED, payload));
     }
 
     public void inviteToChannelCall(User inviter, Long recipientId, Long channelId, String channelName) {
@@ -86,7 +86,7 @@ public class SfuService {
     }
 
     public void notifyUserLeft(Long channelId, Long userId) {
-        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_LEFT_VOICE,
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.LEFT,
                 new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId)))));
     }
 

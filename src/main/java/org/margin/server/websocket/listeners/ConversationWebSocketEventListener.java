@@ -11,7 +11,7 @@ import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.ConversationAcceptedPayload;
 import org.margin.server.websocket.models.payloads.ConversationDeclinedPayload;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.websocket.models.payloads.ConversationReadPayload;
 import org.margin.server.websocket.models.payloads.TypingIndicatorEventPayload;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;

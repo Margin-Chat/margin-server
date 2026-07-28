@@ -13,7 +13,7 @@ import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.models.payloads.CallSessionDescription;
+import org.margin.server.social.calls.models.CallSessionDescription;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 

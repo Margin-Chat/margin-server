@@ -2,6 +2,7 @@ package org.margin.server.websocket.listeners;
 
 import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
+import org.margin.server.sfu.models.VoiceParticipantChange;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -36,12 +37,19 @@ public class SfuWebSocketEventListener {
 
     @EventListener
     public void onChannelVoiceParticipantChanged(ChannelVoiceParticipantEvent event) {
-        String json = messageBuilder.buildMessage(event.getWsType(), event.getPayload().channelId(), event.getPayload());
+        String json = messageBuilder.buildMessage(toMessageType(event.getChange()), event.getPayload().channelId(), event.getPayload());
         List<User> members = spaceMemberRepository.findSpaceMemberByChannel_Id(event.getChannelId());
         for (User member : members) {
             if (connectionManager.isUserOnline(member.getId())) {
                 connectionManager.sendToUser(member.getId(), json);
             }
         }
+    }
+
+    private static WebSocketMessageType toMessageType(VoiceParticipantChange change) {
+        return switch (change) {
+            case JOINED -> WebSocketMessageType.USER_JOINED_VOICE;
+            case LEFT -> WebSocketMessageType.USER_LEFT_VOICE;
+        };
     }
 }

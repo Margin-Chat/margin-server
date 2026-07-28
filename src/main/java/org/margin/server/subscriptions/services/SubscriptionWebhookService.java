@@ -16,13 +16,11 @@ import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
+import org.margin.server.subscriptions.events.SubscriptionUpdatedEvent;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -50,8 +48,6 @@ public class SubscriptionWebhookService {
     private final MollieProperties mollieProperties;
     private final SubscriptionPricingProperties pricingProperties;
     private final EmailService emailService;
-    private final ConnectionManager connectionManager;
-    private final WebSocketMessageBuilder wsMessageBuilder;
     private final ApplicationEventPublisher eventPublisher;
     private final MarginService marginService;
     private final SubscriptionWebhookService self;
@@ -62,8 +58,6 @@ public class SubscriptionWebhookService {
                                       MollieProperties mollieProperties,
                                       SubscriptionPricingProperties pricingProperties,
                                       EmailService emailService,
-                                      ConnectionManager connectionManager,
-                                      WebSocketMessageBuilder wsMessageBuilder,
                                       ApplicationEventPublisher eventPublisher,
                                       MarginService marginService,
                                       @Lazy SubscriptionWebhookService self) {
@@ -73,8 +67,6 @@ public class SubscriptionWebhookService {
         this.mollieProperties = mollieProperties;
         this.pricingProperties = pricingProperties;
         this.emailService = emailService;
-        this.connectionManager = connectionManager;
-        this.wsMessageBuilder = wsMessageBuilder;
         this.eventPublisher = eventPublisher;
         this.marginService = marginService;
         this.self = self;
@@ -287,12 +279,7 @@ public class SubscriptionWebhookService {
         try {
             MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
             SubscriptionDTO dto = subscriptionService.getSubscriptionDtoForMargin(subscription.getMargin());
-            String json = wsMessageBuilder.buildMessage(
-                    WebSocketMessageType.SUBSCRIPTION_UPDATED,
-                    owner.getUser().getId(),
-                    dto
-            );
-            connectionManager.sendToUser(owner.getUser().getId(), json);
+            eventPublisher.publishEvent(new SubscriptionUpdatedEvent(owner.getUser().getId(), dto));
         } catch (Exception e) {
             log.warn("Failed to push subscription update for subscription {}", subscription.getId(), e);
         }

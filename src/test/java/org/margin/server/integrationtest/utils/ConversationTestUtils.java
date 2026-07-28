@@ -11,8 +11,8 @@ import org.margin.server.social.conversation.repositories.ConversationRepository
 import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
-import org.margin.server.websocket.models.payloads.SentConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

@@ -15,6 +15,7 @@ import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
+import org.margin.server.subscriptions.events.SubscriptionUpdatedEvent;
 import org.margin.server.subscriptions.entities.SubscriptionLimits;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
@@ -23,8 +24,6 @@ import org.margin.server.subscriptions.services.MollieClient;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -56,10 +55,6 @@ class SubscriptionWebhookServiceTest {
     @Mock
     private EmailService emailService;
     @Mock
-    private ConnectionManager connectionManager;
-    @Mock
-    private WebSocketMessageBuilder wsMessageBuilder;
-    @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private MarginService marginService;
@@ -79,7 +74,7 @@ class SubscriptionWebhookServiceTest {
         SubscriptionPricingProperties pricing = new SubscriptionPricingProperties("EUR",
                 Map.of(SubscriptionTier.SMALL, smallConfig));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
-                subscriptionService, mollie, pricing, emailService, connectionManager, wsMessageBuilder,
+                subscriptionService, mollie, pricing, emailService,
                 eventPublisher, marginService, null);
         ReflectionTestUtils.setField(service, "self", service);
     }
@@ -210,19 +205,22 @@ class SubscriptionWebhookServiceTest {
 
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
-        when(wsMessageBuilder.buildMessage(any(), any(), any())).thenReturn("{}");
 
         service.handleWebhook(PAYMENT_ID);
 
         assertThat(subscription.getPendingPaymentId()).isNull();
         verify(subscriptionRepository).save(subscription);
-        ArgumentCaptor<SubscriptionStatusChangedEvent> failedCaptor =
+        ArgumentCaptor<SubscriptionStatusChangedEvent> statusCaptor =
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
-        verify(eventPublisher).publishEvent(failedCaptor.capture());
-        assertThat(failedCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
-        assertThat(failedCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
-        assertThat(failedCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
-        verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
+        verify(eventPublisher).publishEvent(statusCaptor.capture());
+        assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
+        assertThat(statusCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
+
+        ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =
+                ArgumentCaptor.forClass(SubscriptionUpdatedEvent.class);
+        verify(eventPublisher).publishEvent(pushCaptor.capture());
+        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription).getId());
     }
 
     @Test
@@ -287,17 +285,20 @@ class SubscriptionWebhookServiceTest {
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
         when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), anyString()))
                 .thenReturn(mollieSub);
-        when(wsMessageBuilder.buildMessage(any(), any(), any())).thenReturn("{}");
 
         service.handleWebhook(PAYMENT_ID);
 
-        ArgumentCaptor<SubscriptionStatusChangedEvent> upgradedCaptor =
+        ArgumentCaptor<SubscriptionStatusChangedEvent> statusCaptor =
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
-        verify(eventPublisher).publishEvent(upgradedCaptor.capture());
-        assertThat(upgradedCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_UPGRADED);
-        assertThat(upgradedCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
-        assertThat(upgradedCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
-        verify(connectionManager).sendToUser(eq(ownerUserOf(subscription).getId()), anyString());
+        verify(eventPublisher).publishEvent(statusCaptor.capture());
+        assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_UPGRADED);
+        assertThat(statusCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
+
+        ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =
+                ArgumentCaptor.forClass(SubscriptionUpdatedEvent.class);
+        verify(eventPublisher).publishEvent(pushCaptor.capture());
+        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription).getId());
     }
 
     @Test
@@ -536,4 +537,5 @@ class SubscriptionWebhookServiceTest {
         lenient().when(sub.nextPaymentDate()).thenReturn(JsonNullable.of(nextPaymentDate));
         return sub;
     }
+
 }

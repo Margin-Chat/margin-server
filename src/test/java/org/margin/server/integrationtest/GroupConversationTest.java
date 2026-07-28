@@ -13,7 +13,7 @@ import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Propagation;
