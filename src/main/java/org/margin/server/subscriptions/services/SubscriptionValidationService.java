@@ -1,7 +1,7 @@
 package org.margin.server.subscriptions.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.events.MemberLimitWarningEvent;
+import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;

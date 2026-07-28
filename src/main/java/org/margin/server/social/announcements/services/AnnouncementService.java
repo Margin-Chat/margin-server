@@ -1,6 +1,6 @@
 package org.margin.server.social.announcements.services;
 
-import org.margin.server.notifications.events.AnnouncementCreatedEvent;
+import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
 import org.margin.server.social.announcements.models.Announcement;
 import org.margin.server.social.announcements.models.dtos.AnnouncementDTO;
 import org.margin.server.social.announcements.models.dtos.CreateAnnouncementRequest;

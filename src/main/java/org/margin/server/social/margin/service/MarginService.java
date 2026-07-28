@@ -1,7 +1,7 @@
 package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.events.UserAddedToMarginEvent;
+import org.margin.server.social.margin.events.UserAddedToMarginEvent;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;

@@ -1,12 +1,12 @@
 package org.margin.server.notifications.listeners;
 
 import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.events.AnnouncementCreatedEvent;
-import org.margin.server.notifications.events.MemberLimitWarningEvent;
-import org.margin.server.notifications.events.MissedCallEvent;
-import org.margin.server.notifications.events.SubscriptionStatusChangedEvent;
-import org.margin.server.notifications.events.UserAddedToMarginEvent;
-import org.margin.server.notifications.events.UserInvitedToMarginEvent;
+import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
+import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
+import org.margin.server.social.calls.events.MissedCallEvent;
+import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
+import org.margin.server.social.margin.events.UserAddedToMarginEvent;
+import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;

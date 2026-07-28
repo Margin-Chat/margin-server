@@ -1,4 +1,4 @@
-package org.margin.server.notifications.events;
+package org.margin.server.subscriptions.events;
 
 import lombok.Getter;
 import org.margin.server.notifications.NotificationType;

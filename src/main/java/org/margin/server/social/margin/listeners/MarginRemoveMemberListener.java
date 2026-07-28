@@ -1,4 +1,6 @@
-package org.margin.server.social.margin.events;
+package org.margin.server.social.margin.listeners;
+
+import org.margin.server.social.margin.events.RemoveUserFromMarginEvent;
 
 import org.margin.server.social.margin.service.MarginService;
 import org.springframework.context.ApplicationListener;

@@ -1,4 +1,4 @@
-package org.margin.server.notifications.events;
+package org.margin.server.social.calls.events;
 
 import lombok.Getter;
 import org.margin.server.users.models.User;

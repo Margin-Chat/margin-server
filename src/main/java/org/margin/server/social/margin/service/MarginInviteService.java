@@ -1,6 +1,6 @@
 package org.margin.server.social.margin.service;
 
-import org.margin.server.notifications.events.UserInvitedToMarginEvent;
+import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.MarginRole;

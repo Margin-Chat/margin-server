@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.email.EmailService;
 import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.events.SubscriptionStatusChangedEvent;
+import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;

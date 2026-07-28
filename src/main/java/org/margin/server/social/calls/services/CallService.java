@@ -2,7 +2,7 @@ package org.margin.server.social.calls.services;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.events.MissedCallEvent;
+import org.margin.server.social.calls.events.MissedCallEvent;
 import org.margin.server.social.calls.events.CallEndedEvent;
 import org.margin.server.social.calls.events.CallOfferedEvent;
 import org.margin.server.social.calls.events.CallResponseForwardedEvent;

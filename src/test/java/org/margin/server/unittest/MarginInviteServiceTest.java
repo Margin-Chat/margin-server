@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.notifications.events.UserInvitedToMarginEvent;
+import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.MarginRole;
