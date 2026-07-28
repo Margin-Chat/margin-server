@@ -9,6 +9,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -16,6 +17,7 @@ import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +31,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
     private final Map<WebSocketMessageType, WebSocketMessageProcessor<Object>> dispatch;
 
     @SuppressWarnings("unchecked")
@@ -36,11 +39,13 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
                             JwtService jwtService,
                             ConnectionManager connectionManager,
                             PresenceService presenceService,
+                            UserLookup userLookup,
                             List<WebSocketMessageProcessor<?>> processors) {
         this.dbExecutor = dbExecutor;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
         this.dispatch = processors.stream()
                 .collect(Collectors.toMap(
                         WebSocketMessageProcessor::getType,
@@ -94,7 +99,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private void onConnectionEstablished(ChannelHandlerContext ctx, User user) {
         ClientConnection connection = new WebSocketClientConnection(ctx.channel(), user);
         connectionManager.addConnection(user, connection);
-        presenceService.userConnected(user);
+        presenceService.userConnected(user.getId());
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
@@ -155,8 +160,8 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         if (user != null) {
             boolean lastSession = connectionManager.removeConnection(user, ctx.channel());
             if (lastSession) {
-                presenceService.userDisconnected(user);
-                dbExecutor.execute(() -> presenceService.stampLastSeen(user.getId()));
+                presenceService.userDisconnected(user.getId());
+                dbExecutor.execute(() -> stampLastSeen(user.getId()));
             }
         }
     }
@@ -170,5 +175,13 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private String buildWsUrl(FullHttpRequest req) {
         String host = req.headers().get("Host", "localhost:8081");
         return "ws://" + host + req.uri();
+    }
+
+    private void stampLastSeen(Long userId) {
+        try {
+            userLookup.markLastSeen(userId, Instant.now());
+        } catch (Exception e) {
+            log.warn("Failed to stamp lastSeenAt for user {}", userId, e);
+        }
     }
 }

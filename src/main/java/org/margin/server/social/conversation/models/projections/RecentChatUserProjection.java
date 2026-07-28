@@ -1,4 +1,4 @@
-package org.margin.server.users.repositories.projections;
+package org.margin.server.social.conversation.models.projections;
 
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.users.models.User;

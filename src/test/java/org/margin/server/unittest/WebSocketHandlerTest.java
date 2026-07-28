@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.WebSocketAttributes;
 import org.margin.server.websocket.WebSocketHandler;
@@ -21,6 +22,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.margin.server.unittest.utils.UserTestUtils.*;
 
@@ -33,6 +37,8 @@ class WebSocketHandlerTest {
     private ConnectionManager connectionManager;
     @Mock
     private PresenceService presenceService;
+    @Mock
+    private UserLookup userLookup;
     @Mock
     private ChannelHandlerContext ctx;
     @Mock
@@ -66,6 +72,7 @@ class WebSocketHandlerTest {
                 jwtService,
                 connectionManager,
                 presenceService,
+                userLookup,
                 List.of(testProcessor)
         );
 
@@ -124,7 +131,20 @@ class WebSocketHandlerTest {
         handler.channelInactive(ctx);
 
         verify(connectionManager).removeConnection(user, channel);
-        verify(presenceService).userDisconnected(user);
+        verify(presenceService).userDisconnected(user.getId());
+        verify(userLookup).markLastSeen(eq(1L), any());
+    }
+
+    @Test
+    void channelInactive_swallowsLastSeenFailures() {
+        User user = createUser(1L, "sender");
+        when(userAttribute.get()).thenReturn(user);
+        when(connectionManager.removeConnection(user, channel)).thenReturn(true);
+        doThrow(new RuntimeException("db down")).when(userLookup).markLastSeen(eq(1L), any());
+
+        assertDoesNotThrow(() -> handler.channelInactive(ctx));
+
+        verify(presenceService).userDisconnected(user.getId());
     }
 
     @Test

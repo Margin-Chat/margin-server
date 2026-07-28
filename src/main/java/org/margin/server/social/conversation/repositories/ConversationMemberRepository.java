@@ -6,7 +6,7 @@ import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.projections.RecentChatUserProjection;
+import org.margin.server.social.conversation.models.projections.RecentChatUserProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

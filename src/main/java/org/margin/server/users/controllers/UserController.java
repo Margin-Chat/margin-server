@@ -1,13 +1,9 @@
 package org.margin.server.users.controllers;
 
-import org.margin.server.bugs.services.BugReportService;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.shared.ratelimit.RateLimitConfig;
 import org.margin.server.shared.ratelimit.RateLimitService;
-import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.margin.models.dtos.MarginDTO;
-import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.*;
 import org.margin.server.users.services.UserService;
@@ -25,20 +21,14 @@ public class UserController {
 
     private final PresenceService presenceService;
     private final UserService userService;
-    private final ConversationService conversationService;
-    private final MarginService marginService;
     private final RateLimitService rateLimitService;
-    private final BugReportService bugReportService;
 
     public UserController(PresenceService presenceService,
                           UserService userService,
-                          ConversationService conversationService, MarginService marginService, RateLimitService rateLimitService, BugReportService bugReportService) {
+                          RateLimitService rateLimitService) {
         this.presenceService = presenceService;
         this.userService = userService;
-        this.conversationService = conversationService;
-        this.marginService = marginService;
         this.rateLimitService = rateLimitService;
-        this.bugReportService = bugReportService;
     }
 
     @GetMapping("/{userId}")
@@ -97,11 +87,6 @@ public class UserController {
         ));
     }
 
-    @GetMapping("/recent_chat_users")
-    public List<RecentChatUsersDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
-        return conversationService.getRecentChatUsers(user.getId());
-    }
-
     @GetMapping("/search_shared_margin")
     public List<UserSearchResultDTO> searchForUserWithSharedMargin(@AuthenticationPrincipal User user,
                                                                    @RequestParam String query) {
@@ -143,13 +128,6 @@ public class UserController {
         return new CurrentUserDTO(updatedUser, presenceService.isUserOnline(updatedUser.getId()));
     }
 
-    @PostMapping("/report_bug")
-    public ResponseEntity<Void> reportBug(@RequestBody BugReportRequest request,
-                                          @AuthenticationPrincipal User user) {
-        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user);
-        return ResponseEntity.ok().build();
-    }
-
     @PatchMapping("/password")
     public ResponseEntity<Void> changePassword(
             @RequestBody ChangePasswordRequest request,
@@ -167,10 +145,7 @@ public class UserController {
 
     @DeleteMapping("/delete")
     public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal User user) {
-        List<Long> marginIds = marginService.getMarginsForUser(user).stream()
-                .map(MarginDTO::marginId)
-                .toList();
-        userService.deleteUser(marginIds, user);
+        userService.deleteUser(user);
         return ResponseEntity.ok().build();
     }
 }

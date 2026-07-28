@@ -1,6 +1,7 @@
-package org.margin.server.users.models.dtos;
+package org.margin.server.social.conversation.models.dtos;
 
-import org.margin.server.social.conversation.models.dtos.ConversationDTO;
+
+import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
 

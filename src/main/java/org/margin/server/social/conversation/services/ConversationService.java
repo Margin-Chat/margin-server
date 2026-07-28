@@ -15,7 +15,7 @@ import org.margin.server.social.conversation.repositories.ConversationMemberRepo
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.RecentChatUsersDTO;
+import org.margin.server.social.conversation.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;

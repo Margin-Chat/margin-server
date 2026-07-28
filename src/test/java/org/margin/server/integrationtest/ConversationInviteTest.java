@@ -8,7 +8,7 @@ import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.RecentChatUsersDTO;
+import org.margin.server.social.conversation.models.dtos.RecentChatUsersDTO;
 import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
 import org.springframework.http.HttpStatus;

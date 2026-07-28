@@ -1,5 +1,6 @@
 package org.margin.server.storage.services;
 
+import org.margin.server.shared.storage.PublicUrls;
 import org.margin.server.storage.StorageProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,8 +9,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class StorageUrls {
     private static final Logger log = LoggerFactory.getLogger(StorageUrls.class);
-    private static final String[] PUBLIC_MARKERS = {"/user-profiles/", "/margin-icons/"};
-
     private static volatile StorageService storage;
     private static volatile String cdnBaseUrl;
     private static volatile boolean s3;
@@ -18,19 +17,11 @@ public class StorageUrls {
         StorageUrls.storage = storage;
         StorageUrls.cdnBaseUrl = properties.getS3().getCdnBaseUrl();
         StorageUrls.s3 = "s3".equalsIgnoreCase(properties.getType());
+        PublicUrls.configure(StorageUrls.cdnBaseUrl, StorageUrls.s3);
     }
 
     public static String publicUrl(String storedUrl) {
-        if (storedUrl == null || !s3 || cdnBaseUrl == null || cdnBaseUrl.isBlank()) {
-            return storedUrl;
-        }
-        for (String marker : PUBLIC_MARKERS) {
-            int idx = storedUrl.indexOf(marker);
-            if (idx >= 0) {
-                return cdnBaseUrl + storedUrl.substring(idx);
-            }
-        }
-        return storedUrl;
+        return PublicUrls.publicUrl(storedUrl);
     }
 
     public static String signedUrl(String storedUrl) {

@@ -2,8 +2,8 @@ package org.margin.server.users.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.social.margin.events.RemoveUserFromMarginEvent;
-import org.margin.server.storage.services.StorageService;
+import org.margin.server.users.api.ProfilePictureStore;
+import org.margin.server.users.events.UserDeletedEvent;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -32,20 +32,20 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
     private final PresenceService presenceService;
-    private final StorageService storageService;
+    private final ProfilePictureStore profilePictureStore;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        UserCacheService userCacheService,
                        PresenceService presenceService,
-                       StorageService storageService,
+                       ProfilePictureStore profilePictureStore,
                        ApplicationEventPublisher applicationEventPublisher,
                        PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
         this.presenceService = presenceService;
-        this.storageService = storageService;
+        this.profilePictureStore = profilePictureStore;
         this.applicationEventPublisher = applicationEventPublisher;
         this.passwordEncoder = passwordEncoder;
     }
@@ -104,9 +104,9 @@ public class UserService {
         if (email != null) user.setEmail(email);
         if (file != null && !file.isEmpty()) {
             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
-                storageService.deleteProfilePicture(user.getProfilePictureUrl());
+                profilePictureStore.delete(user.getProfilePictureUrl());
             }
-            String url = storageService.saveProfilePicture(file);
+            String url = profilePictureStore.save(file);
             user.setProfilePictureUrl(url);
         }
 
@@ -135,15 +135,10 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(List<Long> marginIds, User user) {
+    public void deleteUser(User user) {
         if (user.getProfilePictureUrl() != null) {
-            storageService.deleteProfilePicture(user.getProfilePictureUrl());
+            profilePictureStore.delete(user.getProfilePictureUrl());
         }
-
-        marginIds.forEach(marginId -> {
-            var removeUserFromMarginEvent = new RemoveUserFromMarginEvent(marginId, user.getId());
-            applicationEventPublisher.publishEvent(removeUserFromMarginEvent);
-        });
 
         UserEncryption encryption = user.getEncryption();
         encryption.setPublicKey(null);
@@ -156,6 +151,8 @@ public class UserService {
         user.setProfilePictureUrl(null);
         user.setDeletedAt(Instant.now());
         userRepository.save(user);
+
+        applicationEventPublisher.publishEvent(new UserDeletedEvent(user.getId()));
 
         log.info("User with id {} has been deleted", user.getId());
     }

@@ -10,7 +10,7 @@ import org.margin.server.social.conversation.repositories.ConversationMemberRepo
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.RecentChatUsersDTO;
+import org.margin.server.social.conversation.models.dtos.RecentChatUsersDTO;
 import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +81,7 @@ public class ConversationTestUtils {
     }
 
     public static List<RecentChatUsersDTO> getRecentChatUsers(User user) {
-        return userController.getRecentChatUsers(user);
+        return conversationController.getRecentChatUsers(user);
     }
 
     public static UnreadConversationsDTO getUnreadConversations(User user) {

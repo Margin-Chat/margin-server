@@ -234,4 +234,9 @@ public class ConversationController {
             @AuthenticationPrincipal User user) {
         return conversationService.getMemberPublicKeys(conversationId, user.getId());
     }
+
+    @GetMapping("/users/recent_chat_users")
+    public List<RecentChatUsersDTO> getRecentChatUsers(@AuthenticationPrincipal User user) {
+        return conversationService.getRecentChatUsers(user.getId());
+    }
 }

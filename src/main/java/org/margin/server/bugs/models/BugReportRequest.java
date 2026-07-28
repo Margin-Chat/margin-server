@@ -1,4 +1,4 @@
-package org.margin.server.users.models.dtos;
+package org.margin.server.bugs.models;
 
 public record BugReportRequest(String bugTitle, String bugDescription) {
 }
