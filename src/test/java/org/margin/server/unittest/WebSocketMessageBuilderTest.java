@@ -2,7 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import tools.jackson.databind.JsonNode;

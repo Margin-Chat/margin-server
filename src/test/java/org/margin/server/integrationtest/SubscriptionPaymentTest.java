@@ -8,7 +8,7 @@ import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.NotificationTestUtils;
 import org.margin.server.integrationtest.utils.SubscriptionTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.SubscriptionController;
 import org.margin.server.subscriptions.entities.Subscription;

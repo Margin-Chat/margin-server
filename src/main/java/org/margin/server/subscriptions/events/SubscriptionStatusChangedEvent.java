@@ -1,7 +1,7 @@
 package org.margin.server.subscriptions.events;
 
 import lombok.Getter;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEvent;
 

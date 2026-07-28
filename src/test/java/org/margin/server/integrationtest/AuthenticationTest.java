@@ -64,7 +64,7 @@ class AuthenticationTest extends MarginTestRunner {
         AuthTestUtils.login("dave@margin.chat", "wrong");
 
         User user = AuthTestUtils.findByEmail("dave@margin.chat");
-        assertEquals(1, user.getSecurity().getFailedLoginAttempts());
+        assertEquals(1, AuthTestUtils.securityOf(user).getFailedLoginAttempts());
     }
 
     @Test
@@ -77,8 +77,8 @@ class AuthenticationTest extends MarginTestRunner {
         AuthTestUtils.login("eve@margin.chat", "wrong");
 
         User user = AuthTestUtils.findByEmail("eve@margin.chat");
-        assertNotNull(user.getSecurity().getAccountLockedUntil());
-        assertTrue(user.getSecurity().getAccountLockedUntil().isAfter(java.time.Instant.now()));
+        assertNotNull(AuthTestUtils.securityOf(user).getAccountLockedUntil());
+        assertTrue(AuthTestUtils.securityOf(user).getAccountLockedUntil().isAfter(java.time.Instant.now()));
     }
 
     @Test
@@ -106,8 +106,8 @@ class AuthenticationTest extends MarginTestRunner {
         AuthTestUtils.login("grace@margin.chat", "correct");
 
         User user = AuthTestUtils.findByEmail("grace@margin.chat");
-        assertEquals(0, user.getSecurity().getFailedLoginAttempts());
-        assertNull(user.getSecurity().getAccountLockedUntil());
+        assertEquals(0, AuthTestUtils.securityOf(user).getFailedLoginAttempts());
+        assertNull(AuthTestUtils.securityOf(user).getAccountLockedUntil());
     }
 
     @Test

@@ -1,7 +1,7 @@
 package org.margin.server.notifications.services;
 
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.users.models.User;
 import org.margin.server.notifications.events.NotificationDeliveryEvent;

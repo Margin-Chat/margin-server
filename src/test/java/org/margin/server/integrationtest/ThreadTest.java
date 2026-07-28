@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.*;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.conversation.models.dtos.ThreadConversationDTO;
 import org.margin.server.social.conversation.models.dtos.ThreadSummaryDTO;

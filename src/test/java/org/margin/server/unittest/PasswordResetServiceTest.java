@@ -6,9 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.authentication.services.PasswordResetService;
+import org.margin.server.authentication.services.UserSecurityService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserCacheService;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +37,7 @@ class PasswordResetServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
     @Mock private UserCacheService userCacheService;
+    @Mock private UserSecurityService userSecurityService;
 
     @InjectMocks
     private PasswordResetService passwordResetService;
@@ -106,7 +107,7 @@ class PasswordResetServiceTest {
         assertNull(user.getEncryption().getSalt());
         assertNull(user.getEncryption().getIv());
         verify(userRepository).save(user);
-        assertEquals(1, user.getSecurity().getTokenVersion(), "reset must bump token version to revoke existing JWTs");
+        verify(userSecurityService).bumpTokenVersion(1L);
         verify(userCacheService).evictUserCache(1L);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
@@ -151,7 +152,6 @@ class PasswordResetServiceTest {
     private static User makeUser() {
         User user = createUser(1L, "Alice", "alice@margin.chat");
         user.setEncryption(createEncryption("old-public", "old-encrypted-private", "old-salt", "old-iv"));
-        user.setSecurity(new UserSecurity());
         return user;
     }
 

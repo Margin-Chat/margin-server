@@ -16,6 +16,7 @@ import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.shared.authorization.ChannelAudience;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.models.User;
@@ -29,7 +30,7 @@ import java.util.Optional;
 
 @Service
 @Slf4j
-public class SpacesService {
+public class SpacesService implements ChannelAudience {
     private final SpacesRepository spacesRepository;
     private final SpaceMemberRepository spaceMemberRepository;
     private final ChannelService channelService;
@@ -171,5 +172,12 @@ public class SpacesService {
     public void removeUserFromSpaces(Long userId, Margin margin) {
         List<Space> spaces = spacesRepository.findByMargin_Id(margin.getId());
         spacesActions.removeUserFromSpaces(userId, spaces);
+    }
+
+    @Override
+    public List<Long> memberIdsForChannel(Long channelId) {
+        return spaceMemberRepository.findSpaceMemberByChannel_Id(channelId).stream()
+                .map(User::getId)
+                .toList();
     }
 }

@@ -3,7 +3,8 @@ package org.margin.server.integrationtest.utils;
 import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
-import org.margin.server.users.models.UserSecurity;
+import org.margin.server.authentication.entities.UserSecurity;
+import org.margin.server.authentication.repositories.UserSecurityRepository;
 import org.margin.server.users.models.dtos.CurrentUserDTO;
 import org.margin.server.users.models.dtos.KeyUploadRequest;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -18,12 +19,15 @@ import java.time.Instant;
 public class UserTestUtils {
     private static UserRepository userRepository;
     private static UserController userController;
+    private static UserSecurityRepository userSecurityRepository;
 
     @Autowired
     public UserTestUtils(UserRepository userRepository,
-                         UserController userController) {
+                         UserController userController,
+                         UserSecurityRepository userSecurityRepository) {
         UserTestUtils.userRepository = userRepository;
         UserTestUtils.userController = userController;
+        UserTestUtils.userSecurityRepository = userSecurityRepository;
     }
 
     public static User createUser(String displayName, String email) {
@@ -37,11 +41,10 @@ public class UserTestUtils {
         encryption.setUser(user);
         user.setEncryption(encryption);
 
-        UserSecurity security = new UserSecurity();
-        security.setUser(user);
-        user.setSecurity(security);
+        User saved = userRepository.save(user);
+        userSecurityRepository.save(new UserSecurity(saved.getId()));
 
-        return userRepository.save(user);
+        return saved;
     }
 
     public static CurrentUserDTO getCurrentUser(User user) {

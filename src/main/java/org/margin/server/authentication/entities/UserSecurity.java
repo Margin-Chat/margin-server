@@ -1,7 +1,14 @@
-package org.margin.server.users.models;
+package org.margin.server.authentication.entities;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.Instant;
 
@@ -10,16 +17,12 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@ToString(exclude = {"encryption", "security"})
+@ToString
 @Table(name = "user_security")
 public class UserSecurity {
     @Id
+    @Column(name = "user_id")
     private Long userId;
-
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "user_id")
-    private User user;
 
     @Column(name = "failed_login_attempts", nullable = false)
     private Integer failedLoginAttempts = 0;
@@ -32,4 +35,8 @@ public class UserSecurity {
 
     @Column(name = "token_version", nullable = false)
     private Integer tokenVersion = 0;
+
+    public UserSecurity(Long userId) {
+        this.userId = userId;
+    }
 }

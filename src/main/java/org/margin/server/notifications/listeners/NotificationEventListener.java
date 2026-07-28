@@ -1,6 +1,6 @@
 package org.margin.server.notifications.listeners;
 
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
 import org.margin.server.social.calls.events.MissedCallEvent;

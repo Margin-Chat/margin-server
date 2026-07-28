@@ -8,6 +8,7 @@ import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
+import org.margin.server.storage.api.StorageLookup;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;

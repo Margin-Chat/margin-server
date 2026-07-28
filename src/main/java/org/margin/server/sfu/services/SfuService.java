@@ -9,7 +9,7 @@ import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
 import org.margin.server.sfu.models.VoiceParticipantChange;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +31,7 @@ public class SfuService {
     private final ApplicationEventPublisher eventPublisher;
     private final PresenceService presenceService;
     private final UserService userService;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
 
     @Getter
     @Value("${sfu.url:http://localhost:3000}")
@@ -44,11 +44,11 @@ public class SfuService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public SfuService(ApplicationEventPublisher eventPublisher, PresenceService presenceService, UserService userService, UserRepository userRepository) {
+    public SfuService(ApplicationEventPublisher eventPublisher, PresenceService presenceService, UserService userService, UserLookup userLookup) {
         this.eventPublisher = eventPublisher;
         this.presenceService = presenceService;
         this.userService = userService;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
     }
 
     private HttpHeaders internalHeaders() {
@@ -102,7 +102,7 @@ public class SfuService {
             );
             List<String> peerIds = response.getBody().getOrDefault("peers", List.of());
             return peerIds.stream()
-                    .map(id -> userRepository.findById(Long.parseLong(id)).orElse(null))
+                    .map(id -> userLookup.findById(Long.parseLong(id)).orElse(null))
                     .filter(Objects::nonNull)
                     .map(u -> new UserDTO(u, presenceService.isUserOnline(u.getId())))
                     .toList();

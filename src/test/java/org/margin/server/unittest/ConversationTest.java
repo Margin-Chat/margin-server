@@ -17,7 +17,7 @@ import org.margin.server.social.conversation.repositories.ConversationRepository
 import org.margin.server.social.conversation.services.ConversationCreationService;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
 import org.margin.server.presence.PresenceService;
 import org.mockito.Mock;
@@ -42,7 +42,7 @@ class ConversationServiceTest {
     @Mock
     private ConversationMemberRepository conversationMemberRepository;
     @Mock
-    private UserRepository userRepository;
+    private UserLookup userLookup;
     @Mock
     private PresenceService presenceService;
     @Mock
@@ -61,7 +61,7 @@ class ConversationServiceTest {
                 conversationCreationService,
                 conversationRepository,
                 conversationMemberRepository,
-                userRepository,
+                userLookup,
                 null, // self placeholder
                 presenceService,
                 eventPublisher,
@@ -127,7 +127,7 @@ class ConversationServiceTest {
         conversation.setName("New Group");
 
         when(conversationCreationService.createGroupConversation("New Group", false)).thenReturn(conversation);
-        when(userRepository.findByEmail("invitee@example.com")).thenReturn(Optional.of(invitee));
+        when(userLookup.findByEmail("invitee@example.com")).thenReturn(Optional.of(invitee));
 
         Conversation result = conversationService.createGroupConversation(
                 creator, List.of("invitee@example.com"), "New Group", false);
@@ -147,7 +147,7 @@ class ConversationServiceTest {
         User invitee = createUser(2L);
 
         doReturn(conv).when(conversationService).getById(1L);
-        when(userRepository.findById(2L)).thenReturn(Optional.of(invitee));
+        when(userLookup.findById(2L)).thenReturn(Optional.of(invitee));
 
         assertDoesNotThrow(() -> conversationService.addMember(1L, 2L, adder));
         verify(conversationCreationService).createConversationMemberWithStatus(

@@ -8,7 +8,7 @@ import org.margin.server.sfu.services.SfuService;
 import org.margin.server.sfu.services.SfuTokenService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.margin.validations.MarginAuthorizationService;
+import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
@@ -24,18 +24,18 @@ import java.util.List;
 @RequestMapping("/api/sfu")
 public class SfuController {
     private final SfuService sfuService;
-    private final MarginAuthorizationService marginAuthorizationService;
+    private final MarginAccessChecker marginAccessChecker;
     private final SfuTokenService sfuTokenService;
     private final ChannelService channelService;
     private final SubscriptionValidationService subscriptionValidationService;
 
     public SfuController(SfuService sfuService,
-                         MarginAuthorizationService marginAuthorizationService,
+                         MarginAccessChecker marginAccessChecker,
                          SfuTokenService sfuTokenService,
                          ChannelService channelService,
                          SubscriptionValidationService subscriptionValidationService) {
         this.sfuService = sfuService;
-        this.marginAuthorizationService = marginAuthorizationService;
+        this.marginAccessChecker = marginAccessChecker;
         this.sfuTokenService = sfuTokenService;
         this.channelService = channelService;
         this.subscriptionValidationService = subscriptionValidationService;
@@ -45,7 +45,7 @@ public class SfuController {
     public ResponseEntity<SfuJoinResponse> getConnectionInfo(@RequestParam String roomId,
                                                              @AuthenticationPrincipal User user) {
         Long channelId = Long.parseLong(roomId);
-        marginAuthorizationService.requireChannelMember(user.getId(), channelId);
+        marginAccessChecker.requireChannelMember(user.getId(), channelId);
         Channel channel = channelService.getById(channelId);
         int currentParticipants = sfuService.getVoiceParticipants(channelId).size();
         int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channel, currentParticipants);
@@ -77,7 +77,7 @@ public class SfuController {
     @GetMapping("voice_participants/{channelId}")
     public ResponseEntity<List<UserDTO>> getVoiceParticipants(@PathVariable Long channelId,
                                                               @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireChannelMember(user.getId(), channelId);
+        marginAccessChecker.requireChannelMember(user.getId(), channelId);
         return ResponseEntity.ok(sfuService.getVoiceParticipants(channelId));
     }
 }

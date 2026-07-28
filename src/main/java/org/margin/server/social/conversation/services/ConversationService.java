@@ -17,7 +17,7 @@ import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
 import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
@@ -41,7 +41,7 @@ public class ConversationService {
     private final ConversationCreationService conversationCreationService;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
     private final ConversationService self;
     private final PresenceService presenceService;
     private final ApplicationEventPublisher eventPublisher;
@@ -51,7 +51,7 @@ public class ConversationService {
     public ConversationService(ConversationCreationService conversationCreationService,
                                ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
-                               UserRepository userRepository,
+                               UserLookup userLookup,
                                @Lazy ConversationService self,
                                PresenceService presenceService,
                                ApplicationEventPublisher eventPublisher,
@@ -59,7 +59,7 @@ public class ConversationService {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
         this.self = self;
         this.presenceService = presenceService;
         this.eventPublisher = eventPublisher;
@@ -191,7 +191,7 @@ public class ConversationService {
 
         // All other members are invited (PENDING)
         for (String email : memberEmails) {
-            User invitee = userRepository.findByEmail(email)
+            User invitee = userLookup.findByEmail(email)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "User not found: " + email));
             conversationCreationService.createConversationMemberWithStatus(
@@ -215,7 +215,7 @@ public class ConversationService {
     @CacheEvict(value = "conversations", key = "#conversationId")
     public void addMember(Long conversationId, Long userId, User adder) {
         Conversation conversation = self.getById(conversationId);
-        User invitee = userRepository.findById(userId)
+        User invitee = userLookup.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
         if (conversationMemberRepository.findByConversationIdAndUserId(conversationId, userId).isPresent()) {

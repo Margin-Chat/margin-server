@@ -21,13 +21,15 @@ import java.util.Optional;
 @Slf4j
 public class JwtService {
     private final UserService userService;
+    private final UserSecurityService userSecurityService;
     @Value("${jwt.secret}")
     private String secret;
     @Value("${jwt.expiration}") // 24 hours
     private Long expiration;
 
-    public JwtService(UserService userService) {
+    public JwtService(UserService userService, UserSecurityService userSecurityService) {
         this.userService = userService;
+        this.userSecurityService = userSecurityService;
     }
 
     private SecretKey getSigningKey() {
@@ -89,7 +91,7 @@ public class JwtService {
                     extractAllClaims(token).get("userId", Long.class)
             );
 
-            if (user.getSecurity().getTokenVersion() != extractTokenVersion(token)) {
+            if (userSecurityService.get(user.getId()).getTokenVersion() != extractTokenVersion(token)) {
                 log.warn("Revoked (token version mismatch) JWT for userId {}", user.getId());
                 return Optional.empty();
             }

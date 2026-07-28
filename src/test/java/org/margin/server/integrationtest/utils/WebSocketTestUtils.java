@@ -31,7 +31,7 @@ public class WebSocketTestUtils {
     }
 
     public static WebSocket connect(User user, WebSocket.Listener listener) throws Exception {
-        String token = jwtService.generateToken(user.getEmail(), user.getId(), user.getSecurity().getTokenVersion());
+        String token = jwtService.generateToken(user.getEmail(), user.getId(), AuthTestUtils.securityOf(user).getTokenVersion());
         int wsPort = webSocketServer.awaitBoundPort(5000);
         CompletableFuture<Void> connected = new CompletableFuture<>();
 

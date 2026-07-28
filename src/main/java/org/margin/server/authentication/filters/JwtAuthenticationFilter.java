@@ -1,5 +1,6 @@
 package org.margin.server.authentication.filters;
 
+import org.margin.server.authentication.services.UserSecurityService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,11 +24,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final UserSecurityService userSecurityService;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   UserSecurityService userSecurityService) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.userSecurityService = userSecurityService;
     }
 
     @Override
@@ -57,7 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (user != null
                         && jwtService.isTokenValid(jwt, user.getEmail())
-                        && user.getSecurity().getTokenVersion() == jwtService.extractTokenVersion(jwt)) {
+                        && userSecurityService.get(user.getId()).getTokenVersion() == jwtService.extractTokenVersion(jwt)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     user,

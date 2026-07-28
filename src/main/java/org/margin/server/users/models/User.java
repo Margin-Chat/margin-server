@@ -20,7 +20,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@ToString(exclude = {"encryption", "security"})
+@ToString(exclude = "encryption")
 @Table(name = "users")
 public class User implements UserDetails {
     @Id
@@ -53,10 +53,6 @@ public class User implements UserDetails {
     @JsonIgnore
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserEncryption encryption;
-
-    @JsonIgnore
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private UserSecurity security;
 
     private Instant deletedAt;
 

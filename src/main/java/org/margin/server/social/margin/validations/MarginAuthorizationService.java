@@ -5,6 +5,7 @@ import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
+import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 @Service
-public class MarginAuthorizationService {
+public class MarginAuthorizationService implements MarginAccessChecker {
 
     private static final Set<MarginRole> MARGIN_ADMIN_ROLES = EnumSet.of(MarginRole.ADMIN, MarginRole.OWNER);
     private static final Set<SpaceRole> SPACE_ADMIN_ROLES = EnumSet.of(SpaceRole.ADMIN);
@@ -28,12 +29,14 @@ public class MarginAuthorizationService {
         this.spaceMemberRepository = spaceMemberRepository;
     }
 
+    @Override
     public void requireMarginMember(Long userId, Long marginId) {
         marginService.findMember(userId, marginId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "User is not a member of this margin"));
     }
 
+    @Override
     public void requireMarginAdmin(Long userId, Long marginId) {
         MarginMember member = marginService.findMember(userId, marginId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -45,6 +48,7 @@ public class MarginAuthorizationService {
         }
     }
 
+    @Override
     public void requireMarginOwner(Long userId, Long marginId) {
         MarginMember member = marginService.findMember(userId, marginId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -56,6 +60,7 @@ public class MarginAuthorizationService {
         }
     }
 
+    @Override
     public void requireSpaceAdmin(Long userId, Long spaceId) {
         SpaceMember spaceMember = spaceMemberRepository
                 .findByUser_IdAndSpace_Id(userId, spaceId)
@@ -68,12 +73,14 @@ public class MarginAuthorizationService {
         }
     }
 
+    @Override
     public void requireChannelMember(Long userId, Long channelId) {
         if (!spaceMemberRepository.existsByChannelIdAndUserId(userId, channelId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User does not have access to the channel");
         }
     }
 
+    @Override
     public void requireSpaceMember(Long id, Long spaceId) {
         if (!spaceMemberRepository.existsSpaceMemberByUserAndSpace(id, spaceId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User does not have access to the space");

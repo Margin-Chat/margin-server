@@ -3,6 +3,7 @@ package org.margin.server.authentication.services;
 import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.ActivationKey;
+import org.margin.server.authentication.entities.UserSecurity;
 import org.margin.server.authentication.events.UserSessionsRevokedEvent;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
@@ -10,7 +11,6 @@ import org.margin.server.email.EmailService;
 import org.margin.server.storage.services.StorageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
-import org.margin.server.users.models.UserSecurity;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.UserCacheService;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +43,7 @@ public class AuthenticationService {
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
     private final UserCacheService userCacheService;
+    private final UserSecurityService userSecurityService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -53,7 +54,8 @@ public class AuthenticationService {
             ApplicationEventPublisher eventPublisher,
             ActivationKeyService activationKeyService,
             EmailService emailService,
-            UserCacheService userCacheService) {
+            UserCacheService userCacheService,
+            UserSecurityService userSecurityService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -63,6 +65,7 @@ public class AuthenticationService {
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
         this.userCacheService = userCacheService;
+        this.userSecurityService = userSecurityService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
@@ -78,8 +81,9 @@ public class AuthenticationService {
                         null, null, null, null, null);
             }
 
-            if (isAccountLocked(user)) {
-                log.warn("Login blocked — userId {} locked until {}", user.getId(), user.getSecurity().getAccountLockedUntil());
+            UserSecurity security = userSecurityService.get(user.getId());
+            if (isAccountLocked(security)) {
+                log.warn("Login blocked — userId {} locked until {}", user.getId(), security.getAccountLockedUntil());
                 throw new BadCredentialsException("account locked");
             }
 
@@ -87,8 +91,8 @@ public class AuthenticationService {
                     new UsernamePasswordAuthenticationToken(normalisedEmail, password)
             );
 
-            resetFailedAttempts(user);
-            String token = jwtService.generateToken(email, user.getId(), user.getSecurity().getTokenVersion());
+            resetFailedAttempts(security);
+            String token = jwtService.generateToken(email, user.getId(), security.getTokenVersion());
             log.info("Login successful for userId {}", user.getId());
 
             return new AuthResponse(
@@ -143,12 +147,11 @@ public class AuthenticationService {
         encryption.setEncryptedPrivateKey(privateKey);
         user.setEncryption(encryption);
 
-        UserSecurity security = new UserSecurity();
-        security.setUser(user);
-        security.setFailedLoginAttempts(0);
-        user.setSecurity(security);
-
         userRepository.save(user);
+
+        UserSecurity security = new UserSecurity(user.getId());
+        security.setFailedLoginAttempts(0);
+        userSecurityService.save(security);
 
         ActivationKey activationKey = activationKeyService.generateActivationKey(user);
 
@@ -170,41 +173,41 @@ public class AuthenticationService {
         return activationKey;
     }
 
-    private boolean isAccountLocked(User user) {
-        if (user.getSecurity().getAccountLockedUntil() == null) {
+    private boolean isAccountLocked(UserSecurity security) {
+        if (security.getAccountLockedUntil() == null) {
             return false;
         }
-        return user.getSecurity().getAccountLockedUntil().isAfter(Instant.now());
+        return security.getAccountLockedUntil().isAfter(Instant.now());
     }
 
     private void handleFailedLogin(String email) {
         userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
-            user.getSecurity().setFailedLoginAttempts(user.getSecurity().getFailedLoginAttempts() + 1);
-            user.getSecurity().setLastFailedLoginAttempt(Instant.now());
+            UserSecurity security = userSecurityService.get(user.getId());
+            security.setFailedLoginAttempts(security.getFailedLoginAttempts() + 1);
+            security.setLastFailedLoginAttempt(Instant.now());
 
-            if (user.getSecurity().getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
-                user.getSecurity().setAccountLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
+            if (security.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                security.setAccountLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
                 log.warn("Account locked for user {} until {}",
-                        user.getDisplayName(), user.getSecurity().getAccountLockedUntil());
+                        user.getDisplayName(), security.getAccountLockedUntil());
             }
 
-            userRepository.save(user);
+            userSecurityService.save(security);
         });
     }
 
-    private void resetFailedAttempts(User user) {
-        if (user.getSecurity().getFailedLoginAttempts() > 0) {
-            user.getSecurity().setFailedLoginAttempts(0);
-            user.getSecurity().setLastFailedLoginAttempt(null);
-            user.getSecurity().setAccountLockedUntil(null);
-            userRepository.save(user);
+    private void resetFailedAttempts(UserSecurity security) {
+        if (security.getFailedLoginAttempts() > 0) {
+            security.setFailedLoginAttempts(0);
+            security.setLastFailedLoginAttempt(null);
+            security.setAccountLockedUntil(null);
+            userSecurityService.save(security);
         }
     }
 
     @Transactional
     public void logoutUser(User user) {
-        user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
-        userRepository.save(user);
+        userSecurityService.bumpTokenVersion(user.getId());
         userCacheService.evictUserCache(user.getId());
         eventPublisher.publishEvent(new UserSessionsRevokedEvent(user.getId()));
     }

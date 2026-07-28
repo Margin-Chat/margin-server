@@ -14,7 +14,7 @@ import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.storage.dtos.StoredFileDTO;
-import org.margin.server.storage.services.StorageLookup;
+import org.margin.server.storage.api.StorageLookup;
 import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;

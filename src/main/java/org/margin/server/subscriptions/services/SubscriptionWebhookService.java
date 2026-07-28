@@ -8,7 +8,7 @@ import com.mollie.mollie.models.components.SubscriptionResponse;
 import com.mollie.mollie.models.errors.APIException;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;

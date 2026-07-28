@@ -1,4 +1,4 @@
-package org.margin.server.notifications;
+package org.margin.server.shared.notifications;
 
 public enum NotificationType {
     ANNOUNCEMENT,

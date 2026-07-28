@@ -1,7 +1,6 @@
 Module 'authentication' depends on non-exposed type org.margin.server.storage.services.StorageService within module 'storage'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.UserEncryption within module 'users'!
-Module 'authentication' depends on non-exposed type org.margin.server.users.models.UserSecurity within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.services.UserCacheService within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
@@ -20,23 +19,18 @@ Module 'notifications' depends on non-exposed type org.margin.server.social.spac
 Module 'notifications' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'notifications' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!
 Module 'notifications' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
-Module 'notifications' is part of a dependency cycle.
 Module 'presence' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
-Module 'presence' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
 Module 'presence' is part of a dependency cycle.
 Module 'sfu' depends on non-exposed type org.margin.server.social.channel.entities.Channel within module 'social'!
 Module 'sfu' depends on non-exposed type org.margin.server.social.channel.services.ChannelService within module 'social'!
-Module 'sfu' depends on non-exposed type org.margin.server.social.margin.validations.MarginAuthorizationService within module 'social'!
 Module 'sfu' depends on non-exposed type org.margin.server.social.space.models.Space within module 'social'!
 Module 'sfu' depends on non-exposed type org.margin.server.subscriptions.entities.Subscription within module 'subscriptions'!
 Module 'sfu' depends on non-exposed type org.margin.server.subscriptions.models.SubscriptionTier within module 'subscriptions'!
 Module 'sfu' depends on non-exposed type org.margin.server.subscriptions.services.SubscriptionValidationService within module 'subscriptions'!
 Module 'sfu' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'sfu' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!
-Module 'sfu' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
 Module 'sfu' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.storage.dtos.StoredFileDTO within module 'storage'!
-Module 'social' depends on non-exposed type org.margin.server.storage.services.StorageLookup within module 'storage'!
 Module 'social' depends on non-exposed type org.margin.server.storage.services.StorageService within module 'storage'!
 Module 'social' depends on non-exposed type org.margin.server.storage.services.StorageUrls within module 'storage'!
 Module 'social' depends on non-exposed type org.margin.server.subscriptions.models.SubscriptionTier within module 'subscriptions'!
@@ -47,7 +41,6 @@ Module 'social' depends on non-exposed type org.margin.server.users.models.User 
 Module 'social' depends on non-exposed type org.margin.server.users.models.UserEncryption within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.users.models.dtos.RecentChatUsersDTO within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!
-Module 'social' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.users.repositories.projections.RecentChatUserProjection within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
 Module 'social' is part of a dependency cycle.
@@ -58,7 +51,6 @@ Module 'storage' depends on non-exposed type org.margin.server.social.conversati
 Module 'storage' depends on non-exposed type org.margin.server.social.conversation.validations.ConversationAuthorizationService within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.margin.MarginLookup within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.margin.entities.Margin within module 'social'!
-Module 'storage' depends on non-exposed type org.margin.server.social.margin.validations.MarginAuthorizationService within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.space.models.Space within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.subscriptions.services.SubscriptionValidationService within module 'subscriptions'!
 Module 'storage' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
@@ -70,9 +62,7 @@ Module 'subscriptions' depends on non-exposed type org.margin.server.social.marg
 Module 'subscriptions' depends on non-exposed type org.margin.server.social.margin.entities.MarginMember within module 'social'!
 Module 'subscriptions' depends on non-exposed type org.margin.server.social.margin.models.MarginRole within module 'social'!
 Module 'subscriptions' depends on non-exposed type org.margin.server.social.margin.service.MarginService within module 'social'!
-Module 'subscriptions' depends on non-exposed type org.margin.server.social.margin.validations.MarginAuthorizationService within module 'social'!
 Module 'subscriptions' depends on non-exposed type org.margin.server.social.space.models.Space within module 'social'!
-Module 'subscriptions' depends on non-exposed type org.margin.server.storage.repositories.StoredFileRepository within module 'storage'!
 Module 'subscriptions' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'subscriptions' is part of a dependency cycle.
 Module 'users' depends on non-exposed type org.margin.server.bugs.services.BugReportService within module 'bugs'!
@@ -91,12 +81,10 @@ Module 'websocket' depends on non-exposed type org.margin.server.social.channel.
 Module 'websocket' depends on non-exposed type org.margin.server.social.conversation.models.ConversationType within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.conversation.services.ConversationService within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.conversation.services.ConversationValidationService within module 'social'!
-Module 'websocket' depends on non-exposed type org.margin.server.social.margin.validations.MarginAuthorizationService within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.messages.models.dtos.MessageDTO within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.messages.models.dtos.MessageReactionDTO within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.messages.models.dtos.MessageResult within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.social.messages.services.MessageService within module 'social'!
-Module 'websocket' depends on non-exposed type org.margin.server.social.space.repositories.SpaceMemberRepository within module 'social'!
 Module 'websocket' depends on non-exposed type org.margin.server.subscriptions.models.dtos.SubscriptionDTO within module 'subscriptions'!
 Module 'websocket' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'websocket' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!

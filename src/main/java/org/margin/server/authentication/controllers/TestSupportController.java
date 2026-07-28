@@ -5,7 +5,7 @@ import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.repositories.ActivationKeyRepository;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -39,16 +39,16 @@ class TestSupportController {
     ) {
     }
 
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
     private final ActivationKeyRepository activationKeyRepository;
     private final AuthenticationService authenticationService;
     private final Environment env;
 
-    TestSupportController(UserRepository userRepository,
+    TestSupportController(UserLookup userLookup,
                           ActivationKeyRepository activationKeyRepository,
                           AuthenticationService authenticationService,
                           Environment env) {
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
         this.activationKeyRepository = activationKeyRepository;
         this.authenticationService = authenticationService;
         this.env = env;
@@ -58,7 +58,7 @@ class TestSupportController {
     ResponseEntity<Void> activateForTest(@RequestBody ActivateTestRequest request) {
         if (!validSecret(request.secret())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userLookup.findByEmail(request.email())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No user with email: " + request.email()));
 

@@ -28,17 +28,20 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final UserCacheService userCacheService;
+    private final UserSecurityService userSecurityService;
 
     public PasswordResetService(UserRepository userRepository,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
-                                UserCacheService userCacheService) {
+                                UserCacheService userCacheService,
+                                UserSecurityService userSecurityService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.userCacheService = userCacheService;
+        this.userSecurityService = userSecurityService;
     }
 
     @Transactional
@@ -86,7 +89,7 @@ public class PasswordResetService {
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
+        userSecurityService.bumpTokenVersion(user.getId());
         user.getEncryption().setPublicKey(null);
         user.getEncryption().setEncryptedPrivateKey(null);
         user.getEncryption().setSalt(null);

@@ -1,5 +1,7 @@
 package org.margin.server.notifications;
 
+import org.margin.server.shared.notifications.NotificationType;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

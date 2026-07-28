@@ -3,7 +3,7 @@ package org.margin.server.storage.controllers;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.social.margin.validations.MarginAuthorizationService;
+import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
@@ -35,20 +35,20 @@ public class FilesController {
     private final StorageProperties storageProperties;
     private final MarginLookup marginLookup;
     private final StoredFileService storedFileService;
-    private final MarginAuthorizationService marginAuthorizationService;
+    private final MarginAccessChecker marginAccessChecker;
     private final ConversationAuthorizationService conversationAuthorizationService;
 
     public FilesController(StorageService storageService,
                            StorageProperties storageProperties,
                            MarginLookup marginLookup,
                            StoredFileService storedFileService,
-                           MarginAuthorizationService marginAuthorizationService,
+                           MarginAccessChecker marginAccessChecker,
                            ConversationAuthorizationService conversationAuthorizationService) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.marginLookup = marginLookup;
         this.storedFileService = storedFileService;
-        this.marginAuthorizationService = marginAuthorizationService;
+        this.marginAccessChecker = marginAccessChecker;
         this.conversationAuthorizationService = conversationAuthorizationService;
     }
 
@@ -68,7 +68,7 @@ public class FilesController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Margin margin = marginLookup.findByIconFileName(fileName);
-        marginAuthorizationService.requireMarginMember(viewer.getId(), margin.getId());
+        marginAccessChecker.requireMarginMember(viewer.getId(), margin.getId());
         return serve(margin.getIconUrl(), fileName);
     }
 
@@ -85,7 +85,7 @@ public class FilesController {
         } else if (f.getScope() == StoredFileScope.CONVERSATION) {
             conversationAuthorizationService.requireConversationMember(f.getConversation().getId(), viewer.getId());
         } else {
-            marginAuthorizationService.requireMarginMember(viewer.getId(), f.getMargin().getId());
+            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMargin().getId());
         }
 
         return serve(f.getStorageUrl(), fileName);

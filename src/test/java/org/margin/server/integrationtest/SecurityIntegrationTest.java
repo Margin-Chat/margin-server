@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.UserTestUtils;
+import org.margin.server.integrationtest.utils.AuthTestUtils;
 import org.margin.server.users.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -88,7 +89,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void getNonexistentChannel_returns404NotInternalServerError() throws Exception {
         User user = UserTestUtils.createUser("alice_sec", "alice_sec@margin.chat");
-        String token = jwtService.generateToken(user.getEmail(), user.getId(), user.getSecurity().getTokenVersion());
+        String token = jwtService.generateToken(user.getEmail(), user.getId(), AuthTestUtils.securityOf(user).getTokenVersion());
 
         HttpResponse<String> response = client.send(
                 HttpRequest.newBuilder(URI.create(base() +"/api/channels/9999999"))
@@ -107,7 +108,7 @@ class SecurityIntegrationTest extends MarginTestRunner {
     @Test
     void tokenIsRejectedAfterLogout() throws Exception {
         User user = UserTestUtils.createUser("logout_sec", "logout_sec@margin.chat");
-        String token = jwtService.generateToken(user.getEmail(), user.getId(), user.getSecurity().getTokenVersion());
+        String token = jwtService.generateToken(user.getEmail(), user.getId(), AuthTestUtils.securityOf(user).getTokenVersion());
 
         assertEquals(200, get("/api/users/me", token).statusCode(),
                 "Token must be accepted before logout");
