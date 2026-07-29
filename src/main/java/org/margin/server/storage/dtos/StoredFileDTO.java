@@ -3,7 +3,6 @@ package org.margin.server.storage.dtos;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.storage.services.StorageUrls;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
@@ -21,7 +20,7 @@ public record StoredFileDTO(
         UserDTO uploadedBy,
         Instant uploadedAt
 ) {
-    public static StoredFileDTO from(StoredFile f, User uploader, boolean uploaderOnline) {
+    public static StoredFileDTO from(StoredFile f, UserDTO uploader) {
         return new StoredFileDTO(
                 f.getId(),
                 f.getScope(),
@@ -32,7 +31,7 @@ public record StoredFileDTO(
                 f.getContentType(),
                 f.getSizeBytes(),
                 StorageUrls.signedUrl(f.getStorageUrl()),
-                new UserDTO(uploader, uploaderOnline),
+                uploader,
                 f.getUploadedAt()
         );
     }

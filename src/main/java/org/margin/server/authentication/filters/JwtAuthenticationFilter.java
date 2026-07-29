@@ -1,5 +1,6 @@
 package org.margin.server.authentication.filters;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.authentication.services.UserSecurityService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -64,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         && userSecurityService.get(user.getId()).getTokenVersion() == jwtService.extractTokenVersion(jwt)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    user,
+                                    new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName()),
                                     null,
                                     user.getAuthorities()
                             );

@@ -1,5 +1,6 @@
 package org.margin.server.notifications.controllers;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
@@ -22,20 +23,20 @@ public class NotificationController {
     }
 
     @GetMapping("/all")
-    public List<Notification> getNotifications(@AuthenticationPrincipal User user) {
-        return notificationService.getNotificationsForUser(user.getId());
+    public List<Notification> getNotifications(@AuthenticationPrincipal AuthenticatedUser user) {
+        return notificationService.getNotificationsForUser(user.id());
     }
 
     @GetMapping("/unseen_counts")
-    public Map<Long, Long> getUnseenCounts(@AuthenticationPrincipal User user) {
-        return notificationService.getUnseenCountsPerMargin(user.getId());
+    public Map<Long, Long> getUnseenCounts(@AuthenticationPrincipal AuthenticatedUser user) {
+        return notificationService.getUnseenCountsPerMargin(user.id());
     }
 
     @PostMapping("/mark_seen")
-    public void markSeen(@AuthenticationPrincipal User user,
+    public void markSeen(@AuthenticationPrincipal AuthenticatedUser user,
                          @RequestBody Long notificationId) {
         Notification notification = notificationService.getNotification(notificationId);
-        if (!notification.getRecipientId().equals(user.getId())) {
+        if (!notification.getRecipientId().equals(user.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         notificationService.markNotificationAsSeen(notification);

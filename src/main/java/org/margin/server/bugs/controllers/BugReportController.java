@@ -1,5 +1,6 @@
 package org.margin.server.bugs.controllers;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.bugs.models.BugReportRequest;
 import org.margin.server.bugs.services.BugReportService;
 import org.margin.server.users.models.User;
@@ -22,8 +23,8 @@ public class BugReportController {
 
     @PostMapping("/report_bug")
     public ResponseEntity<Void> reportBug(@RequestBody BugReportRequest request,
-                                          @AuthenticationPrincipal User user) {
-        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user.getId());
+                                          @AuthenticationPrincipal AuthenticatedUser user) {
+        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user.id());
         return ResponseEntity.ok().build();
     }
 }

@@ -1,6 +1,7 @@
 package org.margin.server.sfu;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.sfu.models.PeerJoinedRequest;
 import org.margin.server.sfu.models.PeerLeftRequest;
 import org.margin.server.sfu.models.SfuJoinResponse;
@@ -42,13 +43,13 @@ public class SfuController {
 
     @PostMapping("create_or_join")
     public ResponseEntity<SfuJoinResponse> getConnectionInfo(@RequestParam String roomId,
-                                                             @AuthenticationPrincipal User user) {
+                                                             @AuthenticationPrincipal AuthenticatedUser user) {
         Long channelId = Long.parseLong(roomId);
-        marginAccessChecker.requireChannelMember(user.getId(), channelId);
+        marginAccessChecker.requireChannelMember(user.id(), channelId);
         int currentParticipants = sfuService.getVoiceParticipants(channelId).size();
         int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channelDirectory.marginIdOf(channelId), currentParticipants);
         sfuService.createOrJoinRoom(roomId, maxParticipants);
-        String roomToken = sfuTokenService.generateRoomToken(user.getId(), roomId);
+        String roomToken = sfuTokenService.generateRoomToken(user.id(), roomId);
         boolean isFree = subscriptionValidationService
                 .tierForMargin(channelDirectory.marginIdOf(channelId)) == SubscriptionTier.FREE;
         Integer maxVideoHeight = isFree ? 720 : null;
@@ -73,8 +74,8 @@ public class SfuController {
 
     @GetMapping("voice_participants/{channelId}")
     public ResponseEntity<List<UserDTO>> getVoiceParticipants(@PathVariable Long channelId,
-                                                              @AuthenticationPrincipal User user) {
-        marginAccessChecker.requireChannelMember(user.getId(), channelId);
+                                                              @AuthenticationPrincipal AuthenticatedUser user) {
+        marginAccessChecker.requireChannelMember(user.id(), channelId);
         return ResponseEntity.ok(sfuService.getVoiceParticipants(channelId));
     }
 }

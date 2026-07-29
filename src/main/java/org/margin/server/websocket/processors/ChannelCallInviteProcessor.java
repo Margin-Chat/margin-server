@@ -36,6 +36,6 @@ public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<Str
         marginAccessChecker.requireChannelMember(user.getId(), channelId);
         marginAccessChecker.requireChannelMember(recipientId, channelId);
 
-        sfuService.inviteToChannelCall(user, recipientId, channelId, channelDirectory.nameOf(channelId));
+        sfuService.inviteToChannelCall(user.getId(), recipientId, channelId, channelDirectory.nameOf(channelId));
     }
 }

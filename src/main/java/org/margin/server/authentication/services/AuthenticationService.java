@@ -192,14 +192,14 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public void logoutUser(User user) {
-        userSecurityService.bumpTokenVersion(user.getId());
-        userAccounts.invalidateCachedUser(user.getId());
-        eventPublisher.publishEvent(new UserSessionsRevokedEvent(user.getId()));
+    public void logoutUser(Long userId) {
+        userSecurityService.bumpTokenVersion(userId);
+        userAccounts.invalidateCachedUser(userId);
+        eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
     }
 
     @Transactional
-    public void updateEncryptionKeys(User user, String publicKey, String encryptedPrivateKey, String salt, String iv) {
-        userAccounts.updateEncryptionKeys(user.getId(), publicKey, encryptedPrivateKey, salt, iv);
+    public void updateEncryptionKeys(Long userId, String publicKey, String encryptedPrivateKey, String salt, String iv) {
+        userAccounts.updateEncryptionKeys(userId, publicKey, encryptedPrivateKey, salt, iv);
     }
 }

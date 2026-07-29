@@ -124,7 +124,7 @@ class StorageUrlsTest {
         StoredFile f = mock(StoredFile.class);
         when(f.getStorageUrl()).thenReturn("/api/files/conversation-images/a.png");
 
-        StoredFileDTO dto = StoredFileDTO.from(f, mock(User.class), true);
+        StoredFileDTO dto = StoredFileDTO.from(f, new UserDTO(1L, "u", null, null, null, false));
 
         assertThat(dto.url()).isEqualTo("https://hel1.your-objectstorage.com/signed");
     }

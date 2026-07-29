@@ -1,5 +1,6 @@
 package org.margin.server.notifications.push;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,15 +24,15 @@ public class PushTokenController {
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody PushTokenRequest request,
-                                         @AuthenticationPrincipal User user) {
-        pushTokenService.register(user, request.platform(), request.token());
+                                         @AuthenticationPrincipal AuthenticatedUser user) {
+        pushTokenService.register(user.id(), request.platform(), request.token());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/unregister")
     public ResponseEntity<Void> unregister(@RequestBody PushTokenRequest request,
-                                           @AuthenticationPrincipal User user) {
-        pushTokenService.unregister(user, request.token());
+                                           @AuthenticationPrincipal AuthenticatedUser user) {
+        pushTokenService.unregister(user.id(), request.token());
         return ResponseEntity.ok().build();
     }
 }

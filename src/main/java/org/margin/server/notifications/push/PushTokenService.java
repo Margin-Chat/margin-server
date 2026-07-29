@@ -1,6 +1,5 @@
 package org.margin.server.notifications.push;
 
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +15,12 @@ public class PushTokenService {
     }
 
     @Transactional
-    public void register(User user, PushPlatform platform, String token) {
+    public void register(Long userId, PushPlatform platform, String token) {
         PushToken entity = pushTokenRepository.findByToken(token).orElseGet(PushToken::new);
         if (entity.getId() == null) {
             entity.setCreatedAt(Instant.now());
         }
-        entity.setUserId(user.getId());
+        entity.setUserId(userId);
         entity.setPlatform(platform);
         entity.setToken(token);
         entity.setUpdatedAt(Instant.now());
@@ -29,9 +28,9 @@ public class PushTokenService {
     }
 
     @Transactional
-    public void unregister(User user, String token) {
+    public void unregister(Long userId, String token) {
         pushTokenRepository.findByToken(token)
-                .filter(t -> t.getUserId().equals(user.getId()))
+                .filter(t -> t.getUserId().equals(userId))
                 .ifPresent(pushTokenRepository::delete);
     }
 }

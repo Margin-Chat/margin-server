@@ -1,8 +1,11 @@
 package org.margin.server.unittest;
 
 import org.junit.jupiter.api.BeforeEach;
+import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
@@ -57,6 +60,8 @@ class StoredFileControllerTest {
     @Mock
     private StoredFileService storedFileService;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private MarginLookup marginLookup;
     @Mock
     private ChannelLookup channelLookup;
@@ -86,6 +91,7 @@ class StoredFileControllerTest {
 
         channel = createChannel(3L);
         channel.setConversation(conversation);
+        stubUploaderDto();
     }
 
     @Test
@@ -93,7 +99,7 @@ class StoredFileControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginMember(42L, 7L);
 
-        assertThrows(ResponseStatusException.class, () -> controller.listMarginFiles(7L, user));
+        assertThrows(ResponseStatusException.class, () -> controller.listMarginFiles(7L, principalOf(user)));
         verify(storedFileService, never()).findMarginFiles(anyLong());
     }
 
@@ -101,9 +107,9 @@ class StoredFileControllerTest {
     void listMarginFilesReturnsDtosForMembers() {
         StoredFile stored = fileEntity(1L, "a.txt");
         when(storedFileService.findMarginFiles(7L)).thenReturn(List.of(stored));
-        when(storedFileService.toDTOs(List.of(stored))).thenReturn(List.of(StoredFileDTO.from(stored, user, false)));
+        when(storedFileService.toDTOs(List.of(stored))).thenReturn(List.of(StoredFileDTO.from(stored, userDto())));
 
-        ResponseEntity<List<StoredFileDTO>> response = controller.listMarginFiles(7L, user);
+        ResponseEntity<List<StoredFileDTO>> response = controller.listMarginFiles(7L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(1, response.getBody().size());
@@ -115,20 +121,20 @@ class StoredFileControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMemberForChannel(3L, 42L);
 
-        assertThrows(ResponseStatusException.class, () -> controller.listChannelFiles(3L, user));
+        assertThrows(ResponseStatusException.class, () -> controller.listChannelFiles(3L, principalOf(user)));
         verify(storedFileService, never()).findChannelFiles(anyLong());
     }
 
     @Test
     void uploadMarginFileDelegatesToService() {
-        when(storedFileService.uploadMarginFile(eq(7L), any(), eq(user)))
+        when(storedFileService.uploadMarginFile(eq(7L), any(), eq(user.getId())))
                 .thenReturn(fileEntity(101L, "a.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadMarginFile(
-                7L, fakeFile("a.txt", "text/plain", "hi"), user);
+                7L, fakeFile("a.txt", "text/plain", "hi"), principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        verify(storedFileService).uploadMarginFile(eq(7L), any(), eq(user));
+        verify(storedFileService).uploadMarginFile(eq(7L), any(), eq(user.getId()));
     }
 
     @Test
@@ -137,53 +143,53 @@ class StoredFileControllerTest {
                 .when(marginAuthorizationService).requireMarginAdmin(42L, 7L);
 
         assertThrows(ResponseStatusException.class, () -> controller.uploadMarginFile(
-                7L, fakeFile("a.txt", "text/plain", "x"), user));
+                7L, fakeFile("a.txt", "text/plain", "x"), principalOf(user)));
         verify(storedFileService, never()).uploadMarginFile(any(), any(), any());
     }
 
     @Test
     void uploadChannelFileDelegatesToService() {
-        when(storedFileService.uploadChannelFile(eq(3L), any(), eq(user), eq(false)))
+        when(storedFileService.uploadChannelFile(eq(3L), any(), eq(user.getId()), eq(false)))
                 .thenReturn(fileEntity(102L, "b.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadChannelFile(
-                3L, fakeFile("b.txt", "text/plain", "x"), false, user);
+                3L, fakeFile("b.txt", "text/plain", "x"), false, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        verify(storedFileService).uploadChannelFile(eq(3L), any(), eq(user), eq(false));
+        verify(storedFileService).uploadChannelFile(eq(3L), any(), eq(user.getId()), eq(false));
     }
 
     @Test
     void uploadMarginFileForbiddenWhenServiceThrowsQuotaException() {
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(storedFileService).uploadMarginFile(eq(7L), any(), eq(user));
+                .when(storedFileService).uploadMarginFile(eq(7L), any(), eq(user.getId()));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
-                controller.uploadMarginFile(7L, fakeFile("big.bin", "application/octet-stream", "data"), user));
+                controller.uploadMarginFile(7L, fakeFile("big.bin", "application/octet-stream", "data"), principalOf(user)));
     }
 
     @Test
     void uploadChannelFileForbiddenWhenServiceThrowsQuotaException() {
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(storedFileService).uploadChannelFile(eq(3L), any(), eq(user), eq(false));
+                .when(storedFileService).uploadChannelFile(eq(3L), any(), eq(user.getId()), eq(false));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
-                controller.uploadChannelFile(3L, fakeFile("img.png", "image/png", "bytes"), false, user));
+                controller.uploadChannelFile(3L, fakeFile("img.png", "image/png", "bytes"), false, principalOf(user)));
     }
 
     @Test
     void uploadConversationFileDelegatesToService() {
-        when(storedFileService.uploadConversationFile(eq(13L), any(), eq(user), eq(true)))
+        when(storedFileService.uploadConversationFile(eq(13L), any(), eq(user.getId()), eq(true)))
                 .thenReturn(conversationFile(103L, "img.png", conversation, user));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadConversationFile(
-                13L, fakeFile("img.png", "image/png", "data"), true, user);
+                13L, fakeFile("img.png", "image/png", "data"), true, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals("img.png", response.getBody().fileName());
         assertNull(response.getBody().marginId());
         assertEquals(13L, response.getBody().conversationId());
-        verify(storedFileService).uploadConversationFile(eq(13L), any(), eq(user), eq(true));
+        verify(storedFileService).uploadConversationFile(eq(13L), any(), eq(user.getId()), eq(true));
     }
 
     @Test
@@ -192,7 +198,7 @@ class StoredFileControllerTest {
                 .when(conversationAuthorizationService).requireConversationMember(13L, 42L);
 
         assertThrows(ResponseStatusException.class, () -> controller.uploadConversationFile(
-                13L, fakeFile("img.png", "image/png", "data"), false, user));
+                13L, fakeFile("img.png", "image/png", "data"), false, principalOf(user)));
         verify(storedFileService, never()).uploadConversationFile(any(), any(), any(), anyBoolean());
     }
 
@@ -203,7 +209,7 @@ class StoredFileControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(13L, 42L);
 
-        assertThrows(ResponseStatusException.class, () -> controller.download(55L, user));
+        assertThrows(ResponseStatusException.class, () -> controller.download(55L, principalOf(user)));
     }
 
     @Test
@@ -215,7 +221,7 @@ class StoredFileControllerTest {
         when(storageService.getFile(file.getStorageUrl()))
                 .thenReturn(new ByteArrayResource("hello".getBytes()));
 
-        ResponseEntity<Resource> response = controller.download(55L, user);
+        ResponseEntity<Resource> response = controller.download(55L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         String disposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
@@ -232,7 +238,7 @@ class StoredFileControllerTest {
         existing.setStorageUrl("/api/files/stored-files/abc_old.txt");
         when(storedFileService.getById(55L)).thenReturn(existing);
 
-        ResponseEntity<Void> response = controller.deleteFile(55L, user);
+        ResponseEntity<Void> response = controller.deleteFile(55L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         ArgumentCaptor<StoredFile> captor = ArgumentCaptor.forClass(StoredFile.class);
@@ -250,7 +256,7 @@ class StoredFileControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginAdmin(42L, 7L);
 
-        assertThrows(ResponseStatusException.class, () -> controller.deleteFile(55L, user));
+        assertThrows(ResponseStatusException.class, () -> controller.deleteFile(55L, principalOf(user)));
         verify(storedFileService, never()).save(any());
         verify(storageService, never()).delete(anyString());
     }
@@ -263,7 +269,7 @@ class StoredFileControllerTest {
         existing.setStorageUrl("/api/files/stored-files/x");
         when(storedFileService.getById(55L)).thenReturn(existing);
 
-        ResponseEntity<Void> response = controller.deleteFile(55L, user);
+        ResponseEntity<Void> response = controller.deleteFile(55L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         verify(storedFileService).save(any());
@@ -278,7 +284,7 @@ class StoredFileControllerTest {
         when(storageService.presign(existing.getStorageUrl(), "report.pdf"))
                 .thenReturn(Optional.of("https://hetzner.example/signed-link"));
 
-        ResponseEntity<Resource> response = controller.download(55L, user);
+        ResponseEntity<Resource> response = controller.download(55L, principalOf(user));
 
         assertEquals(HttpStatus.FOUND, response.getStatusCode());
         assertEquals("https://hetzner.example/signed-link",
@@ -295,7 +301,7 @@ class StoredFileControllerTest {
         when(storageService.getFile(existing.getStorageUrl()))
                 .thenReturn(new ByteArrayResource("hello".getBytes()));
 
-        ResponseEntity<Resource> response = controller.download(55L, user);
+        ResponseEntity<Resource> response = controller.download(55L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         String disposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
@@ -315,7 +321,7 @@ class StoredFileControllerTest {
         when(storageService.getFile(existing.getStorageUrl()))
                 .thenReturn(new ByteArrayResource(new byte[]{1, 2, 3}));
 
-        ResponseEntity<Resource> response = controller.download(55L, user);
+        ResponseEntity<Resource> response = controller.download(55L, principalOf(user));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
     }
@@ -327,7 +333,7 @@ class StoredFileControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginMember(42L, 7L);
 
-        assertThrows(ResponseStatusException.class, () -> controller.download(55L, user));
+        assertThrows(ResponseStatusException.class, () -> controller.download(55L, principalOf(user)));
     }
 
     private StoredFile fileEntity(Long id, String name) {
@@ -347,5 +353,13 @@ class StoredFileControllerTest {
 
     private MultipartFile fakeFile(String name, String type, String content) {
         return new MockMultipartFile("file", name, type, content.getBytes());
+    }
+
+    private UserDTO userDto() {
+        return new UserDTO(user, false);
+    }
+
+    private void stubUploaderDto() {
+        lenient().when(userLookup.dtoOf(user.getId())).thenReturn(userDto());
     }
 }

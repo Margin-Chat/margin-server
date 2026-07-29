@@ -1,5 +1,6 @@
 package org.margin.server.integrationtest.utils;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
@@ -48,26 +49,31 @@ public class UserTestUtils {
     }
 
     public static CurrentUserDTO getCurrentUser(User user) {
-        return userController.getCurrentUser(user);
+        return userController.getCurrentUser(principalOf(user));
     }
 
     public static CurrentUserDTO updateUser(String displayName, String email, User user) {
-        return userController.updateUserInfo(displayName, email, null, user);
+        return userController.updateUserInfo(displayName, email, null, principalOf(user));
     }
 
     public static ResponseEntity<UserDTO> lookupByEmail(User requester, String email) {
-        return userController.lookupByEmail(requester, email);
+        return userController.lookupByEmail(principalOf(requester), email);
     }
 
     public static ResponseEntity<Void> uploadKeys(Long userId, String publicKey, String encryptedPrivateKey, User user) {
-        return userController.uploadKeys(userId, new KeyUploadRequest(publicKey, encryptedPrivateKey), user);
+        return userController.uploadKeys(userId, new KeyUploadRequest(publicKey, encryptedPrivateKey), principalOf(user));
     }
 
     public static void deleteUser(User user) {
-        userController.deleteUser(user);
+        userController.deleteUser(principalOf(user));
     }
 
     public static User findById(Long userId) {
         return userRepository.findById(userId).orElseThrow();
+    }
+
+    public static AuthenticatedUser principalOf(User user) {
+        return user == null ? null
+                : new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName());
     }
 }

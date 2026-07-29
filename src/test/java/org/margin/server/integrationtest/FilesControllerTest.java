@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest;
 
 import org.junit.jupiter.api.BeforeEach;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.*;
@@ -51,7 +52,7 @@ class FilesControllerTest extends MarginTestRunner {
 
     private ResponseEntity<?> serveStoredFile(String fileName, User viewer) {
         try {
-            return filesController.getStoredFileByName(fileName, viewer);
+            return filesController.getStoredFileByName(fileName, principalOf(viewer));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }

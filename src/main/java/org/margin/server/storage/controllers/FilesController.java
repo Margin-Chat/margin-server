@@ -1,5 +1,6 @@
 package org.margin.server.storage.controllers;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.api.MarginDirectory;
@@ -57,7 +58,7 @@ public class FilesController {
 
     @GetMapping("/user-profiles/{fileName}")
     public ResponseEntity<Resource> getProfilePicture(@PathVariable String fileName,
-                                                      @AuthenticationPrincipal User viewer) {
+                                                      @AuthenticationPrincipal AuthenticatedUser viewer) {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -66,29 +67,29 @@ public class FilesController {
 
     @GetMapping("/margin-icons/{fileName}")
     public ResponseEntity<Resource> getMarginIcon(@PathVariable String fileName,
-                                                  @AuthenticationPrincipal User viewer) {
+                                                  @AuthenticationPrincipal AuthenticatedUser viewer) {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         MarginDirectory.MarginIcon icon = marginDirectory.iconByFileName(fileName);
-        marginAccessChecker.requireMarginMember(viewer.getId(), icon.marginId());
+        marginAccessChecker.requireMarginMember(viewer.id(), icon.marginId());
         return serve(icon.iconUrl(), fileName);
     }
 
     @GetMapping("/stored-files/{fileName}")
     public ResponseEntity<Resource> getStoredFileByName(@PathVariable String fileName,
-                                                        @AuthenticationPrincipal User viewer) {
+                                                        @AuthenticationPrincipal AuthenticatedUser viewer) {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         StoredFile f = storedFileService.findByStoredFileName(fileName);
 
         if (f.getScope() == StoredFileScope.CHANNEL) {
-            conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(f.getChannelId()), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(f.getChannelId()), viewer.id());
         } else if (f.getScope() == StoredFileScope.CONVERSATION) {
-            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.id());
         } else {
-            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMarginId());
+            marginAccessChecker.requireMarginMember(viewer.id(), f.getMarginId());
         }
 
         return serve(f.getStorageUrl(), fileName);
@@ -96,7 +97,7 @@ public class FilesController {
 
     @GetMapping("/conversation-images/{fileName}")
     public ResponseEntity<Resource> getConversationImage(@PathVariable String fileName,
-                                                         @AuthenticationPrincipal User viewer) {
+                                                         @AuthenticationPrincipal AuthenticatedUser viewer) {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -104,7 +105,7 @@ public class FilesController {
         if (file.getMessageId() == null || file.getChannelId() == null) {
             return ResponseEntity.notFound().build();
         }
-        conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(file.getChannelId()), viewer.getId());
+        conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(file.getChannelId()), viewer.id());
         return serve(file.getStorageUrl(), fileName);
     }
 

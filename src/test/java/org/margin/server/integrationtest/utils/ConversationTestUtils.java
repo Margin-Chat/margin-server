@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest.utils;
 
 import org.margin.server.social.conversation.controllers.ConversationController;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.api.ConversationType;
@@ -49,43 +50,43 @@ public class ConversationTestUtils {
     }
 
     public static GetConversationMessagesResponse getChannelMessages(Long channelId, User user) {
-        return conversationController.getConversationMessagesForChannel(channelId, user, 50, null);
+        return conversationController.getConversationMessagesForChannel(channelId, principalOf(user), 50, null);
     }
 
     public static GetConversationMessagesResponse getGroupMessages(Long conversationId, User user) {
-        return conversationController.getConversationMessages(conversationId, user, 50, null);
+        return conversationController.getConversationMessages(conversationId, principalOf(user), 50, null);
     }
 
     public static DirectConversationDTO sendInvite(User sender, String recipientEmail) {
         return conversationController.sendConversationInvite(
-                new SendConversationInviteRequest(recipientEmail, false), sender);
+                new SendConversationInviteRequest(recipientEmail, false), principalOf(sender));
     }
 
     public static DirectConversationDTO sendEncryptedInvite(User sender, String recipientEmail) {
         return conversationController.sendConversationInvite(
-                new SendConversationInviteRequest(recipientEmail, true), sender);
+                new SendConversationInviteRequest(recipientEmail, true), principalOf(sender));
     }
 
     public static ConversationDTO createGroupConversation(User creator, List<String> memberEmails,
                                                           String name, boolean encrypted) {
         return conversationController.createGroupConversation(
-                new CreateGroupConversationRequest(memberEmails, name, encrypted), creator);
+                new CreateGroupConversationRequest(memberEmails, name, encrypted), principalOf(creator));
     }
 
     public static List<ConversationInvitePayload> getPendingInvites(User user) {
-        return conversationController.getPendingInvites(user);
+        return conversationController.getPendingInvites(principalOf(user));
     }
 
     public static List<SentConversationInvitePayload> getSentInvites(User user) {
-        return conversationController.getSentInvites(user);
+        return conversationController.getSentInvites(principalOf(user));
     }
 
     public static List<RecentChatUsersDTO> getRecentChatUsers(User user) {
-        return conversationController.getRecentChatUsers(user);
+        return conversationController.getRecentChatUsers(principalOf(user));
     }
 
     public static UnreadConversationsDTO getUnreadConversations(User user) {
-        return conversationController.getUnreadConversations(user);
+        return conversationController.getUnreadConversations(principalOf(user));
     }
 
     public static Conversation getConversationById(Long conversationId) {
@@ -93,19 +94,19 @@ public class ConversationTestUtils {
     }
 
     public static void acceptInvite(Long conversationId, User user) {
-        conversationController.acceptConversationInvite(conversationId, user);
+        conversationController.acceptConversationInvite(conversationId, principalOf(user));
     }
 
     public static void markConversationAsRead(Long conversationId, User user) {
-        conversationController.markConversationAsRead(conversationId, user);
+        conversationController.markConversationAsRead(conversationId, principalOf(user));
     }
 
     public static void declineInvite(Long conversationId, User user) {
-        conversationController.declineConversationInvite(conversationId, user);
+        conversationController.declineConversationInvite(conversationId, principalOf(user));
     }
 
     public static List<ConversationDTO> getUserConversations(User user) {
-        return conversationController.getUserConversations(user);
+        return conversationController.getUserConversations(principalOf(user));
     }
 
     public static List<User> getConversationMembers(Long conversationId) {
@@ -113,11 +114,11 @@ public class ConversationTestUtils {
     }
 
     public static Map<Long, String> getMemberPublicKeys(Long conversationId, User user) {
-        return conversationController.getMemberPublicKeys(conversationId, user);
+        return conversationController.getMemberPublicKeys(conversationId, principalOf(user));
     }
 
     public static ResponseEntity<Void> addMemberToConversation(Long conversationId, Long userId, User adder) {
-        return conversationController.addMemberToConversation(conversationId, new AddMemberRequest(userId), adder);
+        return conversationController.addMemberToConversation(conversationId, new AddMemberRequest(userId), principalOf(adder));
     }
 
     private static void createConversationMember(Conversation conversation, User user) {

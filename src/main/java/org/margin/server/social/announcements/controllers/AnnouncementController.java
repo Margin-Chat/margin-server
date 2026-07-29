@@ -1,5 +1,7 @@
 package org.margin.server.social.announcements.controllers;
 
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.announcements.models.dtos.AnnouncementDTO;
 import org.margin.server.social.announcements.models.dtos.CreateAnnouncementRequest;
 import org.margin.server.social.announcements.models.dtos.DeleteAnnouncementRequest;
@@ -17,17 +19,20 @@ import java.util.List;
 public class AnnouncementController {
     private final AnnouncementService announcementService;
     private final MarginAuthorizationService marginAuthorizationService;
+    private final UserLookup userLookup;
 
     public AnnouncementController(AnnouncementService announcementService,
-                                  MarginAuthorizationService marginAuthorizationService) {
+                                  MarginAuthorizationService marginAuthorizationService,
+                              UserLookup userLookup) {
         this.announcementService = announcementService;
         this.marginAuthorizationService = marginAuthorizationService;
+        this.userLookup = userLookup;
     }
 
     @GetMapping("/get/{marginId}")
     public List<AnnouncementDTO> getAnnouncements(@PathVariable Long marginId,
-                                                  @AuthenticationPrincipal User user) {
-        marginAuthorizationService.requireMarginMember(user.getId(), marginId);
+                                                  @AuthenticationPrincipal AuthenticatedUser user) {
+        marginAuthorizationService.requireMarginMember(user.id(), marginId);
         return announcementService.getAnnouncementsForMargin(marginId).stream()
                 .map(announcementService::toDTO)
                 .toList();
@@ -35,23 +40,27 @@ public class AnnouncementController {
 
     @PostMapping("/create")
     public AnnouncementDTO createAnnouncement(@RequestBody CreateAnnouncementRequest announcementDTO,
-                                              @AuthenticationPrincipal User author) {
-        marginAuthorizationService.requireMarginAdmin(author.getId(), announcementDTO.marginId());
-        return announcementService.toDTO(announcementService.createAnnouncement(announcementDTO, author));
+                                              @AuthenticationPrincipal AuthenticatedUser author) {
+        marginAuthorizationService.requireMarginAdmin(author.id(), announcementDTO.marginId());
+        return announcementService.toDTO(announcementService.createAnnouncement(announcementDTO, entityOf(author)));
     }
 
     @PostMapping("/edit")
     public AnnouncementDTO editAnnouncement(@RequestBody AnnouncementDTO announcementDTO,
-                                            @AuthenticationPrincipal User author) {
-        marginAuthorizationService.requireMarginAdmin(author.getId(), announcementDTO.marginId());
+                                            @AuthenticationPrincipal AuthenticatedUser author) {
+        marginAuthorizationService.requireMarginAdmin(author.id(), announcementDTO.marginId());
         return announcementService.toDTO(announcementService.editAnnouncement(announcementDTO));
     }
 
     @DeleteMapping("/delete")
     public ResponseEntity<Void> deleteAnnouncement(@RequestBody DeleteAnnouncementRequest request,
-                                                   @AuthenticationPrincipal User author) {
-        marginAuthorizationService.requireMarginAdmin(author.getId(), request.marginId());
+                                                   @AuthenticationPrincipal AuthenticatedUser author) {
+        marginAuthorizationService.requireMarginAdmin(author.id(), request.marginId());
         announcementService.deleteAnnouncement(request.announcementId());
         return ResponseEntity.ok().build();
+    }
+
+    private User entityOf(AuthenticatedUser principal) {
+        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
     }
 }

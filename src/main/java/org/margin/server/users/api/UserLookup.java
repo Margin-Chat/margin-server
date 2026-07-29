@@ -1,6 +1,7 @@
 package org.margin.server.users.api;
 
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -19,6 +20,10 @@ public interface UserLookup {
     List<User> findAllById(Collection<Long> userIds);
 
     UserContact contactOf(Long userId);
+
+    UserDTO dtoOf(Long userId);
+
+    List<UserDTO> dtosOf(Collection<Long> userIds);
 
     void markLastSeen(Long userId, Instant lastSeenAt);
 }

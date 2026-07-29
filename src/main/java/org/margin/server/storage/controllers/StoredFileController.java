@@ -1,5 +1,7 @@
 package org.margin.server.storage.controllers;
 
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.shared.authorization.MarginAccessChecker;
@@ -35,33 +37,36 @@ public class StoredFileController {
     private final ConversationAuthorizationService conversationAuthorizationService;
     private final MarginAccessChecker marginAccessChecker;
     private final MarginLookup marginLookup;
+    private final UserLookup userLookup;
 
     public StoredFileController(StorageService storageService,
                                 StorageProperties storageProperties,
                                 StoredFileService storedFileService,
                                 ConversationAuthorizationService conversationAuthorizationService,
                                 MarginAccessChecker marginAccessChecker,
-                                MarginLookup marginLookup) {
+                                MarginLookup marginLookup,
+                                UserLookup userLookup) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.storedFileService = storedFileService;
         this.conversationAuthorizationService = conversationAuthorizationService;
         this.marginAccessChecker = marginAccessChecker;
         this.marginLookup = marginLookup;
+        this.userLookup = userLookup;
     }
 
     @GetMapping("/margins/{marginId}/stored-files")
     public ResponseEntity<List<StoredFileDTO>> listMarginFiles(@PathVariable Long marginId,
-                                                               @AuthenticationPrincipal User viewer) {
-        marginAccessChecker.requireMarginMember(viewer.getId(), marginId);
+                                                               @AuthenticationPrincipal AuthenticatedUser viewer) {
+        marginAccessChecker.requireMarginMember(viewer.id(), marginId);
 
         return ResponseEntity.ok(storedFileService.toDTOs(storedFileService.findMarginFiles(marginId)));
     }
 
     @GetMapping("/channels/{channelId}/stored-files")
     public ResponseEntity<List<StoredFileDTO>> listChannelFiles(@PathVariable Long channelId,
-                                                                @AuthenticationPrincipal User viewer) {
-        conversationAuthorizationService.requireConversationMemberForChannel(channelId, viewer.getId());
+                                                                @AuthenticationPrincipal AuthenticatedUser viewer) {
+        conversationAuthorizationService.requireConversationMemberForChannel(channelId, viewer.id());
 
         return ResponseEntity.ok(storedFileService.toDTOs(storedFileService.findChannelFiles(channelId)));
     }
@@ -69,37 +74,37 @@ public class StoredFileController {
     @PostMapping("/margins/{marginId}/stored-files")
     public ResponseEntity<StoredFileDTO> uploadMarginFile(@PathVariable Long marginId,
                                                           @RequestParam("file") MultipartFile file,
-                                                          @AuthenticationPrincipal User uploader) {
-        marginAccessChecker.requireMarginAdmin(uploader.getId(), marginId);
-        StoredFile saved = storedFileService.uploadMarginFile(marginId, file, uploader);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
+                                                          @AuthenticationPrincipal AuthenticatedUser uploader) {
+        marginAccessChecker.requireMarginAdmin(uploader.id(), marginId);
+        StoredFile saved = storedFileService.uploadMarginFile(marginId, file, uploader.id());
+        return ResponseEntity.ok(StoredFileDTO.from(saved, userLookup.dtoOf(uploader.id())));
     }
 
     @PostMapping("/channels/{channelId}/stored-files")
     public ResponseEntity<StoredFileDTO> uploadChannelFile(@PathVariable Long channelId,
                                                            @RequestParam("file") MultipartFile file,
                                                            @RequestParam(value = "inline", defaultValue = "false") boolean inline,
-                                                           @AuthenticationPrincipal User uploader) {
-        marginAccessChecker.requireChannelMember(uploader.getId(), channelId);
-        StoredFile saved = storedFileService.uploadChannelFile(channelId, file, uploader, inline);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
+                                                           @AuthenticationPrincipal AuthenticatedUser uploader) {
+        marginAccessChecker.requireChannelMember(uploader.id(), channelId);
+        StoredFile saved = storedFileService.uploadChannelFile(channelId, file, uploader.id(), inline);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, userLookup.dtoOf(uploader.id())));
     }
 
     @PostMapping("/conversations/{conversationId}/stored-files")
     public ResponseEntity<StoredFileDTO> uploadConversationFile(@PathVariable Long conversationId,
                                                                 @RequestParam("file") MultipartFile file,
                                                                 @RequestParam(value = "inline", defaultValue = "false") boolean inline,
-                                                                @AuthenticationPrincipal User uploader) {
+                                                                @AuthenticationPrincipal AuthenticatedUser uploader) {
         StorageUtils.requireConversationFileSize(file);
-        conversationAuthorizationService.requireConversationMember(conversationId, uploader.getId());
-        StoredFile saved = storedFileService.uploadConversationFile(conversationId, file, uploader, inline);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
+        conversationAuthorizationService.requireConversationMember(conversationId, uploader.id());
+        StoredFile saved = storedFileService.uploadConversationFile(conversationId, file, uploader.id(), inline);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, userLookup.dtoOf(uploader.id())));
     }
 
     @PatchMapping("/stored-files/{fileId}")
     public ResponseEntity<StoredFileDTO> renameFile(@PathVariable Long fileId,
                                                     @RequestBody RenameRequest body,
-                                                    @AuthenticationPrincipal User actor) {
+                                                    @AuthenticationPrincipal AuthenticatedUser actor) {
         if (body == null || body.fileName() == null || body.fileName().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -110,13 +115,13 @@ public class StoredFileController {
 
         StoredFile f = storedFileService.getById(fileId);
 
-        if (!f.getUploadedByUserId().equals(actor.getId())) {
-            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMarginId());
+        if (!f.getUploadedByUserId().equals(actor.id())) {
+            marginAccessChecker.requireMarginAdmin(actor.id(), f.getMarginId());
         }
 
         f.setFileName(newName);
         StoredFile saved = storedFileService.save(f);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, actor, false));
+        return ResponseEntity.ok(StoredFileDTO.from(saved, userLookup.dtoOf(actor.id())));
     }
 
     public record RenameRequest(String fileName) {
@@ -124,11 +129,11 @@ public class StoredFileController {
 
     @DeleteMapping("/stored-files/{fileId}")
     public ResponseEntity<Void> deleteFile(@PathVariable Long fileId,
-                                           @AuthenticationPrincipal User actor) {
+                                           @AuthenticationPrincipal AuthenticatedUser actor) {
         StoredFile f = storedFileService.getById(fileId);
 
-        if (!f.getUploadedByUserId().equals(actor.getId())) {
-            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMarginId());
+        if (!f.getUploadedByUserId().equals(actor.id())) {
+            marginAccessChecker.requireMarginAdmin(actor.id(), f.getMarginId());
         }
 
         f.setDeletedAt(Instant.now());
@@ -141,15 +146,15 @@ public class StoredFileController {
 
     @GetMapping("/stored-files/{fileId}/download")
     public ResponseEntity<Resource> download(@PathVariable Long fileId,
-                                             @AuthenticationPrincipal User viewer) {
+                                             @AuthenticationPrincipal AuthenticatedUser viewer) {
         StoredFile f = storedFileService.getById(fileId);
 
         if (f.getScope() == StoredFileScope.MARGIN) {
-            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMarginId());
+            marginAccessChecker.requireMarginMember(viewer.id(), f.getMarginId());
         } else if (f.getScope() == StoredFileScope.CHANNEL) {
-            marginAccessChecker.requireChannelMember(viewer.getId(), f.getChannelId());
+            marginAccessChecker.requireChannelMember(viewer.id(), f.getChannelId());
         } else {
-            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.id());
         }
 
         if ("s3".equals(storageProperties.getType())) {

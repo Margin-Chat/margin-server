@@ -11,7 +11,7 @@ import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.api.UserLookup;
-import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +49,7 @@ public class StoredFileService implements MessageAttachments {
     }
 
     @Transactional
-    public StoredFile uploadMarginFile(Long marginId, MultipartFile file, User uploader) {
+    public StoredFile uploadMarginFile(Long marginId, MultipartFile file, Long uploaderId) {
         validateQuota(marginId, file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
@@ -59,12 +59,12 @@ public class StoredFileService implements MessageAttachments {
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedByUserId(uploader.getId());
+        entity.setUploadedByUserId(uploaderId);
         return storedFileRepository.save(entity);
     }
 
     @Transactional
-    public StoredFile uploadChannelFile(Long channelId, MultipartFile file, User uploader, boolean inline) {
+    public StoredFile uploadChannelFile(Long channelId, MultipartFile file, Long uploaderId, boolean inline) {
         Long marginId = channelDirectory.marginIdOf(channelId);
         validateQuota(marginId, file.getSize());
         String url = storageService.saveStoredFile(file);
@@ -76,13 +76,13 @@ public class StoredFileService implements MessageAttachments {
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedByUserId(uploader.getId());
+        entity.setUploadedByUserId(uploaderId);
         entity.setInline(inline);
         return storedFileRepository.save(entity);
     }
 
     @Transactional
-    public StoredFile uploadConversationFile(Long conversationId, MultipartFile file, User uploader, boolean inline) {
+    public StoredFile uploadConversationFile(Long conversationId, MultipartFile file, Long uploaderId, boolean inline) {
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.CONVERSATION);
@@ -91,7 +91,7 @@ public class StoredFileService implements MessageAttachments {
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedByUserId(uploader.getId());
+        entity.setUploadedByUserId(uploaderId);
         entity.setInline(inline);
         return storedFileRepository.save(entity);
     }
@@ -118,7 +118,7 @@ public class StoredFileService implements MessageAttachments {
                 .collect(Collectors.groupingBy(
                         StoredFile::getMessageId,
                         Collectors.mapping(
-                                f -> toAttachment(StoredFileDTO.from(f, userLookup.findById(f.getUploadedByUserId()).orElseThrow(), presenceService.isUserOnline(f.getUploadedByUserId()))),
+                                f -> toAttachment(StoredFileDTO.from(f, userLookup.dtoOf(f.getUploadedByUserId()))),
                                 Collectors.toList()
                         )
                 ));
@@ -180,13 +180,12 @@ public class StoredFileService implements MessageAttachments {
 
     @Transactional(readOnly = true)
     public List<StoredFileDTO> toDTOs(List<StoredFile> files) {
-        Map<Long, User> uploaders = userLookup.findAllById(
+        Map<Long, UserDTO> uploaders = userLookup.dtosOf(
                         files.stream().map(StoredFile::getUploadedByUserId).distinct().toList()).stream()
-                .collect(Collectors.toMap(User::getId, u -> u));
+                .collect(Collectors.toMap(UserDTO::id, u -> u));
 
         return files.stream()
-                .map(f -> StoredFileDTO.from(f, uploaders.get(f.getUploadedByUserId()),
-                        presenceService.isUserOnline(f.getUploadedByUserId())))
+                .map(f -> StoredFileDTO.from(f, uploaders.get(f.getUploadedByUserId())))
                 .toList();
     }
 }

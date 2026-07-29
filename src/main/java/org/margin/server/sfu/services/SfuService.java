@@ -78,9 +78,9 @@ public class SfuService {
         eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.JOINED, payload));
     }
 
-    public void inviteToChannelCall(User inviter, Long recipientId, Long channelId, String channelName) {
+    public void inviteToChannelCall(Long inviterId, Long recipientId, Long channelId, String channelName) {
         ChannelCallInvitePayload payload = new ChannelCallInvitePayload(
-                channelId, channelName, new UserDTO(inviter, presenceService.isUserOnline(inviter.getId()))
+                channelId, channelName, userLookup.dtoOf(inviterId)
         );
         eventPublisher.publishEvent(new ChannelCallInviteEvent(recipientId, payload));
     }

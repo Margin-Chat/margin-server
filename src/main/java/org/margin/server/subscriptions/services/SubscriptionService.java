@@ -17,7 +17,7 @@ import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.subscriptions.models.dtos.SubscriptionLimitsDTO;
 import org.margin.server.subscriptions.repositories.SubscriptionRepository;
 import org.margin.server.subscriptions.utils.SubscriptionUtils;
-import org.margin.server.users.models.User;
+import org.margin.server.users.api.UserLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -42,6 +42,7 @@ public class SubscriptionService {
     private final SubscriptionLimitsFactory subscriptionLimitsFactory;
     private final SubscriptionService self;
     private final MarginDirectory marginDirectory;
+    private final UserLookup userLookup;
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
                                SubscriptionPricingProperties subscriptionPricingProperties,
@@ -49,6 +50,7 @@ public class SubscriptionService {
                                MollieProperties mollieProperties,
                                SubscriptionLimitsFactory subscriptionLimitsFactory,
                                MarginDirectory marginDirectory,
+                             UserLookup userLookup,
                                @Lazy SubscriptionService self) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPricingProperties = subscriptionPricingProperties;
@@ -57,6 +59,7 @@ public class SubscriptionService {
         this.subscriptionLimitsFactory = subscriptionLimitsFactory;
         this.self = self;
         this.marginDirectory = marginDirectory;
+        this.userLookup = userLookup;
     }
 
     public Subscription getByMarginId(Long marginId) {
@@ -171,7 +174,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public String createCheckout(Long marginId, SubscriptionTier targetTier, User user) {
+    public String createCheckout(Long marginId, SubscriptionTier targetTier, Long userId) {
         SubscriptionPricingProperties.TierConfig config = subscriptionPricingProperties.tiers().get(targetTier);
         if (config == null || config.price() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -183,7 +186,7 @@ public class SubscriptionService {
 
         String customerId = subscription.getMollieCustomerId();
         if (customerId == null) {
-            CustomerResponse customer = mollieClient.createCustomer(marginDirectory.summaryOf(marginId).name(), user.getEmail());
+            CustomerResponse customer = mollieClient.createCustomer(marginDirectory.summaryOf(marginId).name(), userLookup.contactOf(userId).email());
             customerId = customer.id();
             subscription.setMollieCustomerId(customerId);
             subscriptionRepository.save(subscription);
