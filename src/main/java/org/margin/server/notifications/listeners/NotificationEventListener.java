@@ -47,8 +47,8 @@ public class NotificationEventListener {
     @EventListener
     public void onMissedCall(MissedCallEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getRecipient()),
-                event.getCaller(),
+                Collections.singletonList(event.getRecipient().getId()),
+                event.getCaller().getId(),
                 NotificationType.MISSED_CALL,
                 event.getCallId(),
                 null);
@@ -57,8 +57,8 @@ public class NotificationEventListener {
     @EventListener
     public void onUserAddedToMargin(UserAddedToMarginEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getAddedUser()),
-                event.getAddingUser(),
+                Collections.singletonList(event.getAddedUser().getId()),
+                event.getAddingUser().getId(),
                 NotificationType.ADDED_TO_MARGIN,
                 null,
                 event.getMarginId());
@@ -67,8 +67,8 @@ public class NotificationEventListener {
     @EventListener
     public void onUserInvitedToMargin(UserInvitedToMarginEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getInvitedUser()),
-                event.getInvitedBy(),
+                Collections.singletonList(event.getInvitedUser().getId()),
+                event.getInvitedBy().getId(),
                 NotificationType.INVITED_TO_MARGIN,
                 event.getInviteId(),
                 event.getMarginId());
@@ -77,8 +77,8 @@ public class NotificationEventListener {
     @EventListener
     public void onConversationInvite(ConversationInviteEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(userService.getById(event.getRecipientId())),
-                event.getSender(),
+                Collections.singletonList(event.getRecipientId()),
+                event.getSender().getId(),
                 NotificationType.CONVERSATION_INVITE,
                 event.getConversation().id(),
                 null);
@@ -114,8 +114,8 @@ public class NotificationEventListener {
                 : conversation.getChannel().getSpace().getMargin().getId();
 
         notificationService.createForUsers(
-                Collections.singletonList(author),
-                reactor,
+                Collections.singletonList(author.getId()),
+                reactor == null ? null : reactor.getId(),
                 NotificationType.MESSAGE_REACTION,
                 reaction.messageId(),
                 marginId,
@@ -136,8 +136,8 @@ public class NotificationEventListener {
                 .orElse(null);
 
         notificationService.createOrCollapseThreadReply(
-                followers,
-                sender,
+                followers.stream().map(User::getId).toList(),
+                sender == null ? null : sender.getId(),
                 message.id(),
                 message.marginId(),
                 message.conversationId());
@@ -146,8 +146,8 @@ public class NotificationEventListener {
     @EventListener
     public void onAnnouncementCreated(AnnouncementCreatedEvent event) {
         notificationService.createForUsers(
-                event.getMembers(),
-                event.getAuthor(),
+                event.getMembers().stream().map(User::getId).toList(),
+                event.getAuthor().getId(),
                 NotificationType.ANNOUNCEMENT,
                 event.getAnnouncementId(),
                 event.getMarginId());
@@ -156,7 +156,7 @@ public class NotificationEventListener {
     @EventListener
     public void onMemberLimitWarning(MemberLimitWarningEvent event) {
         notificationService.createForUsers(
-                event.getRecipients(),
+                event.getRecipients().stream().map(User::getId).toList(),
                 null,
                 NotificationType.SUBSCRIPTION_LIMIT_WARNING,
                 null,
@@ -166,7 +166,7 @@ public class NotificationEventListener {
     @EventListener
     public void onSubscriptionStatusChanged(SubscriptionStatusChangedEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getOwner()),
+                Collections.singletonList(event.getOwner().getId()),
                 null,
                 event.getType(),
                 null,

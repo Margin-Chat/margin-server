@@ -77,7 +77,7 @@ class NotificationControllerTest {
 
     private Notification testNotification(User recipient, Long marginId) {
         Notification n = new Notification();
-        n.setRecipient(recipient);
+        n.setRecipientId(recipient.getId());
         n.setMarginId(marginId);
         n.setType(NotificationType.ANNOUNCEMENT);
         n.setSeen(false);

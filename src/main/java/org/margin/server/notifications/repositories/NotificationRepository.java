@@ -12,16 +12,16 @@ import java.util.Optional;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-    List<Notification> findByRecipient_IdOrderByCreatedAtDesc(Long recipientId);
+    List<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId);
 
-    List<Notification> findByRecipient_IdAndSeenFalse(Long recipientId);
+    List<Notification> findByRecipientIdAndSeenFalse(Long recipientId);
 
-    long countByRecipient_IdAndMarginIdAndSeenFalse(Long recipientId, Long marginId);
+    long countByRecipientIdAndMarginIdAndSeenFalse(Long recipientId, Long marginId);
 
-    Optional<Notification> findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+    Optional<Notification> findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
             Long recipientId, NotificationType type, Long conversationId);
 
     @Modifying
-    @Query("UPDATE Notification n SET n.seen = true WHERE n.recipient.id = :userId AND n.referenceId = :referenceId")
+    @Query("UPDATE Notification n SET n.seen = true WHERE n.recipientId = :userId AND n.referenceId = :referenceId")
     void markSeenByReference(Long userId, Long referenceId);
 }

@@ -35,7 +35,7 @@ public class NotificationController {
     public void markSeen(@AuthenticationPrincipal User user,
                          @RequestBody Long notificationId) {
         Notification notification = notificationService.getNotification(notificationId);
-        if (!notification.getRecipient().getId().equals(user.getId())) {
+        if (!notification.getRecipientId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         notificationService.markNotificationAsSeen(notification);

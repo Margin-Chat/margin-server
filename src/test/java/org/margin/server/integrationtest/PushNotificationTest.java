@@ -61,7 +61,7 @@ class PushNotificationTest extends MarginTestRunner {
 
         var tokens = pushTokenRepository.findByToken("device-token-1");
         assertTrue(tokens.isPresent());
-        assertEquals(bob.getId(), tokens.get().getUser().getId());
+        assertEquals(bob.getId(), tokens.get().getUserId());
         assertEquals(1, pushTokenRepository.count());
     }
 

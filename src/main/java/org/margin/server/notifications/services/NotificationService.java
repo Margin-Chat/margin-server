@@ -3,7 +3,6 @@ package org.margin.server.notifications.services;
 import org.margin.server.notifications.Notification;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
-import org.margin.server.users.models.User;
 import org.margin.server.notifications.events.NotificationDeliveryEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,20 +25,20 @@ public class NotificationService {
     }
 
     @Transactional
-    public void createForUsers(List<User> members, User sender, NotificationType type,
+    public void createForUsers(List<Long> recipientIds, Long senderId, NotificationType type,
                                Long referenceId, Long marginId) {
-        createForUsers(members, sender, type, referenceId, marginId, null);
+        createForUsers(recipientIds, senderId, type, referenceId, marginId, null);
     }
 
     @Transactional
-    public void createForUsers(List<User> members, User sender, NotificationType type,
+    public void createForUsers(List<Long> recipientIds, Long senderId, NotificationType type,
                                Long referenceId, Long marginId, Long conversationId) {
-        List<Notification> notifications = members.stream()
-                .filter(member -> sender == null || !member.getId().equals(sender.getId()))
-                .map(member -> {
+        List<Notification> notifications = recipientIds.stream()
+                .filter(recipientId -> senderId == null || !recipientId.equals(senderId))
+                .map(recipientId -> {
                     Notification n = new Notification();
-                    n.setRecipient(member);
-                    n.setSender(sender);
+                    n.setRecipientId(recipientId);
+                    n.setSenderId(senderId);
                     n.setType(type);
                     n.setReferenceId(referenceId);
                     n.setMarginId(marginId);
@@ -56,24 +55,24 @@ public class NotificationService {
     }
 
     @Transactional
-    public void createOrCollapseThreadReply(List<User> recipients, User sender, Long referenceId,
+    public void createOrCollapseThreadReply(List<Long> recipientIds, Long senderId, Long referenceId,
                                             Long marginId, Long threadConversationId) {
-        for (User recipient : recipients) {
-            if (sender != null && recipient.getId().equals(sender.getId())) {
+        for (Long recipientId : recipientIds) {
+            if (senderId != null && recipientId.equals(senderId)) {
                 continue;
             }
             Notification notification = notificationRepository
-                    .findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
-                            recipient.getId(), NotificationType.THREAD_REPLY, threadConversationId)
+                    .findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
+                            recipientId, NotificationType.THREAD_REPLY, threadConversationId)
                     .orElseGet(() -> {
                         Notification n = new Notification();
-                        n.setRecipient(recipient);
+                        n.setRecipientId(recipientId);
                         n.setType(NotificationType.THREAD_REPLY);
                         n.setConversationId(threadConversationId);
                         n.setSeen(false);
                         return n;
                     });
-            notification.setSender(sender);
+            notification.setSenderId(senderId);
             notification.setReferenceId(referenceId);
             notification.setMarginId(marginId);
             notification.setCreatedAt(Instant.now());
@@ -89,11 +88,11 @@ public class NotificationService {
     }
 
     public List<Notification> getNotificationsForUser(Long recipientId) {
-        return notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipientId);
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId);
     }
 
     public Map<Long, Long> getUnseenCountsPerMargin(Long recipientId) {
-        return notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
+        return notificationRepository.findByRecipientIdAndSeenFalse(recipientId)
                 .stream()
                 .filter(n -> n.getMarginId() != null)
                 .collect(Collectors.groupingBy(Notification::getMarginId, Collectors.counting()));

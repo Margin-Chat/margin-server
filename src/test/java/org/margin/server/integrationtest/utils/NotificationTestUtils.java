@@ -19,7 +19,7 @@ public class NotificationTestUtils {
     }
 
     public static List<Notification> getForUser(User user) {
-        return notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(user.getId());
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(user.getId());
     }
 
     public static boolean hasNotification(User user, NotificationType type) {

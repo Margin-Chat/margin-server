@@ -21,7 +21,7 @@ public class PushTokenService {
         if (entity.getId() == null) {
             entity.setCreatedAt(Instant.now());
         }
-        entity.setUser(user);
+        entity.setUserId(user.getId());
         entity.setPlatform(platform);
         entity.setToken(token);
         entity.setUpdatedAt(Instant.now());
@@ -31,7 +31,7 @@ public class PushTokenService {
     @Transactional
     public void unregister(User user, String token) {
         pushTokenRepository.findByToken(token)
-                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .filter(t -> t.getUserId().equals(user.getId()))
                 .ifPresent(pushTokenRepository::delete);
     }
 }

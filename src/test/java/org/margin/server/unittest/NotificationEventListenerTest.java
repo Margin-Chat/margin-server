@@ -54,7 +54,6 @@ class NotificationEventListenerTest {
     void onConversationInvite_createsNotificationForRecipient() {
         User sender = createUser(1L, "Sender");
         User recipient = createUser(2L, "Recipient");
-        when(userService.getById(recipient.getId())).thenReturn(recipient);
 
         DirectConversationDTO conversation = new DirectConversationDTO(
                 42L, Instant.now(), sender.getId(), null, ConversationInviteStatus.PENDING, false);
@@ -62,7 +61,7 @@ class NotificationEventListenerTest {
         listener.onConversationInvite(new ConversationInviteEvent(conversation, sender, recipient.getId()));
 
         verify(notificationService).createForUsers(
-                List.of(recipient), sender, NotificationType.CONVERSATION_INVITE, 42L, null);
+                List.of(recipient.getId()), sender.getId(), NotificationType.CONVERSATION_INVITE, 42L, null);
     }
 
     @Test
@@ -117,7 +116,7 @@ class NotificationEventListenerTest {
         listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author, reactor), ConversationType.CHANNEL));
 
         verify(notificationService).createForUsers(
-                List.of(author), reactor, NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
+                List.of(author.getId()), reactor.getId(), NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
     }
 
     @Test
