@@ -9,7 +9,7 @@ import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.authentication.services.UserSecurityService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.api.UserLookup;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -33,7 +33,7 @@ import static org.margin.server.unittest.utils.UserTestUtils.createEncryption;
 class PasswordResetServiceTest {
 
     @Mock private UserLookup userLookup;
-    @Mock private UserAccounts userAccounts;
+    @Mock private UserAccountCommands userAccountCommands;
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
@@ -101,7 +101,7 @@ class PasswordResetServiceTest {
 
         passwordResetService.resetPassword("valid-token", "new-pass");
 
-        verify(userAccounts).resetCredentials(1L, "hashed");
+        verify(userAccountCommands).resetCredentials(1L, "hashed");
         verify(userSecurityService).bumpTokenVersion(1L);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
@@ -117,7 +117,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("expired"));
-        verifyNoInteractions(userAccounts);
+        verifyNoInteractions(userAccountCommands);
     }
 
     @Test
@@ -130,7 +130,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("already been used"));
-        verifyNoInteractions(userAccounts);
+        verifyNoInteractions(userAccountCommands);
     }
 
     @Test

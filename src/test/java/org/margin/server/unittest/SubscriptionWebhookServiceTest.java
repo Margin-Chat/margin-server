@@ -11,7 +11,7 @@ import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
@@ -58,7 +58,7 @@ class SubscriptionWebhookServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
-    private MarginDirectory marginDirectory;
+    private MarginLookup marginLookup;
     @Mock
     private UserLookup userLookup;
 
@@ -78,7 +78,7 @@ class SubscriptionWebhookServiceTest {
                 Map.of(SubscriptionTier.SMALL, smallConfig));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
                 subscriptionService, mollie, pricing, emailService,
-                eventPublisher, marginDirectory, userLookup, null);
+                eventPublisher, marginLookup, userLookup, null);
         ReflectionTestUtils.setField(service, "self", service);
     }
 
@@ -447,11 +447,11 @@ class SubscriptionWebhookServiceTest {
 
     private Subscription localSubscriptionWithOwner() {
         Subscription subscription = localSubscription();
-        lenient().when(marginDirectory.ownerUserIdOf(subscription.getMarginId())).thenReturn(OWNER_ID);
+        lenient().when(marginLookup.ownerUserIdOf(subscription.getMarginId())).thenReturn(OWNER_ID);
         lenient().when(userLookup.contactOf(OWNER_ID))
                 .thenReturn(new UserLookup.UserContact(OWNER_ID, "Owner", "owner@test.com"));
-        lenient().when(marginDirectory.summaryOf(subscription.getMarginId()))
-                .thenReturn(new MarginDirectory.MarginSummary(subscription.getMarginId(), "Test Margin", 1));
+        lenient().when(marginLookup.summaryOf(subscription.getMarginId()))
+                .thenReturn(new MarginLookup.MarginSummary(subscription.getMarginId(), "Test Margin", 1));
         return subscription;
     }
 

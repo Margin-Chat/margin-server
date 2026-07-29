@@ -2,7 +2,7 @@ package org.margin.server.social.api;
 
 import java.util.List;
 
-public interface MessageDirectory {
+public interface MessageLookup {
 
     MessageContext contextOf(Long messageId);
 

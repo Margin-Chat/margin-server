@@ -1,9 +1,9 @@
 package org.margin.server.storage.controllers;
 
 import org.margin.server.shared.security.AuthenticatedUser;
-import org.margin.server.social.api.ChannelDirectory;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.models.StoredFile;
@@ -33,26 +33,26 @@ import java.util.Optional;
 public class FilesController {
     private final StorageService storageService;
     private final StorageProperties storageProperties;
-    private final MarginDirectory marginDirectory;
+    private final MarginLookup marginLookup;
     private final StoredFileService storedFileService;
     private final MarginAccessChecker marginAccessChecker;
     private final ConversationAuthorizationService conversationAuthorizationService;
-    private final ChannelDirectory channelDirectory;
+    private final ChannelLookup channelLookup;
 
     public FilesController(StorageService storageService,
                            StorageProperties storageProperties,
-                           MarginDirectory marginDirectory,
+                           MarginLookup marginLookup,
                            StoredFileService storedFileService,
                            MarginAccessChecker marginAccessChecker,
                            ConversationAuthorizationService conversationAuthorizationService,
-                           ChannelDirectory channelDirectory) {
+                           ChannelLookup channelLookup) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
-        this.marginDirectory = marginDirectory;
+        this.marginLookup = marginLookup;
         this.storedFileService = storedFileService;
         this.marginAccessChecker = marginAccessChecker;
         this.conversationAuthorizationService = conversationAuthorizationService;
-        this.channelDirectory = channelDirectory;
+        this.channelLookup = channelLookup;
     }
 
     @GetMapping("/user-profiles/{fileName}")
@@ -70,7 +70,7 @@ public class FilesController {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        MarginDirectory.MarginIcon icon = marginDirectory.iconByFileName(fileName);
+        MarginLookup.MarginIcon icon = marginLookup.iconByFileName(fileName);
         marginAccessChecker.requireMarginMember(viewer.id(), icon.marginId());
         return serve(icon.iconUrl(), fileName);
     }
@@ -84,7 +84,7 @@ public class FilesController {
         StoredFile f = storedFileService.findByStoredFileName(fileName);
 
         if (f.getScope() == StoredFileScope.CHANNEL) {
-            conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(f.getChannelId()), viewer.id());
+            conversationAuthorizationService.requireConversationMember(channelLookup.conversationIdOf(f.getChannelId()), viewer.id());
         } else if (f.getScope() == StoredFileScope.CONVERSATION) {
             conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.id());
         } else {
@@ -104,7 +104,7 @@ public class FilesController {
         if (file.getMessageId() == null || file.getChannelId() == null) {
             return ResponseEntity.notFound().build();
         }
-        conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(file.getChannelId()), viewer.id());
+        conversationAuthorizationService.requireConversationMember(channelLookup.conversationIdOf(file.getChannelId()), viewer.id());
         return serve(file.getStorageUrl(), fileName);
     }
 

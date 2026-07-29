@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.channel.ChannelLookup;
+import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
@@ -60,7 +60,7 @@ class ThreadServiceTest {
     @Mock
     private MessageService messageService;
     @Mock
-    private ChannelLookup channelLookup;
+    private ChannelService channelService;
     @Mock
     private PresenceService presenceService;
     @Mock
@@ -86,14 +86,14 @@ class ThreadServiceTest {
     }
 
     private void stubThreadChannel() {
-        when(channelLookup.getById(5L)).thenReturn(threadChannel);
+        when(channelService.getById(5L)).thenReturn(threadChannel);
         lenient().when(conversationService.getByChannelId(5L)).thenReturn(channelConversation);
     }
 
     @Test
     void createPost_inChatChannel_throwsBadRequest() {
         threadChannel.setChannelType(ChannelType.Communication);
-        when(channelLookup.getById(5L)).thenReturn(threadChannel);
+        when(channelService.getById(5L)).thenReturn(threadChannel);
 
         assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "title", "body"))
                 .isInstanceOf(ResponseStatusException.class)

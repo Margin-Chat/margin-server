@@ -1,6 +1,6 @@
 package org.margin.server.social.api;
 
-public interface ChannelDirectory {
+public interface ChannelLookup {
 
     Long marginIdOf(Long channelId);
 

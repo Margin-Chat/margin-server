@@ -7,7 +7,7 @@ import org.margin.server.sfu.models.PeerLeftRequest;
 import org.margin.server.sfu.models.SfuJoinResponse;
 import org.margin.server.sfu.services.SfuService;
 import org.margin.server.sfu.services.SfuTokenService;
-import org.margin.server.social.api.ChannelDirectory;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
@@ -25,18 +25,18 @@ public class SfuController {
     private final SfuService sfuService;
     private final MarginAccessChecker marginAccessChecker;
     private final SfuTokenService sfuTokenService;
-    private final ChannelDirectory channelDirectory;
+    private final ChannelLookup channelLookup;
     private final SubscriptionValidationService subscriptionValidationService;
 
     public SfuController(SfuService sfuService,
                          MarginAccessChecker marginAccessChecker,
                          SfuTokenService sfuTokenService,
-                         ChannelDirectory channelDirectory,
+                         ChannelLookup channelLookup,
                          SubscriptionValidationService subscriptionValidationService) {
         this.sfuService = sfuService;
         this.marginAccessChecker = marginAccessChecker;
         this.sfuTokenService = sfuTokenService;
-        this.channelDirectory = channelDirectory;
+        this.channelLookup = channelLookup;
         this.subscriptionValidationService = subscriptionValidationService;
     }
 
@@ -46,11 +46,11 @@ public class SfuController {
         Long channelId = Long.parseLong(roomId);
         marginAccessChecker.requireChannelMember(user.id(), channelId);
         int currentParticipants = sfuService.getVoiceParticipants(channelId).size();
-        int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channelDirectory.marginIdOf(channelId), currentParticipants);
+        int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channelLookup.marginIdOf(channelId), currentParticipants);
         sfuService.createOrJoinRoom(roomId, maxParticipants);
         String roomToken = sfuTokenService.generateRoomToken(user.id(), roomId);
         boolean isFree = subscriptionValidationService
-                .tierForMargin(channelDirectory.marginIdOf(channelId)) == SubscriptionTier.FREE;
+                .tierForMargin(channelLookup.marginIdOf(channelId)) == SubscriptionTier.FREE;
         Integer maxVideoHeight = isFree ? 720 : null;
         return ResponseEntity.ok(new SfuJoinResponse(sfuService.getSfuPublicUrl(), roomToken, maxVideoHeight));
     }

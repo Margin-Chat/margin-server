@@ -1,15 +1,15 @@
 package org.margin.server.storage.services;
 
-import org.margin.server.users.api.ProfilePictureStore;
+import org.margin.server.users.api.ProfilePictureCommands;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 @Component
-public class ProfilePictureStoreAdapter implements ProfilePictureStore {
+public class ProfilePictureCommandsAdapter implements ProfilePictureCommands {
 
     private final StorageService storageService;
 
-    public ProfilePictureStoreAdapter(StorageService storageService) {
+    public ProfilePictureCommandsAdapter(StorageService storageService) {
         this.storageService = storageService;
     }
 

@@ -5,7 +5,7 @@ import org.springframework.modulith.NamedInterface;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -27,14 +27,14 @@ public class SubscriptionValidationService {
 
     private final SubscriptionService subscriptionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final MarginDirectory marginDirectory;
+    private final MarginLookup marginLookup;
 
     public SubscriptionValidationService(SubscriptionService subscriptionService,
                                          ApplicationEventPublisher eventPublisher,
-                                         MarginDirectory marginDirectory) {
+                                         MarginLookup marginLookup) {
         this.subscriptionService = subscriptionService;
         this.eventPublisher = eventPublisher;
-        this.marginDirectory = marginDirectory;
+        this.marginLookup = marginLookup;
     }
 
     public Subscription getSubscriptionForMargin(Long marginId) {
@@ -43,7 +43,7 @@ public class SubscriptionValidationService {
 
     public void validateAddMarginMember(Long marginId) {
         Subscription subscription = getSubscriptionForMargin(marginId);
-        if (marginDirectory.summaryOf(marginId).memberCount() >= subscription.getLimits().getMaxMembers()) {
+        if (marginLookup.summaryOf(marginId).memberCount() >= subscription.getLimits().getMaxMembers()) {
             throw new SubscriptionLimitExceededException(
                     "Maximum number of margin members exceeded",
                     subscription.getTier(),
@@ -56,11 +56,11 @@ public class SubscriptionValidationService {
         Subscription subscription = getSubscriptionForMargin(marginId);
         int max = subscription.getLimits().getMaxMembers();
         int thresholdCount = (int) Math.ceil(max * WARNING_THRESHOLD);
-        if (marginDirectory.summaryOf(marginId).memberCount() != thresholdCount) {
+        if (marginLookup.summaryOf(marginId).memberCount() != thresholdCount) {
             return;
         }
 
-        List<Long> recipients = marginDirectory.adminUserIdsOf(marginId);
+        List<Long> recipients = marginLookup.adminUserIdsOf(marginId);
 
         try {
             eventPublisher.publishEvent(new MemberLimitWarningEvent(recipients, marginId));

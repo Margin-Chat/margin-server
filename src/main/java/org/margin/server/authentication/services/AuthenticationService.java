@@ -8,8 +8,8 @@ import org.margin.server.authentication.events.UserSessionsRevokedEvent;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.email.EmailService;
-import org.margin.server.users.api.ProfilePictureStore;
-import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.ProfilePictureCommands;
+import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,10 +35,10 @@ public class AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final UserLookup userLookup;
-    private final UserAccounts userAccounts;
+    private final UserAccountCommands userAccountCommands;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final ProfilePictureStore profilePictureStore;
+    private final ProfilePictureCommands profilePictureCommands;
     private final ApplicationEventPublisher eventPublisher;
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
@@ -47,20 +47,20 @@ public class AuthenticationService {
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             UserLookup userLookup,
-            UserAccounts userAccounts,
+            UserAccountCommands userAccountCommands,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            ProfilePictureStore profilePictureStore,
+            ProfilePictureCommands profilePictureCommands,
             ApplicationEventPublisher eventPublisher,
             ActivationKeyService activationKeyService,
             EmailService emailService,
             UserSecurityService userSecurityService) {
         this.authenticationManager = authenticationManager;
         this.userLookup = userLookup;
-        this.userAccounts = userAccounts;
+        this.userAccountCommands = userAccountCommands;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.profilePictureStore = profilePictureStore;
+        this.profilePictureCommands = profilePictureCommands;
         this.eventPublisher = eventPublisher;
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
@@ -122,16 +122,16 @@ public class AuthenticationService {
                                       String salt,
                                       String iv,
                                       MultipartFile profilePicture) {
-        if (userAccounts.emailIsTaken(email)) {
+        if (userAccountCommands.emailIsTaken(email)) {
             throw new IllegalArgumentException("Email already in use");
         }
 
         String profilePictureUrl = null;
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            profilePictureUrl = profilePictureStore.save(profilePicture);
+            profilePictureUrl = profilePictureCommands.save(profilePicture);
         }
 
-        Long userId = userAccounts.register(new UserAccounts.NewUser(
+        Long userId = userAccountCommands.register(new UserAccountCommands.NewUser(
                 displayName, email, passwordEncoder.encode(password), profilePictureUrl,
                 publicKey, privateKey, salt, iv));
 
@@ -194,12 +194,12 @@ public class AuthenticationService {
     @Transactional
     public void logoutUser(Long userId) {
         userSecurityService.bumpTokenVersion(userId);
-        userAccounts.invalidateCachedUser(userId);
+        userAccountCommands.invalidateCachedUser(userId);
         eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
     }
 
     @Transactional
     public void updateEncryptionKeys(Long userId, String publicKey, String encryptedPrivateKey, String salt, String iv) {
-        userAccounts.updateEncryptionKeys(userId, publicKey, encryptedPrivateKey, salt, iv);
+        userAccountCommands.updateEncryptionKeys(userId, publicKey, encryptedPrivateKey, salt, iv);
     }
 }

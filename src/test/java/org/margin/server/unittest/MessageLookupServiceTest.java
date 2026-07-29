@@ -3,14 +3,14 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.api.MessageDirectory;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.social.messages.services.MessageDirectoryService;
+import org.margin.server.social.messages.services.MessageLookupService;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
@@ -25,7 +25,7 @@ import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class MessageDirectoryServiceTest {
+class MessageLookupServiceTest {
 
     @Mock
     private MessageRepository messageRepository;
@@ -33,7 +33,7 @@ class MessageDirectoryServiceTest {
     private ConversationMemberRepository conversationMemberRepository;
 
     @InjectMocks
-    private MessageDirectoryService messageDirectoryService;
+    private MessageLookupService messageLookupService;
 
     @Test
     @DisplayName("resolves the margin id through channel -> space -> margin for a channel message")
@@ -51,7 +51,7 @@ class MessageDirectoryServiceTest {
 
         when(messageRepository.findById(10L)).thenReturn(Optional.of(message(conversation, createUser(2L))));
 
-        MessageDirectory.MessageContext context = messageDirectoryService.contextOf(10L);
+        MessageLookup.MessageContext context = messageLookupService.contextOf(10L);
 
         assertThat(context.authorId()).isEqualTo(2L);
         assertThat(context.conversationId()).isEqualTo(5L);
@@ -66,7 +66,7 @@ class MessageDirectoryServiceTest {
 
         when(messageRepository.findById(10L)).thenReturn(Optional.of(message(conversation, createUser(2L))));
 
-        assertThat(messageDirectoryService.contextOf(10L).marginId()).isNull();
+        assertThat(messageLookupService.contextOf(10L).marginId()).isNull();
     }
 
     @Test
@@ -75,7 +75,7 @@ class MessageDirectoryServiceTest {
         when(conversationMemberRepository.findUserIdsByConversationId(5L))
                 .thenReturn(List.of(1L, 2L));
 
-        assertThat(messageDirectoryService.threadFollowerIds(5L)).containsExactly(1L, 2L);
+        assertThat(messageLookupService.threadFollowerIds(5L)).containsExactly(1L, 2L);
     }
 
     private static Message message(Conversation conversation, User author) {

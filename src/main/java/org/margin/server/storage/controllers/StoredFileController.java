@@ -3,7 +3,6 @@ package org.margin.server.storage.controllers;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.StorageUtils;
@@ -35,7 +34,6 @@ public class StoredFileController {
     private final StoredFileService storedFileService;
     private final ConversationAuthorizationService conversationAuthorizationService;
     private final MarginAccessChecker marginAccessChecker;
-    private final MarginLookup marginLookup;
     private final UserLookup userLookup;
 
     public StoredFileController(StorageService storageService,
@@ -43,14 +41,12 @@ public class StoredFileController {
                                 StoredFileService storedFileService,
                                 ConversationAuthorizationService conversationAuthorizationService,
                                 MarginAccessChecker marginAccessChecker,
-                                MarginLookup marginLookup,
                                 UserLookup userLookup) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.storedFileService = storedFileService;
         this.conversationAuthorizationService = conversationAuthorizationService;
         this.marginAccessChecker = marginAccessChecker;
-        this.marginLookup = marginLookup;
         this.userLookup = userLookup;
     }
 

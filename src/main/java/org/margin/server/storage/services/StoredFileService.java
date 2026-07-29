@@ -5,9 +5,9 @@ import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
-import org.margin.server.social.api.ChannelDirectory;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.api.MessageAttachmentDTO;
-import org.margin.server.social.api.MessageAttachments;
+import org.margin.server.social.api.MessageAttachmentLookup;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.api.UserLookup;
@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class StoredFileService implements MessageAttachments {
+public class StoredFileService implements MessageAttachmentLookup {
 
     private static final int MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
@@ -31,20 +31,20 @@ public class StoredFileService implements MessageAttachments {
     private final PresenceService presenceService;
     private final StorageService storageService;
     private final SubscriptionValidationService subscriptionValidationService;
-    private final ChannelDirectory channelDirectory;
+    private final ChannelLookup channelLookup;
     private final UserLookup userLookup;
 
     public StoredFileService(StoredFileRepository storedFileRepository,
                              PresenceService presenceService,
                              StorageService storageService,
                              SubscriptionValidationService subscriptionValidationService,
-                             ChannelDirectory channelDirectory,
+                             ChannelLookup channelLookup,
                              UserLookup userLookup) {
         this.storedFileRepository = storedFileRepository;
         this.presenceService = presenceService;
         this.storageService = storageService;
         this.subscriptionValidationService = subscriptionValidationService;
-        this.channelDirectory = channelDirectory;
+        this.channelLookup = channelLookup;
         this.userLookup = userLookup;
     }
 
@@ -65,7 +65,7 @@ public class StoredFileService implements MessageAttachments {
 
     @Transactional
     public StoredFile uploadChannelFile(Long channelId, MultipartFile file, Long uploaderId, boolean inline) {
-        Long marginId = channelDirectory.marginIdOf(channelId);
+        Long marginId = channelLookup.marginIdOf(channelId);
         validateQuota(marginId, file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();

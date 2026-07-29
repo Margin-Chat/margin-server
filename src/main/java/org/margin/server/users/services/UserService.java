@@ -4,7 +4,7 @@ import org.springframework.modulith.NamedInterface;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.users.api.ProfilePictureStore;
+import org.margin.server.users.api.ProfilePictureCommands;
 import org.margin.server.users.events.UserDeletedEvent;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
@@ -35,20 +35,20 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
     private final PresenceService presenceService;
-    private final ProfilePictureStore profilePictureStore;
+    private final ProfilePictureCommands profilePictureCommands;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        UserCacheService userCacheService,
                        PresenceService presenceService,
-                       ProfilePictureStore profilePictureStore,
+                       ProfilePictureCommands profilePictureCommands,
                        ApplicationEventPublisher applicationEventPublisher,
                        PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
         this.presenceService = presenceService;
-        this.profilePictureStore = profilePictureStore;
+        this.profilePictureCommands = profilePictureCommands;
         this.applicationEventPublisher = applicationEventPublisher;
         this.passwordEncoder = passwordEncoder;
     }
@@ -107,9 +107,9 @@ public class UserService {
         if (email != null) user.setEmail(email);
         if (file != null && !file.isEmpty()) {
             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
-                profilePictureStore.delete(user.getProfilePictureUrl());
+                profilePictureCommands.delete(user.getProfilePictureUrl());
             }
-            String url = profilePictureStore.save(file);
+            String url = profilePictureCommands.save(file);
             user.setProfilePictureUrl(url);
         }
 
@@ -140,7 +140,7 @@ public class UserService {
     @Transactional
     public void deleteUser(User user) {
         if (user.getProfilePictureUrl() != null) {
-            profilePictureStore.delete(user.getProfilePictureUrl());
+            profilePictureCommands.delete(user.getProfilePictureUrl());
         }
 
         UserEncryption encryption = user.getEncryption();

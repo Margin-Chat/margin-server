@@ -1,6 +1,6 @@
 package org.margin.server.users.services;
 
-import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 import org.margin.server.users.repositories.UserRepository;
@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 
 @Service
-public class UserAccountService implements UserAccounts {
+public class UserAccountService implements UserAccountCommands {
 
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;

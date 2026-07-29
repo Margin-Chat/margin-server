@@ -15,7 +15,7 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.social.api.MarginIconStore;
+import org.margin.server.social.api.MarginIconCommands;
 import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -49,7 +49,7 @@ class MarginServiceTest {
     @Mock
     private MarginMemberRepository marginMemberRepository;
     @Mock
-    private MarginIconStore marginIconStore;
+    private MarginIconCommands marginIconCommands;
     @Mock
     private SpacesService spacesService;
     @Mock
@@ -100,7 +100,7 @@ class MarginServiceTest {
         assertThat(capturedMargin.getDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
 
-        verify(marginIconStore, never()).save(any());
+        verify(marginIconCommands, never()).save(any());
     }
 
     @Test
@@ -136,11 +136,11 @@ class MarginServiceTest {
         );
 
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
-        when(marginIconStore.save(profilePicture)).thenReturn(expectedUrl);
+        when(marginIconCommands.save(profilePicture)).thenReturn(expectedUrl);
 
         marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser").getId());
 
-        verify(marginIconStore, times(1)).save(profilePicture);
+        verify(marginIconCommands, times(1)).save(profilePicture);
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -165,7 +165,7 @@ class MarginServiceTest {
 
         marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser").getId());
 
-        verify(marginIconStore, never()).save(any());
+        verify(marginIconCommands, never()).save(any());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -183,7 +183,7 @@ class MarginServiceTest {
                 "test image content".getBytes()
         );
 
-        when(marginIconStore.save(profilePicture))
+        when(marginIconCommands.save(profilePicture))
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->

@@ -5,7 +5,7 @@ import org.springframework.modulith.NamedInterface;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.api.MessageAttachmentDTO;
-import org.margin.server.social.api.MessageAttachments;
+import org.margin.server.social.api.MessageAttachmentLookup;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class MessageService {
     private final MessageRepository messageRepository;
     private final MessageReactionRepository messageReactionRepository;
-    private final MessageAttachments messageAttachments;
+    private final MessageAttachmentLookup messageAttachmentLookup;
     private final UserLookup userLookup;
     private final ConversationService conversationService;
     private final PresenceService presenceService;
@@ -45,7 +45,7 @@ public class MessageService {
 
     public MessageService(MessageRepository messageRepository,
                           MessageReactionRepository messageReactionRepository,
-                          MessageAttachments messageAttachments,
+                          MessageAttachmentLookup messageAttachmentLookup,
                           UserLookup userLookup,
                           ConversationService conversationService,
                           PresenceService presenceService,
@@ -54,7 +54,7 @@ public class MessageService {
                           MessageValidationService messageValidationService, ConversationValidationService conversationValidationService) {
         this.messageRepository = messageRepository;
         this.messageReactionRepository = messageReactionRepository;
-        this.messageAttachments = messageAttachments;
+        this.messageAttachmentLookup = messageAttachmentLookup;
         this.userLookup = userLookup;
         this.conversationService = conversationService;
         this.presenceService = presenceService;
@@ -193,7 +193,7 @@ public class MessageService {
 
     private Map<Long, List<MessageAttachmentDTO>> loadAttachmentsForMessages(List<Long> messageIds) {
         if (messageIds.isEmpty()) return Map.of();
-        return messageAttachments.findByMessageIds(messageIds);
+        return messageAttachmentLookup.findByMessageIds(messageIds);
     }
 
     private List<MessageAttachmentDTO> attachmentsFor(Long messageId) {

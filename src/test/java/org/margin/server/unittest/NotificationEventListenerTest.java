@@ -18,7 +18,7 @@ import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.social.api.MessageDirectory;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -46,7 +46,7 @@ class NotificationEventListenerTest {
     @Mock
     private UserService userService;
     @Mock
-    private MessageDirectory messageDirectory;
+    private MessageLookup messageLookup;
 
     @InjectMocks
     private NotificationEventListener listener;
@@ -97,8 +97,8 @@ class NotificationEventListenerTest {
 
         Margin margin = new Margin();
         margin.setId(99L);
-        when(messageDirectory.contextOf(10L))
-                .thenReturn(new MessageDirectory.MessageContext(author.getId(), 5L, 99L));
+        when(messageLookup.contextOf(10L))
+                .thenReturn(new MessageLookup.MessageContext(author.getId(), 5L, 99L));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, reactor.getId(), "Reactor", "👍");
 
@@ -112,8 +112,8 @@ class NotificationEventListenerTest {
     void onReactionAdded_doesNotNotify_whenAuthorReactsToOwnMessage() {
         User author = createUser(2L, "Author");
 
-        when(messageDirectory.contextOf(10L))
-                .thenReturn(new MessageDirectory.MessageContext(author.getId(), 5L, null));
+        when(messageLookup.contextOf(10L))
+                .thenReturn(new MessageLookup.MessageContext(author.getId(), 5L, null));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, author.getId(), "Author", "👍");
 

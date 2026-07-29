@@ -1,6 +1,6 @@
 package org.margin.server.social.messages.services;
 
-import org.margin.server.social.api.MessageDirectory;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.messages.models.Message;
@@ -13,12 +13,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
-public class MessageDirectoryService implements MessageDirectory {
+public class MessageLookupService implements MessageLookup {
 
     private final MessageRepository messageRepository;
     private final ConversationMemberRepository conversationMemberRepository;
 
-    public MessageDirectoryService(MessageRepository messageRepository,
+    public MessageLookupService(MessageRepository messageRepository,
                                    ConversationMemberRepository conversationMemberRepository) {
         this.messageRepository = messageRepository;
         this.conversationMemberRepository = conversationMemberRepository;

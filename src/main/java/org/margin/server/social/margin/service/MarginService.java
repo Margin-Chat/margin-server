@@ -2,7 +2,7 @@ package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.users.api.UserLookup;
-import org.margin.server.social.api.MarginIconStore;
+import org.margin.server.social.api.MarginIconCommands;
 import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.social.margin.events.UserAddedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class MarginService {
 
     private final MarginRepository marginRepository;
-    private final MarginIconStore marginIconStore;
+    private final MarginIconCommands marginIconCommands;
     private final MarginMemberRepository marginMemberRepository;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
@@ -46,7 +46,7 @@ public class MarginService {
     private final UserLookup userLookup;
 
     public MarginService(MarginRepository marginRepository,
-                         MarginIconStore marginIconStore,
+                         MarginIconCommands marginIconCommands,
                          MarginMemberRepository marginMemberRepository,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
@@ -54,7 +54,7 @@ public class MarginService {
                          MarginSubscriptionPolicy marginSubscriptionPolicy,
                          UserLookup userLookup) {
         this.marginRepository = marginRepository;
-        this.marginIconStore = marginIconStore;
+        this.marginIconCommands = marginIconCommands;
         this.marginMemberRepository = marginMemberRepository;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
@@ -89,7 +89,7 @@ public class MarginService {
 
         String iconUrl = null;
         if (marginIcon != null && !marginIcon.isEmpty()) {
-            iconUrl = marginIconStore.save(marginIcon);
+            iconUrl = marginIconCommands.save(marginIcon);
         }
 
         Margin margin = new Margin();
@@ -214,7 +214,7 @@ public class MarginService {
         margin.setDescription(updateMarginDTO.description());
 
         if (icon != null && !icon.isEmpty()) {
-            margin.setIconUrl(marginIconStore.save(icon));
+            margin.setIconUrl(marginIconCommands.save(icon));
         }
 
         Margin saved = marginRepository.save(margin);

@@ -12,7 +12,7 @@ import org.margin.server.social.conversation.events.ConversationInviteAcceptedEv
 import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.api.ConversationType;
-import org.margin.server.social.api.MessageDirectory;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -29,13 +29,13 @@ public class NotificationEventListener {
 
     private final NotificationService notificationService;
     private final UserService userService;
-    private final MessageDirectory messageDirectory;
+    private final MessageLookup messageLookup;
 
     public NotificationEventListener(NotificationService notificationService, UserService userService,
-                                     MessageDirectory messageDirectory) {
+                                     MessageLookup messageLookup) {
         this.notificationService = notificationService;
         this.userService = userService;
-        this.messageDirectory = messageDirectory;
+        this.messageLookup = messageLookup;
     }
 
     @EventListener
@@ -91,7 +91,7 @@ public class NotificationEventListener {
     @EventListener
     public void onReactionAdded(ReactionAddedEvent event) {
         MessageReactionDTO reaction = event.getReaction();
-        MessageDirectory.MessageContext context = messageDirectory.contextOf(reaction.messageId());
+        MessageLookup.MessageContext context = messageLookup.contextOf(reaction.messageId());
 
         if (context.authorId().equals(reaction.userId())) {
             return;
@@ -118,7 +118,7 @@ public class NotificationEventListener {
             return;
         }
 
-        List<Long> followerIds = messageDirectory.threadFollowerIds(message.conversationId());
+        List<Long> followerIds = messageLookup.threadFollowerIds(message.conversationId());
         Long senderId = event.getRecipientIds().stream()
                 .filter(id -> id.equals(message.user().id()))
                 .findFirst()

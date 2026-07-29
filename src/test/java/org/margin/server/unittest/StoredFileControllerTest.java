@@ -6,12 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
@@ -61,10 +59,6 @@ class StoredFileControllerTest {
     private StoredFileService storedFileService;
     @Mock
     private UserLookup userLookup;
-    @Mock
-    private MarginLookup marginLookup;
-    @Mock
-    private ChannelLookup channelLookup;
     @Mock
     private MarginAuthorizationService marginAuthorizationService;
     @Mock

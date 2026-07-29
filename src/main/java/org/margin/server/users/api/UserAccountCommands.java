@@ -1,6 +1,6 @@
 package org.margin.server.users.api;
 
-public interface UserAccounts {
+public interface UserAccountCommands {
 
     boolean emailIsTaken(String email);
 

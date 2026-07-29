@@ -1,15 +1,15 @@
 package org.margin.server.storage.services;
 
-import org.margin.server.social.api.MarginIconStore;
+import org.margin.server.social.api.MarginIconCommands;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 @Component
-public class MarginIconStoreAdapter implements MarginIconStore {
+public class MarginIconCommandsAdapter implements MarginIconCommands {
 
     private final StorageService storageService;
 
-    public MarginIconStoreAdapter(StorageService storageService) {
+    public MarginIconCommandsAdapter(StorageService storageService) {
         this.storageService = storageService;
     }
 

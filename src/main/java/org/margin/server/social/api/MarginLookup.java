@@ -1,6 +1,6 @@
 package org.margin.server.social.api;
 
-public interface MarginDirectory {
+public interface MarginLookup {
 
     MarginSummary summaryOf(Long marginId);
 

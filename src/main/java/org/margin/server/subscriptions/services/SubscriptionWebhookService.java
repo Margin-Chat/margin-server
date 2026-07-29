@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.users.api.UserLookup;
 
 import org.margin.server.subscriptions.config.MollieProperties;
@@ -49,7 +49,7 @@ public class SubscriptionWebhookService {
     private final SubscriptionPricingProperties pricingProperties;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
-    private final MarginDirectory marginDirectory;
+    private final MarginLookup marginLookup;
     private final UserLookup userLookup;
     private final SubscriptionWebhookService self;
 
@@ -60,7 +60,7 @@ public class SubscriptionWebhookService {
                                       SubscriptionPricingProperties pricingProperties,
                                       EmailService emailService,
                                       ApplicationEventPublisher eventPublisher,
-                                      MarginDirectory marginDirectory,
+                                      MarginLookup marginLookup,
                                       UserLookup userLookup,
                                       @Lazy SubscriptionWebhookService self) {
         this.mollieClient = mollieClient;
@@ -70,7 +70,7 @@ public class SubscriptionWebhookService {
         this.pricingProperties = pricingProperties;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
-        this.marginDirectory = marginDirectory;
+        this.marginLookup = marginLookup;
         this.userLookup = userLookup;
         this.self = self;
     }
@@ -201,7 +201,7 @@ public class SubscriptionWebhookService {
             return;
         }
 
-        String description = "margin %s — %s plan".formatted(marginDirectory.summaryOf(subscription.getMarginId()).name(), targetTier);
+        String description = "margin %s — %s plan".formatted(marginLookup.summaryOf(subscription.getMarginId()).name(), targetTier);
         SubscriptionResponse mollieSubscription;
         try {
             mollieSubscription = mollieClient.createSubscription(
@@ -270,7 +270,7 @@ public class SubscriptionWebhookService {
 
     private void notifyOwner(Subscription subscription, NotificationType type) {
         try {
-            Long ownerUserId = marginDirectory.ownerUserIdOf(subscription.getMarginId());
+            Long ownerUserId = marginLookup.ownerUserIdOf(subscription.getMarginId());
             eventPublisher.publishEvent(new SubscriptionStatusChangedEvent(
                     ownerUserId, type, subscription.getMarginId()));
         } catch (Exception e) {
@@ -280,7 +280,7 @@ public class SubscriptionWebhookService {
 
     private void pushSubscriptionUpdate(Subscription subscription) {
         try {
-            Long ownerUserId = marginDirectory.ownerUserIdOf(subscription.getMarginId());
+            Long ownerUserId = marginLookup.ownerUserIdOf(subscription.getMarginId());
             SubscriptionDTO dto = subscriptionService.getSubscriptionDtoForMargin(subscription.getMarginId());
             eventPublisher.publishEvent(new SubscriptionUpdatedEvent(ownerUserId, dto));
         } catch (Exception e) {
@@ -290,11 +290,11 @@ public class SubscriptionWebhookService {
 
     private void sendPaymentConfirmation(Subscription subscription, PaymentResponse payment, SubscriptionTier tier) {
         try {
-            UserLookup.UserContact owner = userLookup.contactOf(marginDirectory.ownerUserIdOf(subscription.getMarginId()));
+            UserLookup.UserContact owner = userLookup.contactOf(marginLookup.ownerUserIdOf(subscription.getMarginId()));
             Amount amount = payment.amount();
             String html = emailService.buildInvoiceMail(
                     owner.displayName(),
-                    marginDirectory.summaryOf(subscription.getMarginId()).name(),
+                    marginLookup.summaryOf(subscription.getMarginId()).name(),
                     tier.name(),
                     amount.value(),
                     amount.currency(),
@@ -303,7 +303,7 @@ public class SubscriptionWebhookService {
             );
             emailService.sendEmail(
                     owner.email(),
-                    "Payment receipt — " + marginDirectory.summaryOf(subscription.getMarginId()).name(),
+                    "Payment receipt — " + marginLookup.summaryOf(subscription.getMarginId()).name(),
                     html
             );
         } catch (Exception e) {

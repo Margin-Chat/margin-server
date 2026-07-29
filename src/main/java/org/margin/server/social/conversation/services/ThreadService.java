@@ -2,7 +2,7 @@ package org.margin.server.social.conversation.services;
 
 import lombok.extern.log4j.Log4j2;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.social.channel.ChannelLookup;
+import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
@@ -45,7 +45,7 @@ public class ThreadService {
     private final ConversationCreationService conversationCreationService;
     private final ConversationService conversationService;
     private final MessageService messageService;
-    private final ChannelLookup channelLookup;
+    private final ChannelService channelService;
     private final PresenceService presenceService;
     private final UserLookup userLookup;
 
@@ -54,7 +54,7 @@ public class ThreadService {
                          ConversationCreationService conversationCreationService,
                          ConversationService conversationService,
                          MessageService messageService,
-                         ChannelLookup channelLookup,
+                         ChannelService channelService,
                          PresenceService presenceService,
                          UserLookup userLookup) {
         this.conversationRepository = conversationRepository;
@@ -62,7 +62,7 @@ public class ThreadService {
         this.conversationCreationService = conversationCreationService;
         this.conversationService = conversationService;
         this.messageService = messageService;
-        this.channelLookup = channelLookup;
+        this.channelService = channelService;
         this.presenceService = presenceService;
         this.userLookup = userLookup;
     }
@@ -219,7 +219,7 @@ public class ThreadService {
     private Conversation requireThreadChannelConversation(Long channelId) {
         Channel channel;
         try {
-            channel = channelLookup.getById(channelId);
+            channel = channelService.getById(channelId);
         } catch (RuntimeException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Channel not found");
         }

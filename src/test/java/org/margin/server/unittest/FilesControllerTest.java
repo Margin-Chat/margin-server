@@ -4,10 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.api.ChannelDirectory;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
@@ -47,11 +47,11 @@ class FilesControllerTest {
     @Mock
     private StorageProperties.S3Properties s3Properties;
     @Mock
-    private MarginDirectory marginDirectory;
+    private MarginLookup marginLookup;
     @Mock
     private StoredFileService storedFileService;
     @Mock
-    private ChannelDirectory channelDirectory;
+    private ChannelLookup channelLookup;
     @Mock
     private MarginAuthorizationService marginAuthorizationService;
     @Mock
@@ -127,8 +127,8 @@ class FilesControllerTest {
 
     @Test
     void getMarginIcon_requiresMarginMembership() throws IOException {
-        when(marginDirectory.iconByFileName("icon.png"))
-                .thenReturn(new MarginDirectory.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
+        when(marginLookup.iconByFileName("icon.png"))
+                .thenReturn(new MarginLookup.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginMember(1L, 10L);
 
@@ -139,8 +139,8 @@ class FilesControllerTest {
 
     @Test
     void getMarginIcon_servesFileForMarginMember() throws IOException {
-        when(marginDirectory.iconByFileName("icon.png"))
-                .thenReturn(new MarginDirectory.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
+        when(marginLookup.iconByFileName("icon.png"))
+                .thenReturn(new MarginLookup.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile("/api/files/margin-icons/icon.png"))
                 .thenReturn(new ByteArrayResource("icon".getBytes()));
@@ -161,7 +161,7 @@ class FilesControllerTest {
     @Test
     void getStoredFileByName_requiresConversationMembershipForChannelFile() throws IOException {
         StoredFile f = channelStoredFile();
-        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
@@ -266,7 +266,7 @@ class FilesControllerTest {
     @Test
     void getConversationImage_requiresConversationMembership() throws IOException {
         StoredFile f = channelStoredFile();
-        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
@@ -279,7 +279,7 @@ class FilesControllerTest {
     @Test
     void getConversationImage_servesFileAfterAuthCheck() throws IOException {
         StoredFile f = channelStoredFile();
-        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile(f.getStorageUrl()))

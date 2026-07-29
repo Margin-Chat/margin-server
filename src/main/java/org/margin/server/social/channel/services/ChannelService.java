@@ -1,11 +1,10 @@
 package org.margin.server.social.channel.services;
 
-import org.margin.server.social.api.ChannelDirectory;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.channel.models.ChannelType;
-import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.api.ConversationType;
@@ -23,7 +22,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
-public class ChannelService implements ChannelLookup, ChannelDirectory {
+public class ChannelService implements ChannelLookup {
     private final ChannelCreationService channelCreationService;
     private final ConversationService conversationService;
     private final ChannelRepository channelRepository;
@@ -91,7 +90,6 @@ public class ChannelService implements ChannelLookup, ChannelDirectory {
         channelRepository.save(channel);
     }
 
-    @Override
     public Channel getById(Long channelId) {
         return channelRepository.findById(channelId).orElseThrow(() -> new ChannelNotFoundException(channelId));
     }

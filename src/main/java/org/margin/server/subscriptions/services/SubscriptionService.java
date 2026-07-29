@@ -4,7 +4,7 @@ import com.mollie.mollie.models.components.CustomerResponse;
 import com.mollie.mollie.models.components.PaymentResponse;
 import com.mollie.mollie.models.components.SubscriptionResponse;
 import com.mollie.mollie.models.components.Url;
-import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -41,7 +41,7 @@ public class SubscriptionService {
     private final MollieProperties mollieProperties;
     private final SubscriptionLimitsFactory subscriptionLimitsFactory;
     private final SubscriptionService self;
-    private final MarginDirectory marginDirectory;
+    private final MarginLookup marginLookup;
     private final UserLookup userLookup;
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
@@ -49,7 +49,7 @@ public class SubscriptionService {
                                MollieClient mollieClient,
                                MollieProperties mollieProperties,
                                SubscriptionLimitsFactory subscriptionLimitsFactory,
-                               MarginDirectory marginDirectory,
+                               MarginLookup marginLookup,
                              UserLookup userLookup,
                                @Lazy SubscriptionService self) {
         this.subscriptionRepository = subscriptionRepository;
@@ -58,7 +58,7 @@ public class SubscriptionService {
         this.mollieProperties = mollieProperties;
         this.subscriptionLimitsFactory = subscriptionLimitsFactory;
         this.self = self;
-        this.marginDirectory = marginDirectory;
+        this.marginLookup = marginLookup;
         this.userLookup = userLookup;
     }
 
@@ -94,7 +94,7 @@ public class SubscriptionService {
                         limits.getMaxStorageGb(),
                         limits.getMaxCallParticipants()
                 ),
-                marginDirectory.summaryOf(subscription.getMarginId()).memberCount(),
+                marginLookup.summaryOf(subscription.getMarginId()).memberCount(),
                 subscription.getTrialEndsAt(),
                 subscription.getCurrentPeriodEnd(),
                 subscription.getPendingPaymentId() != null,
@@ -139,7 +139,7 @@ public class SubscriptionService {
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
                 "1 month",
-                "margin %s — %s plan".formatted(marginDirectory.summaryOf(marginId).name(), newTier),
+                "margin %s — %s plan".formatted(marginLookup.summaryOf(marginId).name(), newTier),
                 "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
                 startDate
         );
@@ -186,7 +186,7 @@ public class SubscriptionService {
 
         String customerId = subscription.getMollieCustomerId();
         if (customerId == null) {
-            CustomerResponse customer = mollieClient.createCustomer(marginDirectory.summaryOf(marginId).name(), userLookup.contactOf(userId).email());
+            CustomerResponse customer = mollieClient.createCustomer(marginLookup.summaryOf(marginId).name(), userLookup.contactOf(userId).email());
             customerId = customer.id();
             subscription.setMollieCustomerId(customerId);
             subscriptionRepository.save(subscription);
@@ -203,13 +203,13 @@ public class SubscriptionService {
                 customerId,
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
-                "margin %s — %s plan".formatted(marginDirectory.summaryOf(marginId).name(), targetTier),
+                "margin %s — %s plan".formatted(marginLookup.summaryOf(marginId).name(), targetTier),
                 "%s/payment-return?marginId=%d".formatted(mollieProperties.redirectBaseUrl(), marginId),
                 "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
                 targetTier.name()
         );
 
-        log.info("Created payment for subscription {} for margin {}", subscription.getId(), marginDirectory.summaryOf(marginId).name());
+        log.info("Created payment for subscription {} for margin {}", subscription.getId(), marginLookup.summaryOf(marginId).name());
 
         subscription.setPendingPaymentId(payment.id());
         subscription.setPendingTier(targetTier);

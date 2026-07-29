@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.email.EmailService;
-import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.api.UserLookup;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,20 +23,20 @@ public class PasswordResetService {
     private static final int EXPIRY_SECONDS = 3600;
 
     private final UserLookup userLookup;
-    private final UserAccounts userAccounts;
+    private final UserAccountCommands userAccountCommands;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final UserSecurityService userSecurityService;
 
     public PasswordResetService(UserLookup userLookup,
-                                UserAccounts userAccounts,
+                                UserAccountCommands userAccountCommands,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
                                 UserSecurityService userSecurityService) {
         this.userLookup = userLookup;
-        this.userAccounts = userAccounts;
+        this.userAccountCommands = userAccountCommands;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
@@ -87,7 +87,7 @@ public class PasswordResetService {
         }
 
         Long userId = resetToken.getUserId();
-        userAccounts.resetCredentials(userId, passwordEncoder.encode(newPassword));
+        userAccountCommands.resetCredentials(userId, passwordEncoder.encode(newPassword));
         userSecurityService.bumpTokenVersion(userId);
         log.info("Encryption keys cleared for userId {} — will be regenerated on next login", userId);
 
