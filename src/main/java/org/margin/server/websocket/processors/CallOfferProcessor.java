@@ -3,7 +3,7 @@ package org.margin.server.websocket.processors;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.services.CallService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.IncomingCallOfferPayload;
@@ -24,11 +24,11 @@ public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCal
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<IncomingCallOfferPayload> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<IncomingCallOfferPayload> message) {
         IncomingCallOfferPayload payload = message.getPayload();
 
         callService.createCall(
-                user.getId(),
+                user.id(),
                 message.getRecipientId(),
                 CallStatus.OFFERED,
                 CallType.AUDIO,

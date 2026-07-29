@@ -3,7 +3,7 @@ package org.margin.server.websocket.listeners;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.events.*;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
@@ -80,7 +80,7 @@ public class MessageWebSocketEventListener {
             if (connectionManager.isUserOnline(recipientId)) {
                 connectionManager.sendToUser(recipientId, json);
             } else if (conversationType == ConversationType.DIRECT || conversationType == ConversationType.GROUP) {
-                log.debug("User {} offline, message stored for later", recipientId);
+                log.debug("AuthenticatedUser {} offline, message stored for later", recipientId);
             }
         }
     }

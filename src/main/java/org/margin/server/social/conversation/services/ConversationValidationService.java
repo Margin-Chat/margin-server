@@ -1,5 +1,7 @@
 package org.margin.server.social.conversation.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.conversation.exceptions.ConversationValidationException;
 import org.margin.server.social.conversation.models.Conversation;
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@NamedInterface("api")
 @Service
 @Slf4j
 public class ConversationValidationService {

@@ -10,7 +10,6 @@ import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.shared.ratelimit.RateLimitConfig;
 import org.margin.server.shared.ratelimit.RateLimitService;
 import org.margin.server.shared.exceptions.TooManyRequestsException;
-import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

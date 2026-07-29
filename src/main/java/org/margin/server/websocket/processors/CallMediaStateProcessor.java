@@ -1,7 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.social.calls.events.CallMediaStateEvent;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.social.calls.models.CallMediaState;
@@ -23,7 +23,7 @@ public class CallMediaStateProcessor implements WebSocketMessageProcessor<CallMe
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<CallMediaState> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<CallMediaState> message) {
         eventPublisher.publishEvent(new CallMediaStateEvent(message.getRecipientId(), message.getPayload()));
     }
 }

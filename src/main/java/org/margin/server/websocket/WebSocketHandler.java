@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.api.UserLookup;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageIn;
@@ -69,7 +69,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        Optional<User> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
+        Optional<AuthenticatedUser> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
         if (optionalUser.isEmpty()) {
             var response = new io.netty.handler.codec.http.DefaultFullHttpResponse(
                     io.netty.handler.codec.http.HttpVersion.HTTP_1_1,
@@ -79,7 +79,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        User user = optionalUser.get();
+        AuthenticatedUser user = optionalUser.get();
         ctx.channel().attr(WebSocketAttributes.USER).set(user);
 
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
@@ -96,10 +96,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         }
     }
 
-    private void onConnectionEstablished(ChannelHandlerContext ctx, User user) {
+    private void onConnectionEstablished(ChannelHandlerContext ctx, AuthenticatedUser user) {
         ClientConnection connection = new WebSocketClientConnection(ctx.channel(), user);
         connectionManager.addConnection(user, connection);
-        presenceService.userConnected(user.getId());
+        presenceService.userConnected(user.id());
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
@@ -121,7 +121,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+        AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user == null) {
             ctx.close();
             return;
@@ -136,7 +136,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         try {
             processor.process(user, (WebSocketMessageIn<Object>) message);
         } catch (Exception t) {
-            log.error("Processor {} failed for user {}", message.getType(), user.getId(), t);
+            log.error("Processor {} failed for user {}", message.getType(), user.id(), t);
         }
     }
 
@@ -146,9 +146,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             if (idleEvent.state() == IdleState.WRITER_IDLE) {
                 ctx.writeAndFlush(new PingWebSocketFrame());
             } else if (idleEvent.state() == IdleState.READER_IDLE) {
-                User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+                AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
                 log.info("Closing idle websocket connection for user {}",
-                        user != null ? user.getId() : "<unauthenticated>");
+                        user != null ? user.id() : "<unauthenticated>");
                 ctx.close();
             }
         }
@@ -156,12 +156,12 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+        AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user != null) {
             boolean lastSession = connectionManager.removeConnection(user, ctx.channel());
             if (lastSession) {
-                presenceService.userDisconnected(user.getId());
-                dbExecutor.execute(() -> stampLastSeen(user.getId()));
+                presenceService.userDisconnected(user.id());
+                dbExecutor.execute(() -> stampLastSeen(user.id()));
             }
         }
     }

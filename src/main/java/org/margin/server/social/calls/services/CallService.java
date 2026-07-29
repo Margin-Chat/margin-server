@@ -1,5 +1,7 @@
 package org.margin.server.social.calls.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.events.MissedCallEvent;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
+@NamedInterface("api")
 @Slf4j
 @Service
 public class CallService {

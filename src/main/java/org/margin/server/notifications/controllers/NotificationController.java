@@ -3,7 +3,6 @@ package org.margin.server.notifications.controllers;
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.notifications.Notification;
 import org.margin.server.notifications.services.NotificationService;
-import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

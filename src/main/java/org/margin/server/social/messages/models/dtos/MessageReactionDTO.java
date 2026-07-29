@@ -1,7 +1,10 @@
 package org.margin.server.social.messages.models.dtos;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.social.messages.models.MessageReaction;
 
+@NamedInterface("api")
 public record MessageReactionDTO(
         Long id,
         Long messageId,

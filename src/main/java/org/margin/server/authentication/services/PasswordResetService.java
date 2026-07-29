@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.email.EmailService;
-import org.margin.server.users.models.User;
 import org.margin.server.users.api.UserAccounts;
 import org.margin.server.users.api.UserLookup;
 import org.springframework.http.HttpStatus;

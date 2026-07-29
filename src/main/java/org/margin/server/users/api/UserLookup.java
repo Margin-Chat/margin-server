@@ -18,7 +18,6 @@ public interface UserLookup {
 
     Optional<User> findByEmail(String email);
 
-    List<User> findAllById(Collection<Long> userIds);
 
     UserContact contactOf(Long userId);
 

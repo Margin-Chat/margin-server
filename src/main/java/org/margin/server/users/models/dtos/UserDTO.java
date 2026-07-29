@@ -1,10 +1,13 @@
 package org.margin.server.users.models.dtos;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.shared.storage.PublicUrls;
 import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
+@NamedInterface("api")
 public record UserDTO(
         Long id,
         String displayName,

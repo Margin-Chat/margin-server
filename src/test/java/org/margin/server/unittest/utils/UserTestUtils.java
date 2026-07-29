@@ -27,6 +27,14 @@ public class UserTestUtils {
         return user;
     }
 
+    public static AuthenticatedUser authUser(Long id) {
+        return new AuthenticatedUser(id, null, null);
+    }
+
+    public static AuthenticatedUser authUser(Long id, String displayName) {
+        return new AuthenticatedUser(id, null, displayName);
+    }
+
     public static UserEncryption createEncryption(String publicKey, String encryptedPrivateKey,
                                                   String salt, String iv) {
         UserEncryption encryption = new UserEncryption();

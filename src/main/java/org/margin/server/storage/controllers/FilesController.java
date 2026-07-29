@@ -10,7 +10,6 @@ import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
 import org.margin.server.storage.services.StorageService;
 import org.margin.server.storage.services.StoredFileService;
-import org.margin.server.users.models.User;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

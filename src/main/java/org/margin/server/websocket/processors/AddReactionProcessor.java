@@ -1,7 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.MessageReactionPayload;
@@ -21,9 +21,9 @@ public class AddReactionProcessor implements WebSocketMessageProcessor<MessageRe
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<MessageReactionPayload> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<MessageReactionPayload> message) {
         messageService.addReaction(
-                user.getId(),
+                user.id(),
                 message.getRecipientId(),
                 message.getPayload().messageId(),
                 message.getPayload().emoji()

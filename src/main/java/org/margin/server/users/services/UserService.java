@@ -1,5 +1,7 @@
 package org.margin.server.users.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.api.ProfilePictureStore;
@@ -25,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@NamedInterface("api")
 @Service
 @Slf4j
 public class UserService {

@@ -2,7 +2,7 @@ package org.margin.server.websocket.processors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.events.CallCandidateForwardedEvent;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.social.calls.models.CallCandidate;
@@ -25,7 +25,7 @@ public class CallCandidateProcessor implements WebSocketMessageProcessor<CallCan
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<CallCandidate> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<CallCandidate> message) {
         eventPublisher.publishEvent(new CallCandidateForwardedEvent(
                 message.getRecipientId(),
                 message.getPayload()

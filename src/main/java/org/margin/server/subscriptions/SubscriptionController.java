@@ -11,7 +11,6 @@ import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.subscriptions.models.dtos.TierPriceDTO;
 import org.margin.server.subscriptions.services.SubscriptionService;
 import org.margin.server.subscriptions.services.SubscriptionWebhookService;
-import org.margin.server.users.models.User;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

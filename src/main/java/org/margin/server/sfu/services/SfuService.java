@@ -1,5 +1,7 @@
 package org.margin.server.sfu.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.presence.PresenceService;
@@ -7,7 +9,6 @@ import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@NamedInterface("api")
 @Slf4j
 @Service
 public class SfuService {
@@ -71,9 +73,8 @@ public class SfuService {
     }
 
     public void notifyUserJoined(Long channelId, Long userId) {
-        User user = userService.getById(userId);
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
-                channelId, new UserDTO(user, presenceService.isUserOnline(userId))
+                channelId, userLookup.dtoOf(userId)
         );
         eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.JOINED, payload));
     }
@@ -87,7 +88,7 @@ public class SfuService {
 
     public void notifyUserLeft(Long channelId, Long userId) {
         eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.LEFT,
-                new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId)))));
+                new ChannelVoiceParticipantPayload(channelId, userLookup.dtoOf(userId))));
     }
 
     public List<UserDTO> getVoiceParticipants(Long channelId) {
@@ -101,11 +102,7 @@ public class SfuService {
                     }
             );
             List<String> peerIds = response.getBody().getOrDefault("peers", List.of());
-            return peerIds.stream()
-                    .map(id -> userLookup.findById(Long.parseLong(id)).orElse(null))
-                    .filter(Objects::nonNull)
-                    .map(u -> new UserDTO(u, presenceService.isUserOnline(u.getId())))
-                    .toList();
+            return userLookup.dtosOf(peerIds.stream().map(Long::parseLong).toList());
         } catch (Exception e) {
             log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());
             return List.of();

@@ -37,10 +37,6 @@ public class UserLookupService implements UserLookup {
         return userRepository.findByEmail(email);
     }
 
-    @Override
-    public List<User> findAllById(Collection<Long> userIds) {
-        return userRepository.findAllById(userIds);
-    }
 
     @Override
     @Transactional(readOnly = true)

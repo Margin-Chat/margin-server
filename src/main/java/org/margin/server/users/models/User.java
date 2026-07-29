@@ -1,5 +1,7 @@
 package org.margin.server.users.models;
 
+import org.springframework.modulith.NamedInterface;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -15,6 +17,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+@NamedInterface("identity")
 @Getter
 @Setter
 @NoArgsConstructor

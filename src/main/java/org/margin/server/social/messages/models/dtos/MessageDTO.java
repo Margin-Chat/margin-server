@@ -1,5 +1,7 @@
 package org.margin.server.social.messages.models.dtos;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.models.Message;
@@ -8,6 +10,7 @@ import org.margin.server.users.models.dtos.UserDTO;
 import java.time.Instant;
 import java.util.List;
 
+@NamedInterface("api")
 public record MessageDTO(
         Long id,
         Long conversationId,

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.messages.events.MessageSentEvent;
-import org.margin.server.users.models.User;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 

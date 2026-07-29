@@ -1,5 +1,7 @@
 package org.margin.server.subscriptions.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
@@ -10,12 +12,12 @@ import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@NamedInterface("api")
 @Slf4j
 @Service
 public class SubscriptionValidationService {

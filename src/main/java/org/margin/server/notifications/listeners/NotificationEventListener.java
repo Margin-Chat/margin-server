@@ -17,7 +17,6 @@ import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

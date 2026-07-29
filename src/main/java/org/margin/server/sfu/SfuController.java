@@ -11,7 +11,6 @@ import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -3,7 +3,7 @@ package org.margin.server.websocket.processors;
 import org.margin.server.sfu.services.SfuService;
 import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.shared.authorization.MarginAccessChecker;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.springframework.stereotype.Component;
@@ -29,13 +29,13 @@ public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<Str
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<String> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<String> message) {
         Long channelId = Long.valueOf(message.getPayload());
         Long recipientId = message.getRecipientId();
 
-        marginAccessChecker.requireChannelMember(user.getId(), channelId);
+        marginAccessChecker.requireChannelMember(user.id(), channelId);
         marginAccessChecker.requireChannelMember(recipientId, channelId);
 
-        sfuService.inviteToChannelCall(user.getId(), recipientId, channelId, channelDirectory.nameOf(channelId));
+        sfuService.inviteToChannelCall(user.id(), recipientId, channelId, channelDirectory.nameOf(channelId));
     }
 }

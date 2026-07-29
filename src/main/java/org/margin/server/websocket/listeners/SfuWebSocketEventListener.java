@@ -4,7 +4,6 @@ import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
 import org.margin.server.sfu.models.VoiceParticipantChange;
 import org.margin.server.shared.authorization.ChannelAudience;
-import org.margin.server.users.models.User;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;

@@ -2,7 +2,6 @@ package org.margin.server.websocket.listeners;
 
 import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.social.space.events.UserJoinedSpaceEvent;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;

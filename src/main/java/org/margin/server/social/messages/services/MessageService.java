@@ -1,5 +1,7 @@
 package org.margin.server.social.messages.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.api.MessageAttachmentDTO;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@NamedInterface("api")
 @Service
 public class MessageService {
     private final MessageRepository messageRepository;

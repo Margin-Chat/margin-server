@@ -5,7 +5,6 @@ import org.margin.server.social.conversation.events.ConversationInviteDeclinedEv
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.events.ConversationReadEvent;
 import org.margin.server.social.conversation.events.TypingIndicatorEvent;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;

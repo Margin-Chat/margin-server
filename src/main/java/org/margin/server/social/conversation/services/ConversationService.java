@@ -1,5 +1,7 @@
 package org.margin.server.social.conversation.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.social.api.ConversationType;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
@@ -36,6 +38,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@NamedInterface("api")
 @Service
 public class ConversationService {
     private final ConversationCreationService conversationCreationService;
