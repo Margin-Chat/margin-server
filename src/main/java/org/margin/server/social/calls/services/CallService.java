@@ -100,7 +100,7 @@ public class CallService {
 
         log.debug("Call {} wasn't answered", call.getId());
 
-        eventPublisher.publishEvent(new MissedCallEvent(recepientUser, user, call.getId()));
+        eventPublisher.publishEvent(new MissedCallEvent(recepientUser.getId(), user.getId(), call.getId()));
     }
 
     @Transactional

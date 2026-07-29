@@ -13,6 +13,7 @@ import org.margin.server.social.conversation.models.projections.ThreadSummaryPro
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.social.conversation.models.dtos.RecentChatUsersDTO;
@@ -93,7 +94,8 @@ public class ConversationService {
         List<User> recipients = getConversationMembers(conversation.getId()).stream()
                 .filter(member -> !member.getId().equals(user.getId()))
                 .toList();
-        eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), user, isTyping, recipients));
+        eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), new UserSummary(user.getId(), user.getDisplayName()), isTyping,
+                recipients.stream().map(User::getId).toList()));
     }
 
     public List<User> getPendingConversationMembers(Long conversationId) {
@@ -205,7 +207,7 @@ public class ConversationService {
                     List.of(),
                     encrypted
             );
-            eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, creator, invitee.getId()));
+            eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, new UserSummary(creator.getId(), creator.getDisplayName()), invitee.getId()));
         }
 
         return conversation;
@@ -233,7 +235,7 @@ public class ConversationService {
                 List.of(),
                 conversation.isEncrypted()
         );
-        eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, adder, invitee.getId()));
+        eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, new UserSummary(adder.getId(), adder.getDisplayName()), invitee.getId()));
     }
 
     @Transactional
@@ -369,7 +371,7 @@ public class ConversationService {
                         ConversationInviteStatus.PENDING,
                         encrypted
                 ),
-                sender,
+                new UserSummary(sender.getId(), sender.getDisplayName()),
                 recipient.getId()
         ));
 

@@ -18,6 +18,7 @@ import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.services.MessageService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.context.event.EventListener;
@@ -47,6 +48,7 @@ public class ThreadService {
     private final MessageService messageService;
     private final ChannelLookup channelLookup;
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
 
     public ThreadService(ConversationRepository conversationRepository,
                          ConversationMemberRepository conversationMemberRepository,
@@ -54,7 +56,8 @@ public class ThreadService {
                          ConversationService conversationService,
                          MessageService messageService,
                          ChannelLookup channelLookup,
-                         PresenceService presenceService) {
+                         PresenceService presenceService,
+                         UserLookup userLookup) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.conversationCreationService = conversationCreationService;
@@ -62,6 +65,7 @@ public class ThreadService {
         this.messageService = messageService;
         this.channelLookup = channelLookup;
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
     }
 
     public ThreadConversationDTO createPost(User user, Long channelId, String title, String body) {
@@ -132,10 +136,9 @@ public class ThreadService {
         if (alreadyFollowing) {
             return;
         }
-        event.getRecipients().stream()
-                .filter(u -> u.getId().equals(senderId))
-                .findFirst()
-                .ifPresent(sender -> follow(conversationService.getById(message.conversationId()), sender));
+        if (event.getRecipientIds().contains(senderId)) {
+            follow(conversationService.getById(message.conversationId()), userLookup.findById(senderId).orElseThrow());
+        }
     }
 
     private List<ThreadSummaryDTO> buildSummaries(List<Conversation> threads, User user) {

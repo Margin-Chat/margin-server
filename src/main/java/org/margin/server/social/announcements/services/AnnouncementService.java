@@ -1,6 +1,7 @@
 package org.margin.server.social.announcements.services;
 
 import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.social.announcements.models.Announcement;
 import org.margin.server.social.announcements.models.dtos.AnnouncementDTO;
 import org.margin.server.social.announcements.models.dtos.CreateAnnouncementRequest;
@@ -62,7 +63,7 @@ public class AnnouncementService {
                 .toList();
 
         eventPublisher.publishEvent(
-                new AnnouncementCreatedEvent(members, author, saved.getAnnouncementId(), margin.getId()));
+                new AnnouncementCreatedEvent(members.stream().map(User::getId).toList(), new UserSummary(author.getId(), author.getDisplayName()), saved.getAnnouncementId(), margin.getId()));
 
         return saved;
     }

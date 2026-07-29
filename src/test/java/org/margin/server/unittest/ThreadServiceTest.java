@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.ChannelLookup;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
@@ -62,6 +63,8 @@ class ThreadServiceTest {
     private ChannelLookup channelLookup;
     @Mock
     private PresenceService presenceService;
+    @Mock
+    private UserLookup userLookup;
 
     @InjectMocks
     private ThreadService threadService;
@@ -143,7 +146,7 @@ class ThreadServiceTest {
         Message channelMessage = createSavedMessage(100L, channelConversation, alice, "hi");
         MessageDTO dto = MessageDTO.from(channelMessage).build();
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
         verify(conversationCreationService, never()).createConversationMember(any(), any());
     }
@@ -158,8 +161,9 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, bob.getId()))
                 .thenReturn(Optional.empty(), Optional.empty());
         when(conversationService.getById(11L)).thenReturn(post);
+        when(userLookup.findById(bob.getId())).thenReturn(Optional.of(bob));
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
         verify(conversationCreationService).createConversationMember(post, bob);
     }
@@ -173,7 +177,7 @@ class ThreadServiceTest {
         lenient().when(conversationMemberRepository.findByConversationIdAndUserId(eq(11L), eq(bob.getId())))
                 .thenReturn(Optional.of(new ConversationMember()));
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
         verify(conversationCreationService, never()).createConversationMember(any(), any());
     }

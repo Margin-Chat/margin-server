@@ -64,8 +64,8 @@ public class SpacesActions {
         space.getChannels().forEach(c -> conversationService.createNewConversationMember(c.getConversation(), user));
 
         eventPublisher.publishEvent(new UserJoinedSpaceEvent(
-                space.getMembers().stream().map(SpaceMember::getUser).toList(),
-                user,
+                space.getMembers().stream().map(m -> m.getUser().getId()).toList(),
+                user.getId(),
                 space.getId()));
 
         return spaceMember;

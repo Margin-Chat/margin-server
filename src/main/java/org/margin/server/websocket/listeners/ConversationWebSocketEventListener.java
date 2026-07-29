@@ -43,7 +43,7 @@ public class ConversationWebSocketEventListener {
     @EventListener
     public void onConversationInvite(ConversationInviteEvent event) {
         ConversationInvitePayload payload = new ConversationInvitePayload(
-                event.getConversation(), userService.toDTO(event.getSender()));
+                event.getConversation(), userService.toDTO(userService.getById(event.getSender().id())));
         String json = messageBuilder.buildMessage(WebSocketMessageType.CONVERSATION_INVITE, event.getRecipientId(), payload);
         connectionManager.sendToUser(event.getRecipientId(), json);
     }
@@ -65,12 +65,12 @@ public class ConversationWebSocketEventListener {
     @EventListener
     public void onTypingIndicator(TypingIndicatorEvent event) {
         TypingIndicatorEventPayload payload = new TypingIndicatorEventPayload(
-                event.getUser().getId(), event.getUser().getDisplayName(), event.isTyping());
+                event.getUser().id(), event.getUser().displayName(), event.isTyping());
         String json = messageBuilder.buildMessage(
                 WebSocketMessageType.RECEIVE_TYPING_INDICATOR, event.getConversationId(), payload);
-        for (User recipient : event.getRecipients()) {
-            if (connectionManager.isUserOnline(recipient.getId())) {
-                connectionManager.sendToUser(recipient.getId(), json);
+        for (Long recipientId : event.getRecipientIds()) {
+            if (connectionManager.isUserOnline(recipientId)) {
+                connectionManager.sendToUser(recipientId, json);
             }
         }
     }

@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.shared.notifications.NotificationType;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.notifications.listeners.NotificationEventListener;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
@@ -58,7 +59,7 @@ class NotificationEventListenerTest {
         DirectConversationDTO conversation = new DirectConversationDTO(
                 42L, Instant.now(), sender.getId(), null, ConversationInviteStatus.PENDING, false);
 
-        listener.onConversationInvite(new ConversationInviteEvent(conversation, sender, recipient.getId()));
+        listener.onConversationInvite(new ConversationInviteEvent(conversation, new UserSummary(sender.getId(), sender.getDisplayName()), recipient.getId()));
 
         verify(notificationService).createForUsers(
                 List.of(recipient.getId()), sender.getId(), NotificationType.CONVERSATION_INVITE, 42L, null);
@@ -113,7 +114,7 @@ class NotificationEventListenerTest {
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, reactor.getId(), "Reactor", "👍");
 
-        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author, reactor), ConversationType.CHANNEL));
+        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author.getId(), reactor.getId()), ConversationType.CHANNEL));
 
         verify(notificationService).createForUsers(
                 List.of(author.getId()), reactor.getId(), NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
@@ -134,7 +135,7 @@ class NotificationEventListenerTest {
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, author.getId(), "Author", "👍");
 
-        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author), ConversationType.DIRECT));
+        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author.getId()), ConversationType.DIRECT));
 
         verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any());
         verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any(), any());

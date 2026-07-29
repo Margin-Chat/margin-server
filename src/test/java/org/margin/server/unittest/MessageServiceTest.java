@@ -157,7 +157,7 @@ class MessageServiceTest {
         verify(eventPublisher).publishEvent(argThat(e ->
                 e instanceof org.margin.server.social.messages.events.MessageSentEvent evt
                 && evt.getMessage().content().equals(content)
-                && evt.getRecipients().contains(toUser)));
+                && evt.getRecipientIds().contains(toUser.getId())));
     }
 
     @Test

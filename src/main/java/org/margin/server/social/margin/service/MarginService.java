@@ -158,7 +158,7 @@ public class MarginService implements MarginLookup {
                 });
 
         if (!isNewlyCreated) {
-            eventPublisher.publishEvent(new UserAddedToMarginEvent(user, addingUser, marginId));
+            eventPublisher.publishEvent(new UserAddedToMarginEvent(user.getId(), addingUser.getId(), marginId));
         }
 
         marginSubscriptionPolicy.notifyIfApproachingMemberLimit(margin);

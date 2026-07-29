@@ -72,7 +72,8 @@ public class MarginInviteService {
         MarginInvite saved = marginInviteRepository.save(marginInvite);
 
         eventPublisher.publishEvent(
-                new UserInvitedToMarginEvent(targetUser, invitedBy, saved.getId(), saved.getInviteCode(), margin.getId()));
+                new UserInvitedToMarginEvent(
+                targetUser.getId(), invitedBy.getId(), saved.getId(), saved.getInviteCode(), margin.getId()));
 
         return saved;
     }

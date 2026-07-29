@@ -117,8 +117,8 @@ class MarginInviteServiceTest {
         assertThat(result.getMaxUses()).isEqualTo(1);
         ArgumentCaptor<UserInvitedToMarginEvent> captor = ArgumentCaptor.forClass(UserInvitedToMarginEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
-        assertThat(captor.getValue().getInvitedUser()).isEqualTo(targetUser);
-        assertThat(captor.getValue().getInvitedBy()).isEqualTo(admin);
+        assertThat(captor.getValue().getInvitedUserId()).isEqualTo(targetUser.getId());
+        assertThat(captor.getValue().getInvitedByUserId()).isEqualTo(admin.getId());
         assertThat(captor.getValue().getInviteCode()).isEqualTo(result.getInviteCode());
         assertThat(captor.getValue().getMarginId()).isEqualTo(margin.getId());
     }

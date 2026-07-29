@@ -1,19 +1,18 @@
 package org.margin.server.social.margin.events;
 
 import lombok.Getter;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEvent;
 
 @Getter
 public class UserAddedToMarginEvent extends ApplicationEvent {
-    private final User addedUser;
-    private final User addingUser;
+    private final Long addedUserId;
+    private final Long addingUserId;
     private final Long marginId;
 
-    public UserAddedToMarginEvent(User addedUser, User addingUser, Long marginId) {
+    public UserAddedToMarginEvent(Long addedUserId, Long addingUserId, Long marginId) {
         super(marginId);
-        this.addedUser = addedUser;
-        this.addingUser = addingUser;
+        this.addedUserId = addedUserId;
+        this.addingUserId = addingUserId;
         this.marginId = marginId;
     }
 }

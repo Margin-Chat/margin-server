@@ -181,9 +181,9 @@ class ConversationServiceTest {
 
         TypingIndicatorEvent event = captor.getValue();
         assertEquals(10L, event.getConversationId());
-        assertEquals(sender, event.getUser());
+        assertEquals(sender.getId(), event.getUser().id());
         assertTrue(event.isTyping());
-        assertEquals(List.of(other), event.getRecipients());
+        assertEquals(List.of(other.getId()), event.getRecipientIds());
     }
 
     @Test

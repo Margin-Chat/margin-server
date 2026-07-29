@@ -39,8 +39,7 @@ public class PushEventListener {
                         "conversationId", String.valueOf(event.getMessage().conversationId())
                 )
         );
-        event.getRecipients().stream()
-                .map(User::getId)
+        event.getRecipientIds().stream()
                 .filter(id -> !Objects.equals(id, senderId))
                 .forEach(id -> pushDispatchService.pushToUserIfOffline(id, push));
     }
@@ -49,7 +48,7 @@ public class PushEventListener {
     public void onConversationInvite(ConversationInviteEvent event) {
         String kind = "GROUP".equals(event.getConversation().type()) ? "a group chat" : "a private chat";
         PushMessage push = new PushMessage(
-                event.getSender().getDisplayName(),
+                event.getSender().displayName(),
                 "Invited you to " + kind,
                 Map.of(
                         "type", "invite",
@@ -62,16 +61,15 @@ public class PushEventListener {
     @EventListener
     public void onAnnouncementCreated(AnnouncementCreatedEvent event) {
         PushMessage push = new PushMessage(
-                event.getAuthor().getDisplayName(),
+                event.getAuthor().displayName(),
                 "Posted an announcement",
                 Map.of(
                         "type", "announcement",
                         "marginId", String.valueOf(event.getMarginId())
                 )
         );
-        event.getMembers().stream()
-                .map(User::getId)
-                .filter(id -> !Objects.equals(id, event.getAuthor().getId()))
+        event.getMemberIds().stream()
+                .filter(id -> !Objects.equals(id, event.getAuthor().id()))
                 .forEach(id -> pushDispatchService.pushToUserIfOffline(id, push));
     }
 

@@ -15,7 +15,6 @@ import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -89,7 +88,7 @@ public class MessageService {
                         .build(),
                 recipients);
 
-        eventPublisher.publishEvent(new MessageEditedEvent(result.message(), result.recipients(), conversation.getType()));
+        eventPublisher.publishEvent(new MessageEditedEvent(result.message(), result.recipients().stream().map(User::getId).toList(), conversation.getType()));
     }
 
     public void deleteMessage(User user, Long messageId, Long recipientId) {
@@ -114,7 +113,7 @@ public class MessageService {
         messageValidationService.validateConversationIsNotPending(fromUser, conversation);
         messageValidationService.validateNotThreadChannelConversation(conversation);
         MessageResult result = createMessageForUsers(fromUser, conversation, content, attachmentIds);
-        eventPublisher.publishEvent(new MessageSentEvent(result.message(), result.recipients()));
+        eventPublisher.publishEvent(new MessageSentEvent(result.message(), result.recipients().stream().map(User::getId).toList()));
     }
 
     @Transactional(readOnly = true)
@@ -151,7 +150,7 @@ public class MessageService {
         MessageReactionDTO reactionDTO = MessageReactionDTO.from(reaction, conversation.getId());
 
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-        eventPublisher.publishEvent(new ReactionAddedEvent(reactionDTO, recipients, conversation.getType()));
+        eventPublisher.publishEvent(new ReactionAddedEvent(reactionDTO, recipients.stream().map(User::getId).toList(), conversation.getType()));
 
         return reactionDTO;
     }
@@ -171,7 +170,7 @@ public class MessageService {
         messageReactionRepository.delete(reaction);
 
         List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-        eventPublisher.publishEvent(new ReactionRemovedEvent(dto, recipients, conversation.getType()));
+        eventPublisher.publishEvent(new ReactionRemovedEvent(dto, recipients.stream().map(User::getId).toList(), conversation.getType()));
 
         return dto;
     }

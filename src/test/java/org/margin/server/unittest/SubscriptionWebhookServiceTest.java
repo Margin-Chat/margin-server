@@ -214,7 +214,7 @@ class SubscriptionWebhookServiceTest {
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
         verify(eventPublisher).publishEvent(statusCaptor.capture());
         assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
-        assertThat(statusCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription).getId());
         assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
 
         ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =
@@ -292,7 +292,7 @@ class SubscriptionWebhookServiceTest {
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
         verify(eventPublisher).publishEvent(statusCaptor.capture());
         assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_UPGRADED);
-        assertThat(statusCaptor.getValue().getOwner()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription).getId());
         assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
 
         ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =

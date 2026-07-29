@@ -30,17 +30,17 @@ public class MarginWebSocketEventListener {
     @EventListener
     public void onMarginInvite(UserInvitedToMarginEvent event) {
         String json = messageBuilder.buildMessage(WebSocketMessageType.MARGIN_INVITE,
-                event.getInvitedUser().getId(), event.getInviteCode());
-        connectionManager.sendToUser(event.getInvitedUser().getId(), json);
+                event.getInvitedUserId(), event.getInviteCode());
+        connectionManager.sendToUser(event.getInvitedUserId(), json);
     }
 
     @EventListener
     public void onUserJoinedSpace(UserJoinedSpaceEvent event) {
-        Map<String, Object> payload = Map.of("spaceId", event.getSpaceId(), "user", userService.toDTO(event.getNewMember()));
+        Map<String, Object> payload = Map.of("spaceId", event.getSpaceId(), "user", userService.toDTO(userService.getById(event.getNewMemberId())));
         String json = messageBuilder.buildMessage(WebSocketMessageType.USER_JOINED_SPACE, event.getSpaceId(), payload);
-        for (User member : event.getSpaceMembers()) {
-            if (connectionManager.isUserOnline(member.getId())) {
-                connectionManager.sendToUser(member.getId(), json);
+        for (Long memberId : event.getSpaceMemberIds()) {
+            if (connectionManager.isUserOnline(memberId)) {
+                connectionManager.sendToUser(memberId, json);
             }
         }
     }

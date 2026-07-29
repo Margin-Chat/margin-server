@@ -54,9 +54,9 @@ public class SubscriptionValidationService {
             return;
         }
 
-        List<User> recipients = margin.getMembers().stream()
+        List<Long> recipients = margin.getMembers().stream()
                 .filter(m -> m.getRole() == MarginRole.OWNER || m.getRole() == MarginRole.ADMIN)
-                .map(MarginMember::getUser)
+                .map(m -> m.getUser().getId())
                 .toList();
 
         try {

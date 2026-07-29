@@ -269,7 +269,7 @@ public class SubscriptionWebhookService {
         try {
             MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
             eventPublisher.publishEvent(new SubscriptionStatusChangedEvent(
-                    owner.getUser(), type, subscription.getMargin().getId()));
+                    owner.getUser().getId(), type, subscription.getMargin().getId()));
         } catch (Exception e) {
             log.warn("Failed to send {} notification for subscription {}", type, subscription.getId(), e);
         }

@@ -34,9 +34,9 @@ public class CallWebSocketEventListener {
     public void onMissedCall(MissedCallEvent missedCallEvent) {
         String json = webSocketMessageBuilder.buildMessage(
                 WebSocketMessageType.CALL_NO_ANSWER,
-                missedCallEvent.getRecipient().getId(),
+                missedCallEvent.getRecipientId(),
                 null);
-        connectionManager.sendToUser(missedCallEvent.getRecipient().getId(), json);
+        connectionManager.sendToUser(missedCallEvent.getRecipientId(), json);
     }
 
     @EventListener
