@@ -1,6 +1,5 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
@@ -33,8 +32,7 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<SendMessa
     @Transactional
     @Override
     public void process(User user, WebSocketMessageIn<SendMessagePayload> message) {
-        Conversation conversation = conversationService.getById(message.getRecipientId());
-        conversationValidationService.validateUserIsInConversation(user, conversation);
-        messageService.sendMessage(user, message.getPayload().content(), conversation, message.getPayload().attachmentIds());
+        conversationValidationService.validateUserIsInConversation(user, message.getRecipientId());
+        messageService.sendMessage(user, message.getPayload().content(), message.getRecipientId(), message.getPayload().attachmentIds());
     }
 }

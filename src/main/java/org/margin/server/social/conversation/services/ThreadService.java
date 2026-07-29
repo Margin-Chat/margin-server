@@ -8,7 +8,7 @@ import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.ThreadConversationDTO;
 import org.margin.server.social.conversation.models.dtos.ThreadSummaryDTO;
 import org.margin.server.social.conversation.models.projections.ThreadSummaryProjection;
@@ -84,7 +84,7 @@ public class ThreadService {
 
         Conversation thread = conversationCreationService.createThreadConversation(channelConversation, trimmedTitle);
         follow(thread, user);
-        messageService.sendMessage(user, trimmedBody, thread, List.of());
+        messageService.sendMessage(user, trimmedBody, thread.getId(), List.of());
 
         return conversationService.toThreadDTO(thread, user.getId());
     }

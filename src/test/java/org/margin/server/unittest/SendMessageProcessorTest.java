@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
@@ -57,13 +57,11 @@ class SendMessageProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new SendMessagePayload("Hello", List.of(7L)));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
-        doNothing().when(messageService).sendMessage(sender, "Hello", conversation, List.of(7L));
+        doNothing().when(messageService).sendMessage(sender, "Hello", conversation.getId(), List.of(7L));
 
         processor.process(sender, message);
 
-        verify(conversationService).getById(10L);
-        verify(messageService).sendMessage(sender, "Hello", conversation, List.of(7L));
+        verify(messageService).sendMessage(sender, "Hello", conversation.getId(), List.of(7L));
     }
 
     @Test
@@ -81,25 +79,24 @@ class SendMessageProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new SendMessagePayload(content, ids));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
         ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).sendMessage(eq(sender), contentCaptor.capture(), eq(conversation), eq(ids));
+        verify(messageService).sendMessage(eq(sender), contentCaptor.capture(), eq(conversation.getId()), eq(ids));
         assertEquals(content, contentCaptor.getValue());
     }
 
     @Test
-    void process_throwsWhenConversationNotFound() {
+    void process_propagatesWhenConversationInvalid() {
         User sender = createUser(1L, "sender");
 
         WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setRecipientId(999L);
         message.setPayload(new SendMessagePayload("Hello", null));
 
-        when(conversationService.getById(999L))
-                .thenThrow(new RuntimeException("Conversation not found"));
+        doThrow(new RuntimeException("Conversation not found"))
+                .when(conversationValidationService).validateUserIsInConversation(sender, 999L);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
         verifyNoInteractions(messageService);
@@ -117,8 +114,7 @@ class SendMessageProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new SendMessagePayload("Hello", null));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
-        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender, "Hello", conversation, null);
+        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender, "Hello", conversation.getId(), null);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
     }

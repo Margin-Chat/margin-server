@@ -1,6 +1,5 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.users.models.User;
@@ -28,8 +27,7 @@ public class TypingIndicatorProcessor implements WebSocketMessageProcessor<Typin
 
     @Override
     public void process(User user, WebSocketMessageIn<TypingIndicatorPayload> message) {
-        Conversation conversation = conversationService.getById(message.getRecipientId());
-        conversationValidationService.validateUserIsInConversation(user, conversation);
-        conversationService.notifyTyping(user, conversation, message.getPayload().isTyping());
+        conversationValidationService.validateUserIsInConversation(user, message.getRecipientId());
+        conversationService.notifyTyping(user, message.getRecipientId(), message.getPayload().isTyping());
     }
 }

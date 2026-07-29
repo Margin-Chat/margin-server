@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.services;
 
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
@@ -90,7 +91,8 @@ public class ConversationService {
     }
 
 
-    public void notifyTyping(User user, Conversation conversation, boolean isTyping) {
+    public void notifyTyping(User user, Long conversationId, boolean isTyping) {
+        Conversation conversation = getById(conversationId);
         List<User> recipients = getConversationMembers(conversation.getId()).stream()
                 .filter(member -> !member.getId().equals(user.getId()))
                 .toList();

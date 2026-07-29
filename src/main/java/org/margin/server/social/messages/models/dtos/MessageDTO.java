@@ -1,7 +1,7 @@
 package org.margin.server.social.messages.models.dtos;
 
 import org.margin.server.social.api.MessageAttachmentDTO;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.users.models.dtos.UserDTO;
 

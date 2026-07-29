@@ -1,9 +1,5 @@
 package org.margin.server.storage.controllers;
 
-import org.margin.server.social.channel.ChannelLookup;
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
@@ -37,26 +33,20 @@ public class StoredFileController {
     private final StorageService storageService;
     private final StorageProperties storageProperties;
     private final StoredFileService storedFileService;
-    private final ChannelLookup channelLookup;
     private final ConversationAuthorizationService conversationAuthorizationService;
-    private final ConversationService conversationService;
     private final MarginAccessChecker marginAccessChecker;
     private final MarginLookup marginLookup;
 
     public StoredFileController(StorageService storageService,
                                 StorageProperties storageProperties,
                                 StoredFileService storedFileService,
-                                ChannelLookup channelLookup,
                                 ConversationAuthorizationService conversationAuthorizationService,
-                                ConversationService conversationService,
                                 MarginAccessChecker marginAccessChecker,
                                 MarginLookup marginLookup) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.storedFileService = storedFileService;
-        this.channelLookup = channelLookup;
         this.conversationAuthorizationService = conversationAuthorizationService;
-        this.conversationService = conversationService;
         this.marginAccessChecker = marginAccessChecker;
         this.marginLookup = marginLookup;
     }

@@ -1,8 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.sfu.services.SfuService;
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.channel.services.ChannelService;
+import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.users.models.User;
 import org.margin.server.websocket.models.WebSocketMessageIn;
@@ -14,14 +13,14 @@ public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<Str
 
     private final SfuService sfuService;
     private final MarginAccessChecker marginAccessChecker;
-    private final ChannelService channelService;
+    private final ChannelDirectory channelDirectory;
 
     public ChannelCallInviteProcessor(SfuService sfuService,
                                       MarginAccessChecker marginAccessChecker,
-                                      ChannelService channelService) {
+                                      ChannelDirectory channelDirectory) {
         this.sfuService = sfuService;
         this.marginAccessChecker = marginAccessChecker;
-        this.channelService = channelService;
+        this.channelDirectory = channelDirectory;
     }
 
     @Override
@@ -37,7 +36,6 @@ public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<Str
         marginAccessChecker.requireChannelMember(user.getId(), channelId);
         marginAccessChecker.requireChannelMember(recipientId, channelId);
 
-        Channel channel = channelService.getById(channelId);
-        sfuService.inviteToChannelCall(user, recipientId, channelId, channel.getName());
+        sfuService.inviteToChannelCall(user, recipientId, channelId, channelDirectory.nameOf(channelId));
     }
 }

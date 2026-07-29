@@ -6,7 +6,7 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.models.User;

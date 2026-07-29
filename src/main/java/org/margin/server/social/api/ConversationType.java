@@ -1,4 +1,4 @@
-package org.margin.server.social.conversation.models;
+package org.margin.server.social.api;
 
 public enum ConversationType {
     DIRECT,

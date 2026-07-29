@@ -2,7 +2,7 @@ package org.margin.server.social.conversation.validations;
 
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

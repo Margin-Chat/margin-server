@@ -5,4 +5,6 @@ public interface ChannelDirectory {
     Long marginIdOf(Long channelId);
 
     Long conversationIdOf(Long channelId);
+
+    String nameOf(Long channelId);
 }

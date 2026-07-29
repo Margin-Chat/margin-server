@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.models;
 
+import org.margin.server.social.api.ConversationType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

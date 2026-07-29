@@ -1,7 +1,7 @@
 package org.margin.server.social.messages.events;
 
 import lombok.Getter;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.springframework.context.ApplicationEvent;
 

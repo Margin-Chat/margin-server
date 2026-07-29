@@ -42,7 +42,7 @@ public class SubscriptionTestUtils {
 
     public static int getMaxCallParticipantsForChannel(Long channelId) {
         Channel channel = channelService.getById(channelId);
-        return subscriptionValidationService.getMaxCallParticipants(channel);
+        return subscriptionValidationService.getMaxCallParticipants(channel.getSpace().getMargin().getId());
     }
 
     public static void overrideLimits(Margin margin, int maxMembers, int maxStorageGb, int maxCallParticipants) {

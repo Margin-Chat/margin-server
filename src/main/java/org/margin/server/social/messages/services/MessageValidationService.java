@@ -3,7 +3,7 @@ package org.margin.server.social.messages.services;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.users.models.User;

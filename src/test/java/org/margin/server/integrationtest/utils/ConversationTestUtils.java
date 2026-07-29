@@ -3,7 +3,7 @@ package org.margin.server.integrationtest.utils;
 import org.margin.server.social.conversation.controllers.ConversationController;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.*;
 import org.springframework.http.ResponseEntity;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;

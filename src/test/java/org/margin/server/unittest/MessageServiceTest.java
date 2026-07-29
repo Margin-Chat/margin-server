@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
@@ -147,11 +147,12 @@ class MessageServiceTest {
         Conversation dmConversation = createConversation(10L, ConversationType.DIRECT);
         Message savedMessage = createSavedMessage(100L, dmConversation, fromUser, content);
 
+        when(conversationService.getById(dmConversation.getId())).thenReturn(dmConversation);
         when(messageActions.createMessage(fromUser, dmConversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(dmConversation.getId()))
                 .thenReturn(Arrays.asList(fromUser, toUser));
 
-        messageService.sendMessage(fromUser, content, dmConversation, attachmentIds);
+        messageService.sendMessage(fromUser, content, dmConversation.getId(), attachmentIds);
 
         verify(messageActions).createMessage(fromUser, dmConversation, content, attachmentIds);
         verify(eventPublisher).publishEvent(argThat(e ->

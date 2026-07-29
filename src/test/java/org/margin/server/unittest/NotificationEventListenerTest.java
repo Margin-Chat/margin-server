@@ -11,14 +11,14 @@ import org.margin.server.social.conversation.events.ConversationInviteDeclinedEv
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.social.messages.services.MessageService;
+import org.margin.server.social.api.MessageDirectory;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -46,7 +46,7 @@ class NotificationEventListenerTest {
     @Mock
     private UserService userService;
     @Mock
-    private MessageService messageService;
+    private MessageDirectory messageDirectory;
 
     @InjectMocks
     private NotificationEventListener listener;
@@ -97,20 +97,8 @@ class NotificationEventListenerTest {
 
         Margin margin = new Margin();
         margin.setId(99L);
-        Space space = new Space();
-        space.setMargin(margin);
-        Channel channel = new Channel();
-        channel.setSpace(space);
-        Conversation conversation = new Conversation();
-        conversation.setId(5L);
-        conversation.setType(ConversationType.CHANNEL);
-        conversation.setChannel(channel);
-
-        Message message = new Message();
-        message.setId(10L);
-        message.setFromUser(author);
-        message.setConversation(conversation);
-        when(messageService.getById(10L)).thenReturn(message);
+        when(messageDirectory.contextOf(10L))
+                .thenReturn(new MessageDirectory.MessageContext(author.getId(), 5L, 99L));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, reactor.getId(), "Reactor", "👍");
 
@@ -124,14 +112,8 @@ class NotificationEventListenerTest {
     void onReactionAdded_doesNotNotify_whenAuthorReactsToOwnMessage() {
         User author = createUser(2L, "Author");
 
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.DIRECT);
-
-        Message message = new Message();
-        message.setId(10L);
-        message.setFromUser(author);
-        message.setConversation(conversation);
-        when(messageService.getById(10L)).thenReturn(message);
+        when(messageDirectory.contextOf(10L))
+                .thenReturn(new MessageDirectory.MessageContext(author.getId(), 5L, null));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, author.getId(), "Author", "👍");
 

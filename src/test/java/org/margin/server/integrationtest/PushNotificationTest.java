@@ -82,7 +82,7 @@ class PushNotificationTest extends MarginTestRunner {
         pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
         Conversation conv = ConversationTestUtils.createDirectConversation(alice, bob);
 
-        messageService.sendMessage(alice, "hello bob", conv, List.of());
+        messageService.sendMessage(alice, "hello bob", conv.getId(), List.of());
 
         CapturedPush push = awaitSinglePush();
         assertEquals("bob-device", push.token());
@@ -99,7 +99,7 @@ class PushNotificationTest extends MarginTestRunner {
 
         String ciphertext = Base64.getEncoder().encodeToString(
                 "{\"iv\":\"abc\",\"message\":\"zzz\",\"recipientKey\":\"k\",\"senderKey\":\"k\"}".getBytes());
-        messageService.sendMessage(alice, ciphertext, conv, List.of());
+        messageService.sendMessage(alice, ciphertext, conv.getId(), List.of());
 
         CapturedPush push = awaitSinglePush();
         assertEquals("New message", push.message().body());
@@ -111,7 +111,7 @@ class PushNotificationTest extends MarginTestRunner {
         Conversation conv = ConversationTestUtils.createDirectConversation(alice, bob);
         CapturingPushSenderConfig.failNextSendAsInvalidToken = true;
 
-        messageService.sendMessage(alice, "are you there?", conv, List.of());
+        messageService.sendMessage(alice, "are you there?", conv.getId(), List.of());
 
         awaitCondition(() -> pushTokenRepository.findByToken("bob-dead-device").isEmpty());
         assertEquals(0, CapturingPushSenderConfig.captured.size());

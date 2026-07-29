@@ -50,7 +50,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                         )
                         AND u.id != :userId
                         AND cm.conversation.type IN ('DIRECT', 'GROUP')
-                        AND (cm.conversation.type != org.margin.server.social.conversation.models.ConversationType.DIRECT
+                        AND (cm.conversation.type != org.margin.server.social.api.ConversationType.DIRECT
                             OR cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED)
                         ORDER BY m.createdAt DESC
             """)
@@ -84,7 +84,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                                                          @Param("status") ConversationInviteStatus status);
 
     @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user " +
-            "WHERE cm.conversation.type = org.margin.server.social.conversation.models.ConversationType.DIRECT " +
+            "WHERE cm.conversation.type = org.margin.server.social.api.ConversationType.DIRECT " +
             "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.PENDING " +
             "AND EXISTS (SELECT 1 FROM ConversationMember sender " +
             "WHERE sender.conversation.id = cm.conversation.id " +

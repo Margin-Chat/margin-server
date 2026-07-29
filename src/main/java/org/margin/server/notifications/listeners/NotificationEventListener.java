@@ -11,15 +11,12 @@ import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
-import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.api.ConversationType;
+import org.margin.server.social.api.MessageDirectory;
 import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
-import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.context.event.EventListener;
@@ -33,15 +30,13 @@ public class NotificationEventListener {
 
     private final NotificationService notificationService;
     private final UserService userService;
-    private final MessageService messageService;
-    private final ConversationService conversationService;
+    private final MessageDirectory messageDirectory;
 
     public NotificationEventListener(NotificationService notificationService, UserService userService,
-                                     MessageService messageService, ConversationService conversationService) {
+                                     MessageDirectory messageDirectory) {
         this.notificationService = notificationService;
         this.userService = userService;
-        this.messageService = messageService;
-        this.conversationService = conversationService;
+        this.messageDirectory = messageDirectory;
     }
 
     @EventListener
@@ -97,10 +92,9 @@ public class NotificationEventListener {
     @EventListener
     public void onReactionAdded(ReactionAddedEvent event) {
         MessageReactionDTO reaction = event.getReaction();
-        Message message = messageService.getById(reaction.messageId());
-        User author = message.getFromUser();
+        MessageDirectory.MessageContext context = messageDirectory.contextOf(reaction.messageId());
 
-        if (author.getId().equals(reaction.userId())) {
+        if (context.authorId().equals(reaction.userId())) {
             return;
         }
 
@@ -109,17 +103,13 @@ public class NotificationEventListener {
                 .findFirst()
                 .orElse(null);
 
-        Conversation conversation = message.getConversation();
-        Long marginId = conversation.getChannel() == null ? null
-                : conversation.getChannel().getSpace().getMargin().getId();
-
         notificationService.createForUsers(
-                Collections.singletonList(author.getId()),
+                Collections.singletonList(context.authorId()),
                 reactorId,
                 NotificationType.MESSAGE_REACTION,
                 reaction.messageId(),
-                marginId,
-                conversation.getId());
+                context.marginId(),
+                context.conversationId());
     }
 
     @EventListener
@@ -129,9 +119,7 @@ public class NotificationEventListener {
             return;
         }
 
-        List<Long> followerIds = conversationService.getThreadFollowers(message.conversationId()).stream()
-                .map(User::getId)
-                .toList();
+        List<Long> followerIds = messageDirectory.threadFollowerIds(message.conversationId());
         Long senderId = event.getRecipientIds().stream()
                 .filter(id -> id.equals(message.user().id()))
                 .findFirst()

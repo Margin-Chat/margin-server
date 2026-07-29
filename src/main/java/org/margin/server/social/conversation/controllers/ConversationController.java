@@ -118,7 +118,7 @@ public class ConversationController {
         Conversation directConversation = existing != null
                 ? existing
                 : conversationService.createNewDirectConversation(user, recipientUser, request.encrypted());
-        messageService.sendMessage(user, request.encryptedContent(), directConversation, null);
+        messageService.sendMessage(user, request.encryptedContent(), directConversation.getId(), null);
         return conversationService.getConversationDTO(directConversation, user.getId());
     }
 

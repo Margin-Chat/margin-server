@@ -8,7 +8,7 @@ import org.margin.server.social.conversation.events.TypingIndicatorEvent;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.ConversationDTO;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
@@ -173,7 +173,7 @@ class ConversationServiceTest {
         when(conversationMemberRepository.findUsersByConversationId(10L))
                 .thenReturn(List.of(sender, other));
 
-        conversationService.notifyTyping(sender, conversation, true);
+        conversationService.notifyTyping(sender, conversation.getId(), true);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);
@@ -197,7 +197,7 @@ class ConversationServiceTest {
         when(conversationMemberRepository.findUsersByConversationId(10L))
                 .thenReturn(List.of(sender, other));
 
-        conversationService.notifyTyping(sender, conversation, false);
+        conversationService.notifyTyping(sender, conversation.getId(), false);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);

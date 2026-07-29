@@ -4,7 +4,7 @@ import org.margin.server.presence.PresenceService;
 import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.events.*;
@@ -93,7 +93,7 @@ public class MessageService {
 
     public void deleteMessage(User user, Long messageId, Long recipientId) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation);
+        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
 
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -109,7 +109,8 @@ public class MessageService {
         eventPublisher.publishEvent(new MessageDeletedEvent(messageResult));
     }
 
-    public void sendMessage(User fromUser, String content, Conversation conversation, List<Long> attachmentIds) {
+    public void sendMessage(User fromUser, String content, Long conversationId, List<Long> attachmentIds) {
+        Conversation conversation = conversationService.getById(conversationId);
         messageValidationService.validateConversationIsNotPending(fromUser, conversation);
         messageValidationService.validateNotThreadChannelConversation(conversation);
         MessageResult result = createMessageForUsers(fromUser, conversation, content, attachmentIds);
@@ -143,7 +144,7 @@ public class MessageService {
     @Transactional
     public MessageReactionDTO addReaction(User user, Long recipientId, Long messageId, String emoji) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation);
+        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
 
         messageValidationService.validateDuplicateEmojiForMessage(user, messageId, emoji);
         MessageReaction reaction = messageActions.createMessageReaction(user, getById(messageId), emoji);
@@ -161,7 +162,7 @@ public class MessageService {
                                              String emoji,
                                              Long recipientId) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation);
+        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
 
         MessageReaction reaction = messageReactionRepository
                 .findByMessageIdAndUserIdAndEmoji(messageId, user.getId(), emoji)

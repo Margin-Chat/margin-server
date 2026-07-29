@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.exceptions.ConversationValidationException;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.users.models.User;
@@ -53,13 +53,12 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(true));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
-        verify(conversationValidationService).validateUserIsInConversation(sender, conversation);
+        verify(conversationValidationService).validateUserIsInConversation(sender, conversation.getId());
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender), eq(conversation.getId()), isTypingCaptor.capture());
         assertTrue(isTypingCaptor.getValue());
     }
 
@@ -75,12 +74,11 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(false));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender), eq(conversation.getId()), isTypingCaptor.capture());
         assertFalse(isTypingCaptor.getValue());
     }
 
@@ -96,9 +94,8 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(true));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
         doThrow(new ConversationValidationException("User is not a part of the conversation"))
-                .when(conversationValidationService).validateUserIsInConversation(sender, conversation);
+                .when(conversationValidationService).validateUserIsInConversation(sender, conversation.getId());
 
         assertThrows(ConversationValidationException.class, () -> processor.process(sender, message));
 

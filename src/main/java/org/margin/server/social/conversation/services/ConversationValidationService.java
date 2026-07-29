@@ -17,7 +17,8 @@ public class ConversationValidationService {
         this.conversationService = conversationService;
     }
 
-    public void validateUserIsInConversation(User user, Conversation conversation) {
+    public void validateUserIsInConversation(User user, Long conversationId) {
+        Conversation conversation = conversationService.getById(conversationId);
         List<Long> list = conversationService.getConversationMembers(conversation.getId()).stream()
                 .map(User::getId)
                 .toList();

@@ -1,9 +1,9 @@
 package org.margin.server.subscriptions.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
 import org.margin.server.social.margin.MarginLookup;
-import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -70,8 +70,12 @@ public class SubscriptionValidationService {
         }
     }
 
-    public int getMaxCallParticipants(Channel channel) {
-        Margin margin = channel.getSpace().getMargin();
+    public SubscriptionTier tierForMargin(Long marginId) {
+        return getSubscriptionForMargin(marginLookup.getById(marginId)).getTier();
+    }
+
+    public int getMaxCallParticipants(Long marginId) {
+        Margin margin = marginLookup.getById(marginId);
         return getSubscriptionForMargin(margin).getLimits().getMaxCallParticipants();
     }
 
@@ -87,8 +91,8 @@ public class SubscriptionValidationService {
         }
     }
 
-    public int validateChannelVoiceJoin(Channel channel, int currentParticipants) {
-        Margin margin = channel.getSpace().getMargin();
+    public int validateChannelVoiceJoin(Long marginId, int currentParticipants) {
+        Margin margin = marginLookup.getById(marginId);
         Subscription subscription = getSubscriptionForMargin(margin);
         int max = subscription.getLimits().getMaxCallParticipants();
         if (currentParticipants >= max) {

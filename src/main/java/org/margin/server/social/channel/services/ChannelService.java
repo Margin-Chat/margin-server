@@ -8,7 +8,7 @@ import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -126,5 +126,11 @@ public class ChannelService implements ChannelLookup, ChannelDirectory {
     @Transactional(readOnly = true)
     public Long conversationIdOf(Long channelId) {
         return getById(channelId).getConversation().getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String nameOf(Long channelId) {
+        return getById(channelId).getName();
     }
 }

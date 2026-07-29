@@ -9,7 +9,7 @@ import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.conversation.services.ConversationCreationService;
@@ -137,7 +137,7 @@ class ThreadServiceTest {
         threadService.createPost(alice, 5L, "title", "the body");
 
         verify(conversationCreationService).createConversationMember(post, alice);
-        verify(messageService).sendMessage(alice, "the body", post, List.of());
+        verify(messageService).sendMessage(alice, "the body", post.getId(), List.of());
         verify(conversationService).toThreadDTO(post, alice.getId());
     }
 
