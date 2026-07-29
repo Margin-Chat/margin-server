@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.margin.server.social.margin.models.MarginRole;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -25,9 +24,8 @@ public class MarginMember {
     @JoinColumn(name = "margin_id", nullable = false)
     private Margin margin;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @NotNull
     @Enumerated(EnumType.STRING)

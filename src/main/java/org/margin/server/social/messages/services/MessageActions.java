@@ -33,7 +33,7 @@ public class MessageActions {
     public Message createMessage(User fromUser, Conversation conversation, String content, List<Long> attachmentIds) {
         Message message = new Message();
         message.setConversation(conversation);
-        message.setFromUser(fromUser);
+        message.setFromUserId(fromUser.getId());
         message.setMessage(content);
         message.setCreatedAt(Instant.now());
         Message saved = messageRepository.save(message);
@@ -64,6 +64,6 @@ public class MessageActions {
 
     @Transactional
     public MessageReaction createMessageReaction(User user, Message message, String emoji) {
-        return messageReactionRepository.save(new MessageReaction(message, user, emoji));
+        return messageReactionRepository.save(new MessageReaction(message, user.getId(), emoji));
     }
 }

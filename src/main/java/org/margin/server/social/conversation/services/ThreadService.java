@@ -190,8 +190,7 @@ public class ThreadService {
         }
 
         UserDTO author = firstMessage != null
-                ? new UserDTO(firstMessage.getFromUser(),
-                presenceService.isUserOnline(firstMessage.getFromUser().getId()))
+                ? userLookup.dtoOf(firstMessage.getFromUserId())
                 : null;
 
         return new ThreadSummaryDTO(
@@ -214,7 +213,7 @@ public class ThreadService {
 
     private void follow(Conversation thread, User user) {
         if (conversationMemberRepository.findByConversationIdAndUserId(thread.getId(), user.getId()).isEmpty()) {
-            conversationCreationService.createConversationMember(thread, user);
+            conversationCreationService.createConversationMember(thread, user.getId());
         }
     }
 

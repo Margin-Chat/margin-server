@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -26,9 +25,8 @@ public class Announcement {
     @JoinColumn(nullable = false, name = "margin_id")
     private Margin margin;
 
-    @ManyToOne
-    @JoinColumn(nullable = false, name = "author_id")
-    private User author;
+    @Column(nullable = false, name = "author_id")
+    private Long authorId;
 
     @NotNull
     @Column(nullable = false, name = "title")

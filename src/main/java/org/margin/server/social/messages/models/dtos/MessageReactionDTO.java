@@ -10,13 +10,13 @@ public record MessageReactionDTO(
         String displayName,
         String emoji
 ) {
-    public static MessageReactionDTO from(MessageReaction reaction, Long conversationId) {
+    public static MessageReactionDTO from(MessageReaction reaction, Long conversationId, String displayName) {
         return new MessageReactionDTO(
                 reaction.getId(),
                 reaction.getMessage().getId(),
                 conversationId,
-                reaction.getUser().getId(),
-                reaction.getUser().getDisplayName(),
+                reaction.getUserId(),
+                displayName,
                 reaction.getEmoji()
         );
     }

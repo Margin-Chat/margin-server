@@ -5,7 +5,6 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,14 +34,12 @@ public class MessageDirectoryService implements MessageDirectory {
         Long marginId = conversation.getChannel() == null ? null
                 : conversation.getChannel().getSpace().getMargin().getId();
 
-        return new MessageContext(message.getFromUser().getId(), conversation.getId(), marginId);
+        return new MessageContext(message.getFromUserId(), conversation.getId(), marginId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Long> threadFollowerIds(Long conversationId) {
-        return conversationMemberRepository.findUsersByConversationId(conversationId).stream()
-                .map(User::getId)
-                .toList();
+        return conversationMemberRepository.findUserIdsByConversationId(conversationId);
     }
 }

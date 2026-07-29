@@ -109,8 +109,8 @@ public class ConversationTestUtils {
         return conversationController.getUserConversations(principalOf(user));
     }
 
-    public static List<User> getConversationMembers(Long conversationId) {
-        return conversationMemberRepository.findUsersByConversationId(conversationId);
+    public static List<Long> getConversationMembers(Long conversationId) {
+        return conversationMemberRepository.findUserIdsByConversationId(conversationId);
     }
 
     public static Map<Long, String> getMemberPublicKeys(Long conversationId, User user) {
@@ -124,7 +124,7 @@ public class ConversationTestUtils {
     private static void createConversationMember(Conversation conversation, User user) {
         ConversationMember member = new ConversationMember();
         member.setConversation(conversation);
-        member.setUser(user);
+        member.setUserId(user.getId());
         member.setJoinedAt(Instant.now());
         conversationMemberRepository.save(member);
     }

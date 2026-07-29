@@ -19,9 +19,7 @@ public class ConversationValidationService {
 
     public void validateUserIsInConversation(User user, Long conversationId) {
         Conversation conversation = conversationService.getById(conversationId);
-        List<Long> list = conversationService.getConversationMembers(conversation.getId()).stream()
-                .map(User::getId)
-                .toList();
+        List<Long> list = conversationService.getConversationMembers(conversation.getId());
 
         if (!list.contains(user.getId())) {
             throw new ConversationValidationException("User is not a part of the conversation");

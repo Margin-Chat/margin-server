@@ -1,5 +1,6 @@
 package org.margin.server.social.margin.service;
 
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelDTO;
@@ -18,15 +19,18 @@ import java.util.List;
 @Service
 public class MarginMapper {
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
 
-    public MarginMapper(PresenceService presenceService) {
+    public MarginMapper(PresenceService presenceService,
+                              UserLookup userLookup) {
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
     }
 
     public MarginDTO marginToDto(Margin margin) {
         List<MarginMemberDTO> members = margin.getMembers().stream()
                 .map(m -> new MarginMemberDTO(
-                        new UserDTO(m.getUser(), presenceService.isUserOnline(m.getUser().getId())),
+                        userLookup.dtoOf(m.getUserId()),
                         m.getRole(),
                         m.getJoinedAt()
                 ))
@@ -44,9 +48,7 @@ public class MarginMapper {
         List<SpaceMemberDTO> members = space.getMembers() != null
                 ? space.getMembers().stream()
                 .map(m -> new SpaceMemberDTO(
-                        new UserDTO(
-                                m.getUser(),
-                                presenceService.isUserOnline(m.getUser().getId())),
+                        userLookup.dtoOf(m.getUserId()),
                         m.getSpace().getId(),
                         m.getRole(),
                         m.getJoinedAt()

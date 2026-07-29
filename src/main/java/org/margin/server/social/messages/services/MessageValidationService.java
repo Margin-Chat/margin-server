@@ -24,7 +24,7 @@ public class MessageValidationService {
     public void validateConversationIsNotPending(User fromUser, Conversation conversation) {
         if (conversation.getType() == ConversationType.DIRECT) {
             boolean anyPending = conversationMemberRepository.findByConversation(conversation).stream()
-                    .anyMatch(m -> !m.getUser().getId().equals(fromUser.getId())
+                    .anyMatch(m -> !m.getUserId().equals(fromUser.getId())
                             && m.getInviteStatus() == ConversationInviteStatus.PENDING);
             if (anyPending) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,

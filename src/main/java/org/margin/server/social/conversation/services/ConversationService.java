@@ -74,8 +74,8 @@ public class ConversationService {
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
     }
 
-    public List<User> getConversationMembers(Long conversationId) {
-        return conversationMemberRepository.findUsersByConversationId(resolveMembershipConversationId(conversationId));
+    public List<Long> getConversationMembers(Long conversationId) {
+        return conversationMemberRepository.findUserIdsByConversationId(resolveMembershipConversationId(conversationId));
     }
 
     private Long resolveMembershipConversationId(Long conversationId) {
@@ -86,22 +86,22 @@ public class ConversationService {
         return conversationId;
     }
 
-    public List<User> getThreadFollowers(Long threadConversationId) {
-        return conversationMemberRepository.findUsersByConversationId(threadConversationId);
+    public List<Long> getThreadFollowers(Long threadConversationId) {
+        return conversationMemberRepository.findUserIdsByConversationId(threadConversationId);
     }
 
 
     public void notifyTyping(User user, Long conversationId, boolean isTyping) {
         Conversation conversation = getById(conversationId);
-        List<User> recipients = getConversationMembers(conversation.getId()).stream()
-                .filter(member -> !member.getId().equals(user.getId()))
+        List<Long> recipientIds = getConversationMembers(conversation.getId()).stream()
+                .filter(memberId -> !memberId.equals(user.getId()))
                 .toList();
         eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), new UserSummary(user.getId(), user.getDisplayName()), isTyping,
-                recipients.stream().map(User::getId).toList()));
+                recipientIds));
     }
 
-    public List<User> getPendingConversationMembers(Long conversationId) {
-        return conversationMemberRepository.findPendingUsersByConversationId(conversationId);
+    public List<Long> getPendingConversationMembers(Long conversationId) {
+        return conversationMemberRepository.findPendingUserIdsByConversationId(conversationId);
     }
 
     public List<Conversation> getUserConversations(Long userId) {
@@ -118,29 +118,25 @@ public class ConversationService {
         return switch (conversation.getType()) {
             case DIRECT -> {
                 ConversationMember otherMember = conversation.getMembers().stream()
-                        .filter(member -> !member.getUser().getId().equals(currentUserId))
+                        .filter(member -> !member.getUserId().equals(currentUserId))
                         .findFirst()
                         .orElseThrow(UserNotFoundException::new);
                 ConversationMember currentMember = conversation.getMembers().stream()
-                        .filter(member -> member.getUser().getId().equals(currentUserId))
+                        .filter(member -> member.getUserId().equals(currentUserId))
                         .findFirst()
                         .orElseThrow(UserNotFoundException::new);
                 yield new DirectConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
-                        otherMember.getUser().getId(),
+                        otherMember.getUserId(),
                         otherMember.getLastReadAt(),
                         currentMember.getInviteStatus(),
                         conversation.isEncrypted()
                 );
             }
             case GROUP -> {
-                List<Long> memberIds = getConversationMembers(conversation.getId()).stream()
-                        .map(User::getId)
-                        .toList();
-                List<Long> pendingMemberIds = getPendingConversationMembers(conversation.getId()).stream()
-                        .map(User::getId)
-                        .toList();
+                List<Long> memberIds = getConversationMembers(conversation.getId());
+                List<Long> pendingMemberIds = getPendingConversationMembers(conversation.getId());
                 yield new GroupConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
@@ -191,7 +187,7 @@ public class ConversationService {
         Conversation conversation = conversationCreationService.createGroupConversation(name, encrypted);
 
         // Creator is immediately an accepted member
-        conversationCreationService.createConversationMember(conversation, creator);
+        conversationCreationService.createConversationMember(conversation, creator.getId());
 
         // All other members are invited (PENDING)
         for (String email : memberEmails) {
@@ -199,7 +195,7 @@ public class ConversationService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "User not found: " + email));
             conversationCreationService.createConversationMemberWithStatus(
-                    conversation, invitee, ConversationInviteStatus.PENDING);
+                    conversation, invitee.getId(), ConversationInviteStatus.PENDING);
 
             GroupConversationDTO groupDTO = new GroupConversationDTO(
                     conversation.getId(),
@@ -227,7 +223,7 @@ public class ConversationService {
         }
 
         conversationCreationService.createConversationMemberWithStatus(
-                conversation, invitee, ConversationInviteStatus.PENDING);
+                conversation, invitee.getId(), ConversationInviteStatus.PENDING);
 
         GroupConversationDTO groupDTO = new GroupConversationDTO(
                 conversation.getId(),
@@ -259,10 +255,10 @@ public class ConversationService {
         Conversation conversation = getById(conversationId);
         if (conversation.getType().equals(ConversationType.DIRECT)) {
             Optional<ConversationMember> otherUser = conversation.getMembers().stream()
-                    .filter(member -> !member.getUser().getId().equals(userId))
+                    .filter(member -> !member.getUserId().equals(userId))
                     .findFirst();
             otherUser.ifPresent(conversationMember ->
-                    eventPublisher.publishEvent(new ConversationReadEvent(conversationId, conversationMember.getUser().getId(), now)));
+                    eventPublisher.publishEvent(new ConversationReadEvent(conversationId, conversationMember.getUserId(), now)));
         }
 
     }
@@ -311,7 +307,7 @@ public class ConversationService {
                 .stream()
                 .map(p -> new RecentChatUsersDTO(
                         getConversationDTO(p.conversation(), userId),
-                        new UserDTO(p.user(), presenceService.isUserOnline(p.user().getId())),
+                        userLookup.dtoOf(p.userId()),
                         p.lastMessage(),
                         p.lastMessageTime(),
                         p.lastMessageIncoming()
@@ -321,10 +317,10 @@ public class ConversationService {
 
     public Instant getOtherUserLastReadAt(Long conversationId, Long currentUserId) {
         return getConversationMembers(conversationId).stream()
-                .filter(u -> !u.getId().equals(currentUserId))
+                .filter(id -> !id.equals(currentUserId))
                 .findFirst()
-                .map(u -> conversationMemberRepository
-                        .findById(new ConversationMemberId(conversationId, u.getId()))
+                .map(otherUserId -> conversationMemberRepository
+                        .findById(new ConversationMemberId(conversationId, otherUserId))
                         .map(ConversationMember::getLastReadAt)
                         .orElse(Instant.EPOCH))
                 .orElse(Instant.EPOCH);
@@ -338,8 +334,8 @@ public class ConversationService {
     @Transactional
     public Conversation createNewDirectConversation(User user, User recipientUser, boolean encrypted) {
         Conversation directConversation = conversationCreationService.createDirectConversation(encrypted);
-        conversationCreationService.createConversationMember(directConversation, user);
-        conversationCreationService.createConversationMember(directConversation, recipientUser);
+        conversationCreationService.createConversationMember(directConversation, user.getId());
+        conversationCreationService.createConversationMember(directConversation, recipientUser.getId());
         return directConversation;
     }
 
@@ -351,8 +347,8 @@ public class ConversationService {
         }
 
         Conversation conversation = conversationCreationService.createDirectConversation(encrypted);
-        conversationCreationService.createConversationMember(conversation, sender);
-        conversationCreationService.createConversationMemberWithStatus(conversation, recipient,
+        conversationCreationService.createConversationMember(conversation, sender.getId());
+        conversationCreationService.createConversationMemberWithStatus(conversation, recipient.getId(),
                 ConversationInviteStatus.PENDING);
 
         DirectConversationDTO dto = new DirectConversationDTO(
@@ -396,21 +392,21 @@ public class ConversationService {
 
         if (conversation.getType() == ConversationType.DIRECT) {
             ConversationMember otherMember = conversation.getMembers().stream()
-                    .filter(m -> !m.getUser().getId().equals(user.getId()))
+                    .filter(m -> !m.getUserId().equals(user.getId()))
                     .findFirst()
                     .orElseThrow(UserNotFoundException::new);
 
             eventPublisher.publishEvent(new ConversationInviteAcceptedEvent(
                     this.getConversationDTO(conversation, user.getId()),
-                    userService.toDTO(member.getUser()),
+                    userLookup.dtoOf(member.getUserId()),
                     otherMember.getId().getUserId()));
         } else {
             // Notify all other ACCEPTED members that someone joined so their member list stays current
             ConversationDTO updatedDTO = getConversationDTO(conversation, user.getId());
-            for (User m : getConversationMembers(conversationId)) {
-                if (!m.getId().equals(user.getId())) {
+            for (Long memberId : getConversationMembers(conversationId)) {
+                if (!memberId.equals(user.getId())) {
                     eventPublisher.publishEvent(new ConversationInviteAcceptedEvent(
-                            updatedDTO, userService.toDTO(user), m.getId()));
+                            updatedDTO, userService.toDTO(user), memberId));
                 }
             }
         }
@@ -434,7 +430,7 @@ public class ConversationService {
             conversationMemberRepository.save(member);
 
             ConversationMember sender = conversation.getMembers().stream()
-                    .filter(m -> !m.getUser().getId().equals(user.getId()))
+                    .filter(m -> !m.getUserId().equals(user.getId()))
                     .findFirst()
                     .orElseThrow(UserNotFoundException::new);
 
@@ -449,10 +445,10 @@ public class ConversationService {
                 .stream()
                 .map(member -> {
                     Conversation conv = member.getConversation();
-                    User sender = conversationMemberRepository
-                            .findUsersByConversationId(conv.getId())
+                    Long senderId = conversationMemberRepository
+                            .findUserIdsByConversationId(conv.getId())
                             .stream()
-                            .filter(u -> !u.getId().equals(userId))
+                            .filter(id -> !id.equals(userId))
                             .findFirst()
                             .orElseThrow();
 
@@ -461,18 +457,14 @@ public class ConversationService {
                         conversationDTO = new DirectConversationDTO(
                                 conv.getId(),
                                 conv.getCreatedAt(),
-                                sender.getId(),
+                                senderId,
                                 null,
                                 ConversationInviteStatus.PENDING,
                                 conv.isEncrypted()
                         );
                     } else {
-                        List<Long> memberIds = getConversationMembers(conv.getId()).stream()
-                                .map(User::getId)
-                                .toList();
-                        List<Long> pendingMemberIds = getPendingConversationMembers(conv.getId()).stream()
-                                .map(User::getId)
-                                .toList();
+                        List<Long> memberIds = getConversationMembers(conv.getId());
+                        List<Long> pendingMemberIds = getPendingConversationMembers(conv.getId());
                         conversationDTO = new GroupConversationDTO(
                                 conv.getId(),
                                 conv.getCreatedAt(),
@@ -483,7 +475,7 @@ public class ConversationService {
                         );
                     }
                     return new ConversationInvitePayload(conversationDTO,
-                            new UserDTO(sender, presenceService.isUserOnline(sender.getId())));
+                            userLookup.dtoOf(senderId));
                 })
                 .toList();
     }
@@ -494,40 +486,40 @@ public class ConversationService {
                 .stream()
                 .map(member -> {
                     Conversation conv = member.getConversation();
-                    User recipient = member.getUser();
+                    Long recipientId = member.getUserId();
 
                     ConversationDTO conversationDTO = new DirectConversationDTO(
                             conv.getId(),
                             conv.getCreatedAt(),
-                            recipient.getId(),
+                            recipientId,
                             null,
                             ConversationInviteStatus.ACCEPTED,
                             conv.isEncrypted()
                     );
 
                     return new SentConversationInvitePayload(conversationDTO,
-                            new UserDTO(recipient, presenceService.isUserOnline(recipient.getId())));
+                            userLookup.dtoOf(recipientId));
                 })
                 .toList();
     }
 
-    public Conversation createNewConversationForUsers(ConversationType type, Channel channel, List<User> users) {
+    public Conversation createNewConversationForUsers(ConversationType type, Channel channel, List<Long> userIds) {
         Conversation conversation = conversationCreationService.createChannelConversation(type, channel);
-        users.forEach(user -> conversationCreationService.createConversationMember(conversation, user));
+        userIds.forEach(userId -> conversationCreationService.createConversationMember(conversation, userId));
         return conversation;
     }
 
-    public void createNewConversationMember(Conversation conversation, User user) {
-        conversationCreationService.createConversationMember(conversation, user);
+    public void createNewConversationMember(Conversation conversation, Long userId) {
+        conversationCreationService.createConversationMember(conversation, userId);
     }
 
     public java.util.Map<Long, String> getMemberPublicKeys(Long conversationId, Long requestingUserId) {
         if (!conversationMemberRepository.isUserMemberOfConversation(conversationId, requestingUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this conversation");
         }
-        List<User> members = getConversationMembers(conversationId);
         java.util.Map<Long, String> keys = new java.util.LinkedHashMap<>();
-        for (User member : members) {
+        for (Long memberId : getConversationMembers(conversationId)) {
+            User member = userLookup.findById(memberId).orElseThrow();
             if (member.getEncryption() != null && member.getEncryption().getPublicKey() != null) {
                 keys.put(member.getId(), member.getEncryption().getPublicKey());
             }

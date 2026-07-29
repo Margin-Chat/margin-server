@@ -76,6 +76,8 @@ class ThreadServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(i.getArgument(0), "u", null, null, null, false));
         alice = createUser(1L, "alice");
         bob = createUser(2L, "bob");
         threadChannel = createChannel(5L);
@@ -136,7 +138,7 @@ class ThreadServiceTest {
 
         threadService.createPost(alice, 5L, "title", "the body");
 
-        verify(conversationCreationService).createConversationMember(post, alice);
+        verify(conversationCreationService).createConversationMember(post, alice.getId());
         verify(messageService).sendMessage(alice, "the body", post.getId(), List.of());
         verify(conversationService).toThreadDTO(post, alice.getId());
     }
@@ -144,7 +146,7 @@ class ThreadServiceTest {
     @Test
     void onMessageSent_nonThreadConversation_isIgnored() {
         Message channelMessage = createSavedMessage(100L, channelConversation, alice, "hi");
-        MessageDTO dto = MessageDTO.from(channelMessage).build();
+        MessageDTO dto = MessageDTO.from(channelMessage).withAuthor(new org.margin.server.users.models.dtos.UserDTO(channelMessage.getFromUserId(), "u", null, null, null, false)).build();
 
         threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
@@ -156,7 +158,7 @@ class ThreadServiceTest {
         Conversation post = createConversation(11L, ConversationType.THREAD);
         post.setParentConversationId(10L);
         Message reply = createSavedMessage(102L, post, bob, "reply");
-        MessageDTO dto = MessageDTO.from(reply).build();
+        MessageDTO dto = MessageDTO.from(reply).withAuthor(new org.margin.server.users.models.dtos.UserDTO(reply.getFromUserId(), "u", null, null, null, false)).build();
 
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, bob.getId()))
                 .thenReturn(Optional.empty(), Optional.empty());
@@ -165,14 +167,14 @@ class ThreadServiceTest {
 
         threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
-        verify(conversationCreationService).createConversationMember(post, bob);
+        verify(conversationCreationService).createConversationMember(post, bob.getId());
     }
 
     @Test
     void onMessageSent_replyByExistingFollower_doesNotDuplicateFollow() {
         Conversation post = createConversation(11L, ConversationType.THREAD);
         Message reply = createSavedMessage(102L, post, bob, "reply");
-        MessageDTO dto = MessageDTO.from(reply).build();
+        MessageDTO dto = MessageDTO.from(reply).withAuthor(new org.margin.server.users.models.dtos.UserDTO(reply.getFromUserId(), "u", null, null, null, false)).build();
 
         lenient().when(conversationMemberRepository.findByConversationIdAndUserId(eq(11L), eq(bob.getId())))
                 .thenReturn(Optional.of(new ConversationMember()));

@@ -16,7 +16,7 @@ public interface MarginInviteRepository extends JpaRepository<MarginInvite, Long
 
     @Query("""
             SELECT i FROM MarginInvite i
-            WHERE i.invitedUser.id = :userId
+            WHERE i.invitedUserId = :userId
             AND i.status = :status
             AND i.expiresAt > :now
             """)
@@ -29,7 +29,7 @@ public interface MarginInviteRepository extends JpaRepository<MarginInvite, Long
             SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
             FROM MarginInvite i
             WHERE i.margin.id = :marginId
-            AND i.invitedUser.id = :userId
+            AND i.invitedUserId = :userId
             AND i.status = :status
             """)
     boolean existsPendingInvite(

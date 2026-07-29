@@ -17,13 +17,13 @@ public record MarginInviteDTO(
         Integer maxUses,
         int currentUses
 ) {
-    public static MarginInviteDTO from(MarginInvite invite) {
+    public static MarginInviteDTO from(MarginInvite invite, String invitedByName, String invitedUserName) {
         return new MarginInviteDTO(
                 invite.getId(),
                 invite.getInviteCode(),
                 invite.getMargin().getName(),
-                invite.getInvitedBy().getDisplayName(),
-                invite.getInvitedUser() != null ? invite.getInvitedUser().getDisplayName() : null,
+                invitedByName,
+                invitedUserName,
                 invite.getStatus().name(),
                 invite.getType().name(),
                 invite.getCreatedAt(),

@@ -50,8 +50,8 @@ class CallTest extends MarginTestRunner {
         long callId = CallTestUtils.extractCallId(callerMsg);
         Call call = CallTestUtils.findById(callId);
         assertEquals(CallStatus.OFFERED, call.getStatus());
-        assertEquals(caller.getId(), call.getCaller().getId());
-        assertEquals(receiver.getId(), call.getReceiver().getId());
+        assertEquals(caller.getId(), call.getCallerId());
+        assertEquals(receiver.getId(), call.getReceiverId());
     }
 
     @Test

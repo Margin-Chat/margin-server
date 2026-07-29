@@ -28,7 +28,7 @@ public class CallOfferProcessor implements WebSocketMessageProcessor<IncomingCal
         IncomingCallOfferPayload payload = message.getPayload();
 
         callService.createCall(
-                user,
+                user.getId(),
                 message.getRecipientId(),
                 CallStatus.OFFERED,
                 CallType.AUDIO,

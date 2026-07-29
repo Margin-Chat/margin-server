@@ -40,10 +40,10 @@ public class SpacesCreationService {
     }
 
     @Transactional
-    public SpaceMember createMember(User user, Space space, SpaceRole role) {
+    public SpaceMember createMember(Long userId, Space space, SpaceRole role) {
         SpaceMember newSpaceMember = new SpaceMember();
         newSpaceMember.setSpace(space); // This sets the FK
-        newSpaceMember.setUser(user);
+        newSpaceMember.setUserId(userId);
         newSpaceMember.setRole(role);
         newSpaceMember.setJoinedAt(Instant.now());
         SpaceMember spaceMember = spaceMemberRepository.save(newSpaceMember);

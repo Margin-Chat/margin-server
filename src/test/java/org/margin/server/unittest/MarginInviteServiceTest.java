@@ -75,11 +75,11 @@ class MarginInviteServiceTest {
                     return saved;
                 });
 
-        MarginInvite result = marginInviteService.createLinkInvite(margin, 10, admin);
+        MarginInvite result = marginInviteService.createLinkInvite(margin, 10, admin.getId());
 
         assertThat(result.getMargin()).isEqualTo(margin);
-        assertThat(result.getInvitedBy()).isEqualTo(admin);
-        assertThat(result.getInvitedUser()).isNull();
+        assertThat(result.getInvitedByUserId()).isEqualTo(admin.getId());
+        assertThat(result.getInvitedUserId()).isNull();
         assertThat(result.getMaxUses()).isEqualTo(10);
         assertThat(result.getType()).isEqualTo(MarginInvite.InviteType.LINK);
         assertThat(result.getStatus()).isEqualTo(MarginInvite.InviteStatus.PENDING);
@@ -92,7 +92,7 @@ class MarginInviteServiceTest {
         when(marginInviteRepository.save(any(MarginInvite.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        MarginInvite result = marginInviteService.createLinkInvite(margin, null, admin);
+        MarginInvite result = marginInviteService.createLinkInvite(margin, null, admin.getId());
 
         assertThat(result.getMaxUses()).isNull();
     }
@@ -110,10 +110,10 @@ class MarginInviteServiceTest {
                     return saved;
                 });
 
-        MarginInvite result = marginInviteService.createDirectInvite(margin, targetUser, admin);
+        MarginInvite result = marginInviteService.createDirectInvite(margin, targetUser.getId(), admin.getId());
 
         assertThat(result.getType()).isEqualTo(MarginInvite.InviteType.DIRECT);
-        assertThat(result.getInvitedUser()).isEqualTo(targetUser);
+        assertThat(result.getInvitedUserId()).isEqualTo(targetUser.getId());
         assertThat(result.getMaxUses()).isEqualTo(1);
         ArgumentCaptor<UserInvitedToMarginEvent> captor = ArgumentCaptor.forClass(UserInvitedToMarginEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -128,7 +128,7 @@ class MarginInviteServiceTest {
         when(marginMemberRepository.existsByMarginIdAndUserId(margin.getId(), targetUser.getId()))
                 .thenReturn(true);
 
-        assertThatThrownBy(() -> marginInviteService.createDirectInvite(margin, targetUser, admin))
+        assertThatThrownBy(() -> marginInviteService.createDirectInvite(margin, targetUser.getId(), admin.getId()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("already a member");
     }
@@ -140,7 +140,7 @@ class MarginInviteServiceTest {
         when(marginInviteRepository.existsPendingInvite(margin.getId(), targetUser.getId(), MarginInvite.InviteStatus.PENDING))
                 .thenReturn(true);
 
-        assertThatThrownBy(() -> marginInviteService.createDirectInvite(margin, targetUser, admin))
+        assertThatThrownBy(() -> marginInviteService.createDirectInvite(margin, targetUser.getId(), admin.getId()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("pending invite");
     }
@@ -157,11 +157,11 @@ class MarginInviteServiceTest {
                 eq(margin.getId()),
                 eq(targetUser.getId()),
                 eq(MarginRole.MEMBER),
-                eq(admin),
+                eq(admin.getId()),
                 eq(false));
         verify(spacesService).addUsersToDefaultSpacesForMargin(
                 eq(margin.getId()),
-                eq(targetUser));
+                eq(targetUser.getId()));
 
         assertThat(invite.getCurrentUses()).isEqualTo(1);
         verify(marginInviteRepository).save(invite);
@@ -179,11 +179,11 @@ class MarginInviteServiceTest {
                 eq(margin.getId()),
                 eq(targetUser.getId()),
                 eq(MarginRole.MEMBER),
-                eq(admin),
+                eq(admin.getId()),
                 eq(false));
         verify(spacesService).addUsersToDefaultSpacesForMargin(
                 eq(margin.getId()),
-                eq(targetUser));
+                eq(targetUser.getId()));
 
         assertThat(invite.getStatus()).isEqualTo(MarginInvite.InviteStatus.ACCEPTED);
         verify(marginInviteRepository).save(invite);
@@ -208,10 +208,10 @@ class MarginInviteServiceTest {
                 any(Instant.class)))
                 .thenReturn(List.of(invite));
 
-        List<MarginInvite> result = marginInviteService.getPendingInvites(targetUser);
+        List<MarginInvite> result = marginInviteService.getPendingInvites(targetUser.getId());
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getInvitedUser()).isEqualTo(targetUser);
+        assertThat(result.get(0).getInvitedUserId()).isEqualTo(targetUser.getId());
     }
 
     @Test

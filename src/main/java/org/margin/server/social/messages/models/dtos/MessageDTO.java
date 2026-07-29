@@ -29,7 +29,7 @@ public record MessageDTO(
 
     public static class Builder {
         private final Message message;
-        private boolean isUserOnline = false;
+        private UserDTO author;
         private Long marginId = null;
         private String channelName = null;
         private List<MessageReactionDTO> reactions = List.of();
@@ -39,8 +39,8 @@ public record MessageDTO(
             this.message = message;
         }
 
-        public Builder withOnline(boolean isUserOnline) {
-            this.isUserOnline = isUserOnline;
+        public Builder withAuthor(UserDTO author) {
+            this.author = author;
             return this;
         }
 
@@ -69,7 +69,7 @@ public record MessageDTO(
                     message.getId(),
                     message.getConversation().getId(),
                     message.getConversation().getType(),
-                    new UserDTO(message.getFromUser(), isUserOnline),
+                    author,
                     message.getMessage(),
                     message.getIsEdited(),
                     message.getCreatedAt(),

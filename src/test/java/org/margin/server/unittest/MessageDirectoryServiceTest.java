@@ -72,8 +72,8 @@ class MessageDirectoryServiceTest {
     @Test
     @DisplayName("threadFollowerIds maps conversation members to ids")
     void threadFollowerIds_mapsToIds() {
-        when(conversationMemberRepository.findUsersByConversationId(5L))
-                .thenReturn(List.of(createUser(1L), createUser(2L)));
+        when(conversationMemberRepository.findUserIdsByConversationId(5L))
+                .thenReturn(List.of(1L, 2L));
 
         assertThat(messageDirectoryService.threadFollowerIds(5L)).containsExactly(1L, 2L);
     }
@@ -81,7 +81,7 @@ class MessageDirectoryServiceTest {
     private static Message message(Conversation conversation, User author) {
         Message message = new Message();
         message.setId(10L);
-        message.setFromUser(author);
+        message.setFromUserId(author.getId());
         message.setConversation(conversation);
         return message;
     }

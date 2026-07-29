@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -24,9 +23,8 @@ public class MessageReaction {
     @JoinColumn(name = "message_id", nullable = false)
     private Message message;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(nullable = false, length = 16)
     private String emoji;
@@ -35,9 +33,9 @@ public class MessageReaction {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public MessageReaction(Message message, User user, String emoji) {
+    public MessageReaction(Message message, Long userId, String emoji) {
         this.message = message;
-        this.user = user;
+        this.userId = userId;
         this.emoji = emoji;
     }
 }

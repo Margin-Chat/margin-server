@@ -2,6 +2,7 @@ package org.margin.server.social.margin.service;
 
 import org.margin.server.social.api.MarginDirectory;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
@@ -46,8 +47,7 @@ public class MarginDirectoryService implements MarginDirectory {
     public Long ownerUserIdOf(Long marginId) {
         return marginMemberRepository.findByMargin_IdAndRole(marginId, MarginRole.OWNER)
                 .orElseThrow(() -> new IllegalStateException("Margin " + marginId + " has no owner"))
-                .getUser()
-                .getId();
+                .getUserId();
     }
 
     @Override
@@ -55,7 +55,7 @@ public class MarginDirectoryService implements MarginDirectory {
     public List<Long> adminUserIdsOf(Long marginId) {
         return marginMemberRepository.findByMargin_Id(marginId).stream()
                 .filter(m -> m.getRole() == MarginRole.OWNER || m.getRole() == MarginRole.ADMIN)
-                .map(m -> m.getUser().getId())
+                .map(m -> m.getUserId())
                 .toList();
     }
 }

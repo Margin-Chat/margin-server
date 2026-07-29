@@ -44,7 +44,6 @@ class CallServiceTest {
         User fromUser = createUser(1L, "caller");
         User toUser = createUser(2L, "receiver");
 
-        when(userService.getById(toUser.getId())).thenReturn(toUser);
         when(callRepository.save(any(Call.class))).thenAnswer(inv -> {
             Call c = inv.getArgument(0);
             c.setId(100L);
@@ -52,7 +51,7 @@ class CallServiceTest {
         });
 
         Call result = callService.createCall(
-                fromUser,
+                fromUser.getId(),
                 toUser.getId(),
                 CallStatus.RINGING,
                 CallType.VIDEO,

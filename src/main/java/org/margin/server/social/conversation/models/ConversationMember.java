@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -29,11 +28,6 @@ public class ConversationMember {
     @JoinColumn(name = "conversation_id")
     private Conversation conversation;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("userId")
-    @JoinColumn(name = "user_id")
-    private User user;
-
     @NotNull
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
@@ -52,4 +46,15 @@ public class ConversationMember {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant acceptedAt;
+
+    public Long getUserId() {
+        return id == null ? null : id.getUserId();
+    }
+
+    public void setUserId(Long userId) {
+        if (id == null) {
+            id = new ConversationMemberId();
+        }
+        id.setUserId(userId);
+    }
 }

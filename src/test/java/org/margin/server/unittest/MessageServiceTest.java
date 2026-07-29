@@ -2,6 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.api.ConversationType;
@@ -46,6 +47,8 @@ class MessageServiceTest {
     @Mock
     private MessageRepository messageRepository;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private MessageReactionRepository messageReactionRepository;
     @Mock
     private MessageAttachments messageAttachments;
@@ -66,6 +69,13 @@ class MessageServiceTest {
     @InjectMocks
     private MessageService messageService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void stubUserLookup() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
+    }
+
     private static final List<Long> attachmentIds = List.of();
 
     @Test
@@ -78,14 +88,14 @@ class MessageServiceTest {
         List<User> members = List.of(fromUser, createUser(2L, "recipient"));
 
         when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members.stream().map(User::getId).toList());
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
         assertEquals(content, result.message().content());
-        assertEquals(2, result.recipients().size());
-        assertTrue(result.recipients().contains(fromUser));
+        assertEquals(2, result.recipientIds().size());
+        assertTrue(result.recipientIds().contains(fromUser.getId()));
 
         verify(messageActions).createMessage(fromUser, conversation, content, attachmentIds);
         verify(conversationService).getConversationMembers(conversation.getId());
@@ -105,14 +115,14 @@ class MessageServiceTest {
         );
 
         when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers.stream().map(User::getId).toList());
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
-        assertEquals(3, result.recipients().size());
+        assertEquals(3, result.recipientIds().size());
         assertEquals(content, result.message().content());
-        assertTrue(result.recipients().contains(fromUser));
+        assertTrue(result.recipientIds().contains(fromUser.getId()));
     }
 
     @Test
@@ -127,12 +137,12 @@ class MessageServiceTest {
         List<User> members = Arrays.asList(fromUser, createUser(2L, "user2"));
 
         when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(members.stream().map(User::getId).toList());
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
         assertNotNull(result);
-        assertEquals(2, result.recipients().size());
+        assertEquals(2, result.recipientIds().size());
         assertEquals(content, result.message().content());
         verify(messageActions).createMessage(fromUser, conversation, content, attachmentIds);
         verify(conversationService).getConversationMembers(conversation.getId());
@@ -150,7 +160,7 @@ class MessageServiceTest {
         when(conversationService.getById(dmConversation.getId())).thenReturn(dmConversation);
         when(messageActions.createMessage(fromUser, dmConversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(dmConversation.getId()))
-                .thenReturn(Arrays.asList(fromUser, toUser));
+                .thenReturn(List.of(fromUser.getId(), toUser.getId()));
 
         messageService.sendMessage(fromUser, content, dmConversation.getId(), attachmentIds);
 
@@ -173,14 +183,14 @@ class MessageServiceTest {
         List<User> allMembers = Arrays.asList(fromUser, user2, user3);
 
         when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers);
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(allMembers.stream().map(User::getId).toList());
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
-        assertEquals(3, result.recipients().size());
-        assertTrue(result.recipients().contains(fromUser));
-        assertTrue(result.recipients().contains(user2));
-        assertTrue(result.recipients().contains(user3));
+        assertEquals(3, result.recipientIds().size());
+        assertTrue(result.recipientIds().contains(fromUser.getId()));
+        assertTrue(result.recipientIds().contains(user2.getId()));
+        assertTrue(result.recipientIds().contains(user3.getId()));
     }
 
     @Test
@@ -193,7 +203,7 @@ class MessageServiceTest {
 
         when(messageActions.createMessage(fromUser, conversation, content, attachmentIds)).thenReturn(savedMessage);
         when(conversationService.getConversationMembers(conversation.getId()))
-                .thenReturn(Arrays.asList(fromUser, createUser(2L, "recipient")));
+                .thenReturn(List.of(fromUser.getId(), 2L));
 
         MessageResult result = messageService.createMessageForUsers(fromUser, conversation, content, attachmentIds);
 
@@ -226,11 +236,11 @@ class MessageServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         Message message = createSavedMessage(100L, conversation, user, "Hello");
 
-        MessageReaction saved = new MessageReaction(message, user, "👍");
+        MessageReaction saved = new MessageReaction(message, user.getId(), "👍");
         saved.setId(1L);
 
         when(conversationService.getById(conversation.getId())).thenReturn(conversation);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user));
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user.getId()));
         when(messageRepository.findById(100L)).thenReturn(Optional.of(message));
         when(messageActions.createMessageReaction(any(), any(), any())).thenReturn(saved);
 
@@ -267,11 +277,11 @@ class MessageServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
         Message message = createSavedMessage(100L, conversation, user, "Hello");
 
-        MessageReaction reaction = new MessageReaction(message, user, "👍");
+        MessageReaction reaction = new MessageReaction(message, user.getId(), "👍");
         reaction.setId(1L);
 
         when(conversationService.getById(conversation.getId())).thenReturn(conversation);
-        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user));
+        when(conversationService.getConversationMembers(conversation.getId())).thenReturn(List.of(user.getId()));
         when(messageReactionRepository.findByMessageIdAndUserIdAndEmoji(100L, 1L, "👍"))
                 .thenReturn(Optional.of(reaction));
 

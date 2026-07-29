@@ -67,9 +67,9 @@ public class MarginTestUtils {
 
     public static void removeUserFromMargin(Long marginId, User removingUser, User userToRemove) {
         Optional<MarginMember> marginMember =
-                marginMemberRepository.findByUser_IdAndMargin_Id(userToRemove.getId(), marginId);
+                marginMemberRepository.findByUserIdAndMarginId(userToRemove.getId(), marginId);
         Assertions.assertTrue(marginMember.isPresent());
-        var request = new RemoveMarginMemberRequest(marginId, marginMember.get().getUser().getId());
+        var request = new RemoveMarginMemberRequest(marginId, marginMember.get().getUserId());
         marginController.removeMarginMember(request, principalOf(removingUser));
     }
 

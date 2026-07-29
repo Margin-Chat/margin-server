@@ -83,11 +83,11 @@ class ConversationServiceTest {
         Conversation conv = createConversation(10L, ConversationType.DIRECT);
 
         ConversationMember member1 = new ConversationMember();
-        member1.setUser(user1);
+        member1.setUserId(user1.getId());
         member1.setLastReadAt(Instant.now());
 
         ConversationMember member2 = new ConversationMember();
-        member2.setUser(user2);
+        member2.setUserId(user2.getId());
         member2.setLastReadAt(Instant.now());
 
         conv.setMembers(List.of(member1, member2));
@@ -105,8 +105,8 @@ class ConversationServiceTest {
         conv.setName("Devs");
 
         doReturn(conv).when(conversationService).getById(20L);
-        when(conversationMemberRepository.findUsersByConversationId(20L))
-                .thenReturn(List.of(createUser(1L), createUser(2L)));
+        when(conversationMemberRepository.findUserIdsByConversationId(20L))
+                .thenReturn(List.of(1L, 2L));
 
         ConversationDTO result = conversationService.getConversationDTO(conv, 1L);
 
@@ -136,7 +136,7 @@ class ConversationServiceTest {
         assertEquals(99L, result.getId());
         verify(conversationCreationService).createGroupConversation("New Group", false);
         // Creator added as ACCEPTED member
-        verify(conversationCreationService).createConversationMember(conversation, creator);
+        verify(conversationCreationService).createConversationMember(conversation, creator.getId());
     }
 
     @Test
@@ -151,7 +151,7 @@ class ConversationServiceTest {
 
         assertDoesNotThrow(() -> conversationService.addMember(1L, 2L, adder));
         verify(conversationCreationService).createConversationMemberWithStatus(
-                conv, invitee, ConversationInviteStatus.PENDING);
+                conv, invitee.getId(), ConversationInviteStatus.PENDING);
     }
 
     @Test
@@ -170,8 +170,8 @@ class ConversationServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
 
         doReturn(conversation).when(conversationService).getById(10L);
-        when(conversationMemberRepository.findUsersByConversationId(10L))
-                .thenReturn(List.of(sender, other));
+        when(conversationMemberRepository.findUserIdsByConversationId(10L))
+                .thenReturn(List.of(sender.getId(), other.getId()));
 
         conversationService.notifyTyping(sender, conversation.getId(), true);
 
@@ -194,8 +194,8 @@ class ConversationServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
         doReturn(conversation).when(conversationService).getById(10L);
-        when(conversationMemberRepository.findUsersByConversationId(10L))
-                .thenReturn(List.of(sender, other));
+        when(conversationMemberRepository.findUserIdsByConversationId(10L))
+                .thenReturn(List.of(sender.getId(), other.getId()));
 
         conversationService.notifyTyping(sender, conversation.getId(), false);
 

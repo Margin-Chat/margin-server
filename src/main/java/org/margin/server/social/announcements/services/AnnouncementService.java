@@ -1,5 +1,6 @@
 package org.margin.server.social.announcements.services;
 
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
 import org.margin.server.users.api.UserSummary;
 import org.margin.server.social.announcements.models.Announcement;
@@ -21,15 +22,18 @@ import java.util.List;
 public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
+    private final UserLookup userLookup;
     private final MarginRepository marginRepository;
     private final UserService userService;
     private final ApplicationEventPublisher eventPublisher;
 
-    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, UserService userService, ApplicationEventPublisher eventPublisher) {
+    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, UserService userService, ApplicationEventPublisher eventPublisher,
+                              UserLookup userLookup) {
         this.announcementRepository = announcementRepository;
         this.marginRepository = marginRepository;
         this.userService = userService;
         this.eventPublisher = eventPublisher;
+        this.userLookup = userLookup;
     }
 
     public List<Announcement> getAnnouncementsForMargin(Long marginId) {
@@ -40,7 +44,7 @@ public class AnnouncementService {
         return new AnnouncementDTO(
                 announcement.getAnnouncementId(),
                 announcement.getMargin().getId(),
-                userService.toDTO(announcement.getAuthor()),
+                userLookup.dtoOf(announcement.getAuthorId()),
                 announcement.getTitle(),
                 announcement.getContent(),
                 announcement.getCreatedAt()
@@ -52,18 +56,18 @@ public class AnnouncementService {
 
         Announcement announcement = new Announcement();
         announcement.setMargin(margin);
-        announcement.setAuthor(author);
+        announcement.setAuthorId(author.getId());
         announcement.setTitle(createAnnouncementRequest.title());
         announcement.setContent(createAnnouncementRequest.content());
         announcement.setCreatedAt(Instant.now());
         Announcement saved = announcementRepository.save(announcement);
 
-        List<User> members = margin.getMembers().stream()
-                .map(MarginMember::getUser)
+        List<Long> members = margin.getMembers().stream()
+                .map(MarginMember::getUserId)
                 .toList();
 
         eventPublisher.publishEvent(
-                new AnnouncementCreatedEvent(members.stream().map(User::getId).toList(), new UserSummary(author.getId(), author.getDisplayName()), saved.getAnnouncementId(), margin.getId()));
+                new AnnouncementCreatedEvent(members, new UserSummary(author.getId(), author.getDisplayName()), saved.getAnnouncementId(), margin.getId()));
 
         return saved;
     }

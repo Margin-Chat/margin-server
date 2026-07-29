@@ -61,8 +61,8 @@ public class ChannelService implements ChannelLookup, ChannelDirectory {
     public ChannelDTO createChannelAsDto(Long spaceId, String name, String description, ChannelType channelType) {
         Space space = spacesRepository.findById(spaceId).orElseThrow(() -> new SpaceNotFoundException(spaceId));
         Channel channel = channelCreationService.createChannel(space, name, description, channelType);
-        List<User> users = space.getMembers().stream()
-                .map(SpaceMember::getUser)
+        List<Long> users = space.getMembers().stream()
+                .map(SpaceMember::getUserId)
                 .toList();
         Conversation conversation =
                 conversationService.createNewConversationForUsers(ConversationType.CHANNEL, channel, users);
@@ -106,8 +106,8 @@ public class ChannelService implements ChannelLookup, ChannelDirectory {
 
     public Channel createNewChannel(Space space, String name, String description) {
         Channel channel = channelCreationService.createChannel(space, name, description);
-        List<User> users = space.getMembers().stream()
-                .map(SpaceMember::getUser)
+        List<Long> users = space.getMembers().stream()
+                .map(SpaceMember::getUserId)
                 .toList();
         Conversation conversation =
                 conversationService.createNewConversationForUsers(ConversationType.CHANNEL, channel, users);

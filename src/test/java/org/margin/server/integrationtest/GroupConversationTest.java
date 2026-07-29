@@ -158,9 +158,7 @@ class GroupConversationTest extends MarginTestRunner {
         ConversationDTO dto = ConversationTestUtils.createGroupConversation(
                 creator, List.of("memberA@margin.chat"), "My Group", false);
 
-        Set<Long> recipientIds = ConversationTestUtils.getConversationMembers(dto.id()).stream()
-                .map(User::getId)
-                .collect(Collectors.toSet());
+        Set<Long> recipientIds = new java.util.HashSet<>(ConversationTestUtils.getConversationMembers(dto.id()));
 
         assertFalse(recipientIds.contains(memberA.getId()),
                 "PENDING member must not receive messages");
@@ -174,9 +172,7 @@ class GroupConversationTest extends MarginTestRunner {
                 creator, List.of("memberA@margin.chat"), "My Group", false);
         ConversationTestUtils.acceptInvite(dto.id(), memberA);
 
-        Set<Long> recipientIds = ConversationTestUtils.getConversationMembers(dto.id()).stream()
-                .map(User::getId)
-                .collect(Collectors.toSet());
+        Set<Long> recipientIds = new java.util.HashSet<>(ConversationTestUtils.getConversationMembers(dto.id()));
 
         assertTrue(recipientIds.contains(memberA.getId()),
                 "ACCEPTED member must receive messages");

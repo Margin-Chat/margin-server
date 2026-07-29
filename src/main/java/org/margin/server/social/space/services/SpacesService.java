@@ -2,6 +2,7 @@ package org.margin.server.social.space.services;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.entities.Margin;
@@ -39,6 +40,7 @@ public class SpacesService implements ChannelAudience {
     private final MarginMapper marginMapper;
     private final PresenceService presenceService;
     private final SpacesActions spacesActions;
+    private final UserLookup userLookup;
 
     public SpacesService(SpacesRepository spacesRepository,
                          SpaceMemberRepository spaceMemberRepository,
@@ -47,7 +49,8 @@ public class SpacesService implements ChannelAudience {
                          SpacesCreationService spacesCreationService,
                          MarginMapper marginMapper,
                          PresenceService presenceService,
-                         SpacesActions spacesActions) {
+                         SpacesActions spacesActions,
+                         UserLookup userLookup) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
         this.channelService = channelService;
@@ -56,6 +59,7 @@ public class SpacesService implements ChannelAudience {
         this.marginMapper = marginMapper;
         this.presenceService = presenceService;
         this.spacesActions = spacesActions;
+        this.userLookup = userLookup;
     }
 
     @Transactional(readOnly = true)
@@ -81,13 +85,13 @@ public class SpacesService implements ChannelAudience {
 
         Space space = spacesCreationService.create(dto.name(), dto.description(), dto.visibility(), margin);
         channelService.createNewChannel(space, "General Chat", "A channel for general conversation");
-        spacesActions.addUserToSpace(user, space, SpaceRole.ADMIN);
+        spacesActions.addUserToSpace(user.getId(), space, SpaceRole.ADMIN);
 
         if (dto.visibility() == Visibility.PUBLIC) {
             marginMemberRepository.findByMargin_Id(margin.getId()).stream()
-                    .map(MarginMember::getUser)
-                    .filter(member -> !member.getId().equals(user.getId()))
-                    .forEach(member -> spacesActions.addUserToSpace(member, space, SpaceRole.MEMBER));
+                    .map(MarginMember::getUserId)
+                    .filter(memberId -> !memberId.equals(user.getId()))
+                    .forEach(memberId -> spacesActions.addUserToSpace(memberId, space, SpaceRole.MEMBER));
         }
 
         return marginMapper.spaceToDto(space);
@@ -100,25 +104,24 @@ public class SpacesService implements ChannelAudience {
     }
 
     @Transactional
-    public void addUsersToDefaultSpacesForMargin(Long marginId, User user) {
+    public void addUsersToDefaultSpacesForMargin(Long marginId, Long userId) {
         List<Space> publicSpaces = spacesRepository.findByMarginIdAndVisibility(marginId, Visibility.PUBLIC);
         for (Space space : publicSpaces) {
-            if (!spaceMemberRepository.existsSpaceMemberByUserAndSpace(user.getId(), space.getId())) {
-                spacesActions.addUserToSpace(user, space, SpaceRole.MEMBER);
+            if (!spaceMemberRepository.existsSpaceMemberByUserAndSpace(userId, space.getId())) {
+                spacesActions.addUserToSpace(userId, space, SpaceRole.MEMBER);
             }
         }
     }
 
     @Transactional
-    public SpaceMemberDTO addNewUserToSpace(User user, Long spaceId, SpaceRole role) {
+    public SpaceMemberDTO addNewUserToSpace(Long userId, Long spaceId, SpaceRole role) {
         Space space = spacesRepository.findById(spaceId)
                 .orElseThrow(() -> new SpaceNotFoundException(spaceId));
 
-        SpaceMember spaceMember = spacesActions.addUserToSpace(user, space, role);
-        User memberUser = spaceMember.getUser();
+        SpaceMember spaceMember = spacesActions.addUserToSpace(userId, space, role);
 
         return new SpaceMemberDTO(
-                new UserDTO(memberUser, presenceService.isUserOnline(memberUser.getId())),
+                userLookup.dtoOf(spaceMember.getUserId()),
                 spaceMember.getSpace().getId(),
                 spaceMember.getRole(),
                 spaceMember.getJoinedAt()
@@ -136,9 +139,9 @@ public class SpacesService implements ChannelAudience {
 
         if (switchingToPublic) {
             marginMemberRepository.findByMargin_Id(saved.getMargin().getId()).stream()
-                    .map(MarginMember::getUser)
-                    .filter(user -> !spaceMemberRepository.existsSpaceMemberByUserAndSpace(user.getId(), saved.getId()))
-                    .forEach(user -> spacesActions.addUserToSpace(user, saved, SpaceRole.MEMBER));
+                    .map(MarginMember::getUserId)
+                    .filter(id -> !spaceMemberRepository.existsSpaceMemberByUserAndSpace(id, saved.getId()))
+                    .forEach(id -> spacesActions.addUserToSpace(id, saved, SpaceRole.MEMBER));
         }
 
         return marginMapper.spaceToDto(saved);
@@ -152,10 +155,8 @@ public class SpacesService implements ChannelAudience {
     @Transactional
     public SpaceMemberDTO updateSpaceMemberRole(Space space, SpaceMemberDTO spaceMemberDTO) {
         SpaceMember saved = spaceMemberRepository.save(spacesActions.prepareRoleUpdate(space, spaceMemberDTO));
-        User user = saved.getUser();
-
         return new SpaceMemberDTO(
-                new UserDTO(user, presenceService.isUserOnline(user.getId())),
+                userLookup.dtoOf(saved.getUserId()),
                 saved.getSpace().getId(),
                 saved.getRole(),
                 saved.getJoinedAt()
@@ -176,8 +177,6 @@ public class SpacesService implements ChannelAudience {
 
     @Override
     public List<Long> memberIdsForChannel(Long channelId) {
-        return spaceMemberRepository.findSpaceMemberByChannel_Id(channelId).stream()
-                .map(User::getId)
-                .toList();
+        return spaceMemberRepository.findUserIdsByChannelId(channelId);
     }
 }

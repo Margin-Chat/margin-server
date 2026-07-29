@@ -5,7 +5,6 @@ import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
 import org.margin.server.social.conversation.models.projections.UnreadConversationProjection;
-import org.margin.server.users.models.User;
 import org.margin.server.social.conversation.models.projections.RecentChatUserProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,27 +13,26 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, ConversationMemberId> {
-    @Query("SELECT cm.user " +
+    @Query("SELECT cm.id.userId " +
             "FROM ConversationMember cm " +
             "WHERE cm.conversation.id = :conversationId " +
             "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED")
-    List<User> findUsersByConversationId(@Param("conversationId") Long conversationId);
+    List<Long> findUserIdsByConversationId(@Param("conversationId") Long conversationId);
 
-    @Query("SELECT cm.user " +
+    @Query("SELECT cm.id.userId " +
             "FROM ConversationMember cm " +
             "WHERE cm.conversation.id = :conversationId " +
             "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.PENDING")
-    List<User> findPendingUsersByConversationId(@Param("conversationId") Long conversationId);
+    List<Long> findPendingUserIdsByConversationId(@Param("conversationId") Long conversationId);
 
     @Query("""
             SELECT
                 cm.conversation,
-                u,
+                cm.id.userId,
                 m.message,
                 m.createdAt,
-                CASE WHEN m.fromUser.id != :userId THEN true ELSE false END
+                CASE WHEN m.fromUserId != :userId THEN true ELSE false END
                         FROM ConversationMember cm
-                        JOIN cm.user u
                         LEFT JOIN Message m
                             ON m.conversation.id = cm.conversation.id
                             AND m.createdAt = (
@@ -45,10 +43,10 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
                         WHERE cm.conversation.id IN (
                             SELECT cm2.conversation.id
                             FROM ConversationMember cm2
-                            WHERE cm2.user.id = :userId
+                            WHERE cm2.id.userId = :userId
                             AND cm2.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED
                         )
-                        AND u.id != :userId
+                        AND cm.id.userId != :userId
                         AND cm.conversation.type IN ('DIRECT', 'GROUP')
                         AND (cm.conversation.type != org.margin.server.social.api.ConversationType.DIRECT
                             OR cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED)
@@ -56,7 +54,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             """)
     List<RecentChatUserProjection> findRecentChatUsers(@Param("userId") Long userId);
 
-    @Query("SELECT COUNT(cm) > 0 FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED")
+    @Query("SELECT COUNT(cm) > 0 FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.id.userId = :userId AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED")
     boolean isUserMemberOfConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 
     @Query("""
@@ -67,11 +65,11 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             LEFT JOIN cm.conversation.channel ch
             LEFT JOIN ch.space sp
             LEFT JOIN sp.margin mg
-            WHERE cm.user.id = :userId
+            WHERE cm.id.userId = :userId
               AND EXISTS (
                 SELECT 1 FROM Message m
                 WHERE m.conversation.id = cm.conversation.id
-                  AND m.fromUser.id != :userId
+                  AND m.fromUserId != :userId
                   AND m.createdAt > COALESCE(cm.lastReadAt, cm.joinedAt)
               )
             """)
@@ -79,24 +77,24 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     List<ConversationMember> findByConversation(Conversation conversation);
 
-    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user WHERE cm.user.id = :userId AND cm.inviteStatus = :status")
+    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation  WHERE cm.id.userId = :userId AND cm.inviteStatus = :status")
     List<ConversationMember> findByUserIdAndInviteStatus(@Param("userId") Long userId,
                                                          @Param("status") ConversationInviteStatus status);
 
-    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation JOIN FETCH cm.user " +
+    @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation  " +
             "WHERE cm.conversation.type = org.margin.server.social.api.ConversationType.DIRECT " +
             "AND cm.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.PENDING " +
             "AND EXISTS (SELECT 1 FROM ConversationMember sender " +
             "WHERE sender.conversation.id = cm.conversation.id " +
-            "AND sender.user.id = :senderId " +
+            "AND sender.id.userId = :senderId " +
             "AND sender.inviteStatus = org.margin.server.social.conversation.models.ConversationInviteStatus.ACCEPTED)")
     List<ConversationMember> findSentDirectInvitesBySenderId(@Param("senderId") Long senderId);
 
-    @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.user.id = :userId")
+    @Query("SELECT cm FROM ConversationMember cm WHERE cm.conversation.id = :conversationId AND cm.id.userId = :userId")
     java.util.Optional<ConversationMember> findByConversationIdAndUserId(@Param("conversationId") Long conversationId,
                                                                          @Param("userId") Long userId);
 
     @Query("SELECT cm FROM ConversationMember cm JOIN FETCH cm.conversation " +
-            "WHERE cm.user.id = :userId AND cm.conversation.type = 'THREAD'")
+            "WHERE cm.id.userId = :userId AND cm.conversation.type = 'THREAD'")
     List<ConversationMember> findThreadMembershipsByUserId(@Param("userId") Long userId);
 }

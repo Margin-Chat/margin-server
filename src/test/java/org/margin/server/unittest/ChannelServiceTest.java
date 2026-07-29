@@ -57,7 +57,7 @@ class ChannelServiceTest {
         testSpace = createSpace(100L);
 
         SpaceMember member = new SpaceMember();
-        member.setUser(testUser);
+        member.setUserId(testUser.getId());
         testSpace.setMembers(List.of(member));
     }
 
@@ -91,7 +91,7 @@ class ChannelServiceTest {
 
         verify(channelCreationService).createChannel(testSpace, name, desc);
         verify(conversationService).createNewConversationForUsers(
-                eq(ConversationType.CHANNEL), eq(channel), argThat(users -> users.size() == 1 && users.contains(testUser)));
+                eq(ConversationType.CHANNEL), eq(channel), argThat(ids -> ids.size() == 1 && ids.contains(testUser.getId())));
         verify(channelRepository).save(channel);
     }
 

@@ -72,7 +72,7 @@ class MarginInviteControllerTest {
     void createLinkInvite_shouldReturnInvite() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createLinkInvite(margin, 10, adminUser)).thenReturn(invite);
+        when(marginInviteService.createLinkInvite(margin, 10, adminUser.getId())).thenReturn(invite);
 
         ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, 10, principalOf(adminUser));
 
@@ -88,7 +88,7 @@ class MarginInviteControllerTest {
     void createLinkInvite_withNullMaxUses_shouldSucceed() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createLinkInvite(margin, null, adminUser)).thenReturn(invite);
+        when(marginInviteService.createLinkInvite(margin, null, adminUser.getId())).thenReturn(invite);
 
         ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, null, principalOf(adminUser));
 
@@ -114,7 +114,7 @@ class MarginInviteControllerTest {
         when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createDirectInvite(margin, targetUser, adminUser)).thenReturn(invite);
+        when(marginInviteService.createDirectInvite(margin, targetUser.getId(), adminUser.getId())).thenReturn(invite);
 
         ResponseEntity<?> response = marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser));
 
@@ -292,7 +292,7 @@ class MarginInviteControllerTest {
     @Test
     void getPendingInvites_shouldReturnList() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
-        when(marginInviteService.getPendingInvites(targetUser)).thenReturn(List.of(invite));
+        when(marginInviteService.getPendingInvites(targetUser.getId())).thenReturn(List.of(invite));
 
         ResponseEntity<?> response = marginInviteController.getPendingInvites(principalOf(targetUser));
 

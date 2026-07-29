@@ -74,7 +74,7 @@ public class SpacesController {
                 ? SpaceRole.MEMBER
                 : SpaceRole.valueOf(spaceMemberDTO.role().name());
 
-        SpaceMemberDTO memberDto = spacesService.addNewUserToSpace(userToAdd, spaceMemberDTO.spaceId(), role);
+        SpaceMemberDTO memberDto = spacesService.addNewUserToSpace(userToAdd.getId(), spaceMemberDTO.spaceId(), role);
         return ResponseEntity.ok(memberDto);
     }
 

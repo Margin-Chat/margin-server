@@ -2,6 +2,7 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
@@ -44,6 +45,8 @@ class MarginServiceTest {
     @Mock
     private MarginRepository marginRepository;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private MarginMemberRepository marginMemberRepository;
     @Mock
     private MarginIconStore marginIconStore;
@@ -60,6 +63,13 @@ class MarginServiceTest {
 
     @InjectMocks
     private MarginService marginService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void stubUserLookup() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
+    }
 
     private void stubMarginSave() {
         when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> {
@@ -193,12 +203,12 @@ class MarginServiceTest {
         User targetUser = createUser(2L, "target");
 
         MarginMember owner = new MarginMember();
-        owner.setUser(ownerUser);
+        owner.setUserId(ownerUser.getId());
         owner.setMargin(margin);
         owner.setRole(MarginRole.OWNER);
 
         MarginMember target = new MarginMember();
-        target.setUser(targetUser);
+        target.setUserId(targetUser.getId());
         target.setMargin(margin);
         target.setRole(MarginRole.MEMBER);
 

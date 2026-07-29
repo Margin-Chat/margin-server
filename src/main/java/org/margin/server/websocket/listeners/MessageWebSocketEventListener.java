@@ -51,7 +51,7 @@ public class MessageWebSocketEventListener {
                 event.getMessageResult().message().conversationId(),
                 event.getMessageResult().message()
         );
-        sendToUsers(event.getMessageResult().recipients().stream().map(User::getId).toList(),
+        sendToUsers(event.getMessageResult().recipientIds(),
                 event.getMessageResult().message().conversationType(), json);
     }
 

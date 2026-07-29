@@ -9,21 +9,21 @@ import org.springframework.stereotype.Service;
 public class CallValidationService {
     public void validateUserIsReceiver(Call call, User user) {
         validateUserIsInCall(call, user);
-        if (!call.getReceiver().getId().equals(user.getId())) {
+        if (!call.getReceiverId().equals(user.getId())) {
             throw new CallValidationException(call.getId(), "User is not the call receiver");
         }
     }
 
     public void validateUserIsSender(Call call, User user) {
         validateUserIsInCall(call, user);
-        if (!call.getCaller().getId().equals(user.getId())) {
+        if (!call.getCallerId().equals(user.getId())) {
             throw new CallValidationException(call.getId(), "User is not the call caller");
         }
     }
 
     public void validateUserIsInCall(Call call, User user) {
-        if (!call.getCaller().getId().equals(user.getId()) &&
-                !call.getReceiver().getId().equals(user.getId())) {
+        if (!call.getCallerId().equals(user.getId()) &&
+                !call.getReceiverId().equals(user.getId())) {
             throw new CallValidationException(call.getId(), "User is not a participant in this call");
         }
     }

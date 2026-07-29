@@ -157,7 +157,7 @@ class UserTest extends MarginTestRunner {
 
         List<MarginMember> marginMembers = MarginTestUtils.getMembersFromMargin(marginId);
         boolean inMargin = marginMembers.stream()
-                .anyMatch(m -> m.getUser().getId().equals(userId));
+                .anyMatch(m -> m.getUserId().equals(userId));
         assertFalse(inMargin);
 
         List<SpaceDTO> userSpaces = SpaceTestUtils.getSpacesForUser(marginId, UserTestUtils.findById(userId));

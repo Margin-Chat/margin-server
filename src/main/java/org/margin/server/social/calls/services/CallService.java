@@ -35,10 +35,10 @@ public class CallService {
     }
 
     @Transactional
-    public Call createCall(User fromUserId, Long toUserId, CallStatus status, CallType type, String sdp) {
+    public Call createCall(Long fromUserId, Long toUserId, CallStatus status, CallType type, String sdp) {
         Call call = new Call(
                 fromUserId,
-                userService.getById(toUserId),
+                toUserId,
                 status,
                 type);
         Call saved = callRepository.save(call);
@@ -48,7 +48,7 @@ public class CallService {
 
         eventPublisher.publishEvent(new CallOfferedEvent(
                 toUserId,
-                fromUserId.getId(),
+                fromUserId,
                 call.getId(),
                 sdp,
                 CallType.AUDIO));

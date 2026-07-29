@@ -63,7 +63,7 @@ public class MarginAuthorizationService implements MarginAccessChecker {
     @Override
     public void requireSpaceAdmin(Long userId, Long spaceId) {
         SpaceMember spaceMember = spaceMemberRepository
-                .findByUser_IdAndSpace_Id(userId, spaceId)
+                .findByUserIdAndSpaceId(userId, spaceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "User is not a member of this space"));
 

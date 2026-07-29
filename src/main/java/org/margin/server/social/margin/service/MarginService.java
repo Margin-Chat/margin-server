@@ -1,6 +1,7 @@
 package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.api.MarginIconStore;
 import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.social.margin.events.UserAddedToMarginEvent;
@@ -45,6 +46,7 @@ public class MarginService {
     private final MarginMapper marginMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final MarginSubscriptionPolicy marginSubscriptionPolicy;
+    private final UserLookup userLookup;
 
     public MarginService(MarginRepository marginRepository,
                          MarginIconStore marginIconStore,
@@ -53,7 +55,8 @@ public class MarginService {
                          SpacesService spacesService,
                          MarginMapper marginMapper,
                          ApplicationEventPublisher eventPublisher,
-                         MarginSubscriptionPolicy marginSubscriptionPolicy) {
+                         MarginSubscriptionPolicy marginSubscriptionPolicy,
+                         UserLookup userLookup) {
         this.marginRepository = marginRepository;
         this.marginIconStore = marginIconStore;
         this.marginMemberRepository = marginMemberRepository;
@@ -62,6 +65,7 @@ public class MarginService {
         this.marginMapper = marginMapper;
         this.eventPublisher = eventPublisher;
         this.marginSubscriptionPolicy = marginSubscriptionPolicy;
+        this.userLookup = userLookup;
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +106,7 @@ public class MarginService {
 
         marginSubscriptionPolicy.onMarginCreated(margin.getId());
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
+        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user.getId(), true);
 
         spacesService.createNewSpace(
                 new CreateSpaceDTO(
@@ -133,7 +137,7 @@ public class MarginService {
     public MarginMember addUserToMargin(Long marginId,
                                         Long userId,
                                         MarginRole role,
-                                        User addingUser,
+                                        Long addingUserId,
                                         boolean isNewlyCreated) {
 
         Margin margin = getById(marginId);
@@ -142,11 +146,11 @@ public class MarginService {
         marginSubscriptionPolicy.validateAddMarginMember(marginId);
 
         MarginMember member = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(userId))
+                .filter(m -> m.getUserId().equals(userId))
                 .findFirst()
                 .orElseGet(() -> {
                     MarginMember m = new MarginMember();
-                    m.setUser(user);
+                    m.setUserId(userId);
                     m.setMargin(margin);
                     m.setRole(role);
                     m.setJoinedAt(Instant.now());
@@ -155,7 +159,7 @@ public class MarginService {
                 });
 
         if (!isNewlyCreated) {
-            eventPublisher.publishEvent(new UserAddedToMarginEvent(user.getId(), addingUser.getId(), marginId));
+            eventPublisher.publishEvent(new UserAddedToMarginEvent(userId, addingUserId, marginId));
         }
 
         marginSubscriptionPolicy.notifyIfApproachingMemberLimit(marginId);
@@ -169,7 +173,7 @@ public class MarginService {
         Margin margin = getById(marginId);
 
         MarginMember requester = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(requesterId))
+                .filter(m -> m.getUserId().equals(requesterId))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this margin"));
 
@@ -178,7 +182,7 @@ public class MarginService {
         }
 
         MarginMember target = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(memberDTO.user().id()))
+                .filter(m -> m.getUserId().equals(memberDTO.user().id()))
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
@@ -201,7 +205,7 @@ public class MarginService {
         marginRepository.save(margin);
 
         return new MarginMemberDTO(
-                new org.margin.server.users.models.dtos.UserDTO(target.getUser(), false),
+                userLookup.dtoOf(target.getUserId()),
                 target.getRole(),
                 target.getJoinedAt()
         );
@@ -228,19 +232,19 @@ public class MarginService {
 
         Margin margin = getById(marginId);
 
-        MarginMember member = marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId)
+        MarginMember member = marginMemberRepository.findByUserIdAndMarginId(userId, marginId)
                 .orElseThrow(UserNotFoundException::new);
 
         validateMemberIsNotTheLastAdmin(member, margin.getMembers());
 
         spacesService.removeUserFromSpaces(userId, margin);
 
-        margin.getMembers().removeIf(m -> m.getUser().getId().equals(userId));
+        margin.getMembers().removeIf(m -> m.getUserId().equals(userId));
         marginRepository.save(margin);
     }
 
     public Optional<MarginMember> findMember(Long userId, Long marginId) {
-        return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
+        return marginMemberRepository.findByUserIdAndMarginId(userId, marginId);
     }
 
     @Transactional(readOnly = true)
@@ -278,7 +282,7 @@ public class MarginService {
 
     private void validateMemberIsNotTheLastAdmin(MarginMember member, List<MarginMember> members) {
         boolean hasOtherAdmin = members.stream()
-                .anyMatch(m -> !m.getUser().getId().equals(member.getUser().getId())
+                .anyMatch(m -> !m.getUserId().equals(member.getUserId())
                         && (m.getRole() == MarginRole.ADMIN || m.getRole() == MarginRole.OWNER));
 
         if (!hasOtherAdmin) {

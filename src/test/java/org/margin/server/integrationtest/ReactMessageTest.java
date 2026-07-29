@@ -59,7 +59,7 @@ class ReactMessageTest extends MarginTestRunner {
         List<MessageReaction> reactions = MessageReactionTestUtils.getReactionsForMessage(message.getId());
         assertEquals(1, reactions.size());
         assertEquals("👍", reactions.getFirst().getEmoji());
-        assertEquals(reactor.getId(), reactions.getFirst().getUser().getId());
+        assertEquals(reactor.getId(), reactions.getFirst().getUserId());
     }
 
     @Test
@@ -118,7 +118,7 @@ class ReactMessageTest extends MarginTestRunner {
 
         List<MessageReaction> reactions = MessageReactionTestUtils.getReactionsForMessage(message.getId());
         assertEquals(1, reactions.size());
-        assertEquals(reactor.getId(), reactions.getFirst().getUser().getId());
+        assertEquals(reactor.getId(), reactions.getFirst().getUserId());
 
         List<Notification> authorNotifications = NotificationTestUtils.getForUser(author).stream()
                 .filter(n -> n.getType() == NotificationType.MESSAGE_REACTION)

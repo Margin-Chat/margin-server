@@ -15,11 +15,11 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                 WHERE c.type = 'DIRECT'
                 AND c.id IN (
                     SELECT cm1.conversation.id FROM ConversationMember cm1
-                    WHERE cm1.user.id = :userId1
+                    WHERE cm1.id.userId = :userId1
                 )
                 AND c.id IN (
                     SELECT cm2.conversation.id FROM ConversationMember cm2
-                    WHERE cm2.user.id = :userId2
+                    WHERE cm2.id.userId = :userId2
                 )
                 AND (
                     SELECT COUNT(cm) FROM ConversationMember cm
@@ -35,7 +35,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("""
                 SELECT DISTINCT c FROM Conversation c
                 JOIN ConversationMember cm ON cm.conversation.id = c.id
-                WHERE cm.user.id = :userId
+                WHERE cm.id.userId = :userId
                 AND c.type <> 'THREAD'
                 ORDER BY c.createdAt DESC
             """)
@@ -52,7 +52,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                 SELECT c.id AS threadConversationId,
                        COUNT(m) AS messageCount,
                        MAX(m.createdAt) AS lastReplyAt,
-                       MAX(CASE WHEN m.fromUser.id <> :userId THEN m.createdAt ELSE NULL END) AS lastOtherReplyAt,
+                       MAX(CASE WHEN m.fromUserId <> :userId THEN m.createdAt ELSE NULL END) AS lastOtherReplyAt,
                        MIN(m.id) AS firstMessageId
                 FROM Conversation c
                 LEFT JOIN Message m ON m.conversation.id = c.id AND m.isDeleted = false

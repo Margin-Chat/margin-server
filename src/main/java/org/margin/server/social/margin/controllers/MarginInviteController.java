@@ -45,9 +45,9 @@ public class MarginInviteController {
         }
 
         Margin margin = marginService.getById(marginId);
-        MarginInvite invite = marginInviteService.createLinkInvite(margin, maxUses, entityOf(user));
+        MarginInvite invite = marginInviteService.createLinkInvite(margin, maxUses, user.id());
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @PostMapping("/margins/{marginId}/email")
@@ -74,11 +74,11 @@ public class MarginInviteController {
 
         MarginInvite invite = marginInviteService.createDirectInvite(
                 marginService.getById(marginId),
-                targetUser,
-                entityOf(user)
+                targetUser.getId(),
+                user.id()
         );
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @GetMapping("/join/{code}")
@@ -91,7 +91,7 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @PostMapping("/join/{code}")
@@ -122,7 +122,7 @@ public class MarginInviteController {
 
         MarginInvite invite = marginInviteService.getById(id);
 
-        if (!invite.getInvitedUser().getId().equals(user.id())) {
+        if (!invite.getInvitedUserId().equals(user.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invite is not for you");
         }
 
@@ -142,7 +142,7 @@ public class MarginInviteController {
 
         MarginInvite invite = marginInviteService.getById(id);
 
-        if (!invite.getInvitedUser().getId().equals(user.id())) {
+        if (!invite.getInvitedUserId().equals(user.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invite is not for you");
         }
 
@@ -158,13 +158,23 @@ public class MarginInviteController {
     @GetMapping("/pending")
     public ResponseEntity<List<MarginInviteDTO>> getPendingInvites(@AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(
-                marginInviteService.getPendingInvites(entityOf(user)).stream()
-                        .map(MarginInviteDTO::from)
+                marginInviteService.getPendingInvites(user.id()).stream()
+                        .map(this::toDTO)
                         .toList()
         );
     }
 
     private User entityOf(AuthenticatedUser principal) {
         return principal == null ? null : userService.getById(principal.id());
+    }
+
+    private MarginInviteDTO toDTO(MarginInvite invite) {
+        return MarginInviteDTO.from(invite,
+                nameOf(invite.getInvitedByUserId()),
+                nameOf(invite.getInvitedUserId()));
+    }
+
+    private String nameOf(Long userId) {
+        return userId == null ? null : userService.getById(userId).getDisplayName();
     }
 }
