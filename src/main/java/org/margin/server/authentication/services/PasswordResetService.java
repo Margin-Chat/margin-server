@@ -6,8 +6,8 @@ import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserCacheService;
+import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserLookup;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,24 +23,24 @@ public class PasswordResetService {
 
     private static final int EXPIRY_SECONDS = 3600;
 
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
+    private final UserAccounts userAccounts;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final UserCacheService userCacheService;
     private final UserSecurityService userSecurityService;
 
-    public PasswordResetService(UserRepository userRepository,
+    public PasswordResetService(UserLookup userLookup,
+                                UserAccounts userAccounts,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
-                                UserCacheService userCacheService,
                                 UserSecurityService userSecurityService) {
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
+        this.userAccounts = userAccounts;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
-        this.userCacheService = userCacheService;
         this.userSecurityService = userSecurityService;
     }
 
@@ -48,7 +48,7 @@ public class PasswordResetService {
     public void requestPasswordReset(String email) {
         String normalised = email.toLowerCase();
         log.info("Password reset requested for email {}", normalised);
-        userRepository.findByEmail(normalised).ifPresent(user -> {
+        userLookup.findByEmail(normalised).ifPresent(user -> {
             tokenRepository.deleteByUserId(user.getId());
 
             PasswordResetToken resetToken = new PasswordResetToken();
@@ -87,22 +87,14 @@ public class PasswordResetService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has already been used");
         }
 
-        User user = userRepository.findById(resetToken.getUserId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reset token"));
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userSecurityService.bumpTokenVersion(user.getId());
-        user.getEncryption().setPublicKey(null);
-        user.getEncryption().setEncryptedPrivateKey(null);
-        user.getEncryption().setSalt(null);
-        user.getEncryption().setIv(null);
-        log.info("Encryption keys cleared for userId {} — will be regenerated on next login", user.getId());
-
-        userRepository.save(user);
-        userCacheService.evictUserCache(user.getId());
+        Long userId = resetToken.getUserId();
+        userAccounts.resetCredentials(userId, passwordEncoder.encode(newPassword));
+        userSecurityService.bumpTokenVersion(userId);
+        log.info("Encryption keys cleared for userId {} — will be regenerated on next login", userId);
 
         resetToken.setUsedAt(Instant.now());
         tokenRepository.save(resetToken);
 
-        log.info("Password reset successfully for userId {}", user.getId());
+        log.info("Password reset successfully for userId {}", userId);
     }
 }

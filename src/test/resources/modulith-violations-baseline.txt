@@ -1,8 +1,5 @@
-Module 'authentication' depends on non-exposed type org.margin.server.storage.services.StorageService within module 'storage'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.models.UserEncryption within module 'users'!
-Module 'authentication' depends on non-exposed type org.margin.server.users.repositories.UserRepository within module 'users'!
-Module 'authentication' depends on non-exposed type org.margin.server.users.services.UserCacheService within module 'users'!
 Module 'authentication' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
 Module 'bugs' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'notifications' depends on non-exposed type org.margin.server.social.channel.entities.Channel within module 'social'!

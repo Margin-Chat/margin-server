@@ -9,8 +9,8 @@ import org.margin.server.authentication.services.PasswordResetService;
 import org.margin.server.authentication.services.UserSecurityService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserCacheService;
+import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserLookup;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,11 +32,11 @@ import static org.margin.server.unittest.utils.UserTestUtils.createEncryption;
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
 
-    @Mock private UserRepository userRepository;
+    @Mock private UserLookup userLookup;
+    @Mock private UserAccounts userAccounts;
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
-    @Mock private UserCacheService userCacheService;
     @Mock private UserSecurityService userSecurityService;
 
     @InjectMocks
@@ -45,7 +45,7 @@ class PasswordResetServiceTest {
     @Test
     void requestReset_knownEmail_deletesOldTokenAndSavesNew() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(any(), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
@@ -63,7 +63,7 @@ class PasswordResetServiceTest {
     @Test
     void requestReset_knownEmail_sendsEmail() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(eq("Alice"), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
@@ -74,7 +74,7 @@ class PasswordResetServiceTest {
 
     @Test
     void requestReset_unknownEmail_doesNothing() {
-        when(userRepository.findByEmail("nobody@margin.chat")).thenReturn(Optional.empty());
+        when(userLookup.findByEmail("nobody@margin.chat")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> passwordResetService.requestPasswordReset("nobody@margin.chat"));
 
@@ -84,7 +84,7 @@ class PasswordResetServiceTest {
     @Test
     void requestReset_emailFailure_doesNotThrow() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(any(), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         doThrow(new MessagingException("SMTP down")).when(emailService).sendEmail(any(), any(), any());
@@ -97,19 +97,12 @@ class PasswordResetServiceTest {
         User user = makeUser();
         PasswordResetToken token = makeToken(user, false, false);
         when(tokenRepository.findByToken("valid-token")).thenReturn(Optional.of(token));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("new-pass")).thenReturn("hashed");
 
         passwordResetService.resetPassword("valid-token", "new-pass");
 
-        assertEquals("hashed", user.getPassword());
-        assertNull(user.getEncryption().getPublicKey());
-        assertNull(user.getEncryption().getEncryptedPrivateKey());
-        assertNull(user.getEncryption().getSalt());
-        assertNull(user.getEncryption().getIv());
-        verify(userRepository).save(user);
+        verify(userAccounts).resetCredentials(1L, "hashed");
         verify(userSecurityService).bumpTokenVersion(1L);
-        verify(userCacheService).evictUserCache(1L);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
     }
@@ -124,7 +117,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("expired"));
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(userAccounts);
     }
 
     @Test
@@ -137,7 +130,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("already been used"));
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(userAccounts);
     }
 
     @Test

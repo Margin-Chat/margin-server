@@ -8,11 +8,10 @@ import org.margin.server.authentication.events.UserSessionsRevokedEvent;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.email.EmailService;
-import org.margin.server.storage.services.StorageService;
+import org.margin.server.users.api.ProfilePictureStore;
+import org.margin.server.users.api.UserAccounts;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserEncryption;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserCacheService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,36 +34,36 @@ public class AuthenticationService {
     private boolean requireEmailActivation;
 
     private final AuthenticationManager authenticationManager;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
+    private final UserAccounts userAccounts;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final StorageService storageService;
+    private final ProfilePictureStore profilePictureStore;
     private final ApplicationEventPublisher eventPublisher;
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
-    private final UserCacheService userCacheService;
     private final UserSecurityService userSecurityService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
-            UserRepository userRepository,
+            UserLookup userLookup,
+            UserAccounts userAccounts,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            StorageService storageService,
+            ProfilePictureStore profilePictureStore,
             ApplicationEventPublisher eventPublisher,
             ActivationKeyService activationKeyService,
             EmailService emailService,
-            UserCacheService userCacheService,
             UserSecurityService userSecurityService) {
         this.authenticationManager = authenticationManager;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
+        this.userAccounts = userAccounts;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.storageService = storageService;
+        this.profilePictureStore = profilePictureStore;
         this.eventPublisher = eventPublisher;
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
-        this.userCacheService = userCacheService;
         this.userSecurityService = userSecurityService;
     }
 
@@ -72,7 +71,7 @@ public class AuthenticationService {
         String normalisedEmail = email.toLowerCase();
         log.info("Login attempt for email {}", normalisedEmail);
         try {
-            User user = userRepository.findByEmail(normalisedEmail)
+            User user = userLookup.findByEmail(normalisedEmail)
                     .orElseThrow(() -> new BadCredentialsException("user not found"));
 
             if (!activationKeyService.isUserActivated(user.getId())) {
@@ -123,52 +122,39 @@ public class AuthenticationService {
                                       String salt,
                                       String iv,
                                       MultipartFile profilePicture) {
-        if (userRepository.findByEmail(email.toLowerCase()).isPresent()) {
+        if (userAccounts.emailIsTaken(email)) {
             throw new IllegalArgumentException("Email already in use");
         }
 
         String profilePictureUrl = null;
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            profilePictureUrl = storageService.saveProfilePicture(profilePicture);
+            profilePictureUrl = profilePictureStore.save(profilePicture);
         }
 
-        User user = new User();
-        user.setDisplayName(displayName);
-        user.setEmail(email.toLowerCase());
-        user.setPassword(passwordEncoder.encode(password));
-        user.setProfilePictureUrl(profilePictureUrl);
-        user.setCreatedAt(Instant.now());
+        Long userId = userAccounts.register(new UserAccounts.NewUser(
+                displayName, email, passwordEncoder.encode(password), profilePictureUrl,
+                publicKey, privateKey, salt, iv));
 
-        UserEncryption encryption = new UserEncryption();
-        encryption.setUser(user);
-        encryption.setSalt(salt);
-        encryption.setIv(iv);
-        encryption.setPublicKey(publicKey);
-        encryption.setEncryptedPrivateKey(privateKey);
-        user.setEncryption(encryption);
-
-        userRepository.save(user);
-
-        UserSecurity security = new UserSecurity(user.getId());
+        UserSecurity security = new UserSecurity(userId);
         security.setFailedLoginAttempts(0);
         userSecurityService.save(security);
 
-        ActivationKey activationKey = activationKeyService.generateActivationKey(user.getId());
+        ActivationKey activationKey = activationKeyService.generateActivationKey(userId);
 
         if (!requireEmailActivation) {
             activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
-            log.info("Email activation disabled — user {} auto-activated", user.getEmail());
+            log.info("Email activation disabled — user {} auto-activated", email);
             return activationKey;
         }
 
-        String registrationContent = emailService.buildRegistrationMail(user.getDisplayName(), activationKey.getToken());
+        String registrationContent = emailService.buildRegistrationMail(displayName, activationKey.getToken());
         try {
-            emailService.sendEmail(user.getEmail(), "Email activation for margin", registrationContent);
+            emailService.sendEmail(email, "Email activation for margin", registrationContent);
         } catch (MessagingException _) {
             throw new RegistrationException("Failed to send activation email for margin");
         }
 
-        log.info("Email registration sent for user {}", user.getEmail());
+        log.info("Email registration sent for user {}", email);
 
         return activationKey;
     }
@@ -181,7 +167,7 @@ public class AuthenticationService {
     }
 
     private void handleFailedLogin(String email) {
-        userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
+        userLookup.findByEmail(email.toLowerCase()).ifPresent(user -> {
             UserSecurity security = userSecurityService.get(user.getId());
             security.setFailedLoginAttempts(security.getFailedLoginAttempts() + 1);
             security.setLastFailedLoginAttempt(Instant.now());
@@ -208,16 +194,12 @@ public class AuthenticationService {
     @Transactional
     public void logoutUser(User user) {
         userSecurityService.bumpTokenVersion(user.getId());
-        userCacheService.evictUserCache(user.getId());
+        userAccounts.invalidateCachedUser(user.getId());
         eventPublisher.publishEvent(new UserSessionsRevokedEvent(user.getId()));
     }
 
     @Transactional
     public void updateEncryptionKeys(User user, String publicKey, String encryptedPrivateKey, String salt, String iv) {
-        user.getEncryption().setPublicKey(publicKey);
-        user.getEncryption().setEncryptedPrivateKey(encryptedPrivateKey);
-        user.getEncryption().setSalt(salt);
-        user.getEncryption().setIv(iv);
-        userRepository.save(user);
+        userAccounts.updateEncryptionKeys(user.getId(), publicKey, encryptedPrivateKey, salt, iv);
     }
 }

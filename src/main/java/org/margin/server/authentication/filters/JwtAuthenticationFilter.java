@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -23,14 +23,14 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
     private final UserSecurityService userSecurityService;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   UserRepository userRepository,
+                                   UserLookup userLookup,
                                    UserSecurityService userSecurityService) {
         this.jwtService = jwtService;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
         this.userSecurityService = userSecurityService;
     }
 
@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String email = jwtService.extractEmail(jwt).toLowerCase();
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                User user = userRepository.findByEmail(email)
+                User user = userLookup.findByEmail(email)
                         .orElse(null);
 
                 if (user != null
