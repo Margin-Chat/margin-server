@@ -68,9 +68,9 @@ public class ThreadService {
         this.userLookup = userLookup;
     }
 
-    public ThreadConversationDTO createPost(User user, Long channelId, String title, String body) {
+    public ThreadConversationDTO createPost(Long userId, Long channelId, String title, String body) {
         Conversation channelConversation = requireThreadChannelConversation(channelId);
-        requireParentMember(user, channelConversation.getId());
+        requireParentMember(userId, channelConversation.getId());
 
         String trimmedTitle = title != null ? title.trim() : "";
         String trimmedBody = body != null ? body.trim() : "";
@@ -83,45 +83,45 @@ public class ThreadService {
         }
 
         Conversation thread = conversationCreationService.createThreadConversation(channelConversation, trimmedTitle);
-        follow(thread, user);
-        messageService.sendMessage(user, trimmedBody, thread.getId(), List.of());
+        follow(thread, userId);
+        messageService.sendMessage(userId, trimmedBody, thread.getId(), List.of());
 
-        return conversationService.toThreadDTO(thread, user.getId());
+        return conversationService.toThreadDTO(thread, userId);
     }
 
     @Transactional(readOnly = true)
-    public List<ThreadSummaryDTO> getPostsForChannel(User user, Long channelId) {
+    public List<ThreadSummaryDTO> getPostsForChannel(Long userId, Long channelId) {
         Conversation channelConversation = requireThreadChannelConversation(channelId);
-        requireParentMember(user, channelConversation.getId());
+        requireParentMember(userId, channelConversation.getId());
 
         List<Conversation> posts = conversationRepository.findByParentConversationId(channelConversation.getId());
-        return buildSummaries(posts, user);
+        return buildSummaries(posts, userId);
     }
 
-    public ThreadConversationDTO getThread(User user, Long threadConversationId) {
+    public ThreadConversationDTO getThread(Long userId, Long threadConversationId) {
         Conversation thread = requireThread(threadConversationId);
-        requireParentMember(user, thread.getParentConversationId());
-        return conversationService.toThreadDTO(thread, user.getId());
+        requireParentMember(userId, thread.getParentConversationId());
+        return conversationService.toThreadDTO(thread, userId);
     }
 
-    public void followThread(User user, Long threadConversationId) {
+    public void followThread(Long userId, Long threadConversationId) {
         Conversation thread = requireThread(threadConversationId);
-        requireParentMember(user, thread.getParentConversationId());
-        follow(thread, user);
+        requireParentMember(userId, thread.getParentConversationId());
+        follow(thread, userId);
     }
 
-    public void unfollowThread(User user, Long threadConversationId) {
+    public void unfollowThread(Long userId, Long threadConversationId) {
         Conversation thread = requireThread(threadConversationId);
-        conversationMemberRepository.deleteById(new ConversationMemberId(thread.getId(), user.getId()));
+        conversationMemberRepository.deleteById(new ConversationMemberId(thread.getId(), userId));
     }
 
     @Transactional(readOnly = true)
-    public List<ThreadSummaryDTO> getFollowedThreads(User user) {
+    public List<ThreadSummaryDTO> getFollowedThreads(Long userId) {
         List<Conversation> threads = conversationMemberRepository
-                .findThreadMembershipsByUserId(user.getId()).stream()
+                .findThreadMembershipsByUserId(userId).stream()
                 .map(ConversationMember::getConversation)
                 .toList();
-        return buildSummaries(threads, user);
+        return buildSummaries(threads, userId);
     }
 
     @EventListener
@@ -137,17 +137,17 @@ public class ThreadService {
             return;
         }
         if (event.getRecipientIds().contains(senderId)) {
-            follow(conversationService.getById(message.conversationId()), userLookup.findById(senderId).orElseThrow());
+            follow(conversationService.getById(message.conversationId()), senderId);
         }
     }
 
-    private List<ThreadSummaryDTO> buildSummaries(List<Conversation> threads, User user) {
+    private List<ThreadSummaryDTO> buildSummaries(List<Conversation> threads, Long userId) {
         if (threads.isEmpty()) {
             return List.of();
         }
         List<Long> threadIds = threads.stream().map(Conversation::getId).toList();
         Map<Long, ThreadSummaryProjection> summariesByThreadId = conversationRepository
-                .findThreadSummariesForThreads(threadIds, user.getId()).stream()
+                .findThreadSummariesForThreads(threadIds, userId).stream()
                 .collect(Collectors.toMap(ThreadSummaryProjection::getThreadConversationId, Function.identity()));
 
         List<Long> firstMessageIds = summariesByThreadId.values().stream()
@@ -158,7 +158,7 @@ public class ThreadService {
                 .collect(Collectors.toMap(Message::getId, Function.identity()));
 
         Map<Long, ConversationMember> membershipsByThreadId = conversationMemberRepository
-                .findThreadMembershipsByUserId(user.getId()).stream()
+                .findThreadMembershipsByUserId(userId).stream()
                 .collect(Collectors.toMap(m -> m.getConversation().getId(), Function.identity()));
 
         return threads.stream()
@@ -167,14 +167,14 @@ public class ThreadService {
                     Message firstMessage = summary != null && summary.getFirstMessageId() != null
                             ? firstMessagesById.get(summary.getFirstMessageId())
                             : null;
-                    return toSummary(thread, user, summary, firstMessage, membershipsByThreadId.get(thread.getId()));
+                    return toSummary(thread, userId, summary, firstMessage, membershipsByThreadId.get(thread.getId()));
                 })
                 .sorted(Comparator.comparing(ThreadSummaryDTO::lastReplyAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
-    private ThreadSummaryDTO toSummary(Conversation thread, User user, ThreadSummaryProjection summary,
+    private ThreadSummaryDTO toSummary(Conversation thread, Long userId, ThreadSummaryProjection summary,
                                        Message firstMessage, ConversationMember membership) {
         long messageCount = summary != null && summary.getMessageCount() != null ? summary.getMessageCount() : 0;
         long replyCount = Math.max(0, messageCount - 1);
@@ -194,7 +194,7 @@ public class ThreadService {
                 : null;
 
         return new ThreadSummaryDTO(
-                conversationService.toThreadDTO(thread, user.getId()),
+                conversationService.toThreadDTO(thread, userId),
                 author,
                 firstMessage != null ? excerptOf(firstMessage) : null,
                 replyCount,
@@ -211,9 +211,9 @@ public class ThreadService {
         return content.substring(0, EXCERPT_MAX_LENGTH);
     }
 
-    private void follow(Conversation thread, User user) {
-        if (conversationMemberRepository.findByConversationIdAndUserId(thread.getId(), user.getId()).isEmpty()) {
-            conversationCreationService.createConversationMember(thread, user.getId());
+    private void follow(Conversation thread, Long userId) {
+        if (conversationMemberRepository.findByConversationIdAndUserId(thread.getId(), userId).isEmpty()) {
+            conversationCreationService.createConversationMember(thread, userId);
         }
     }
 
@@ -244,8 +244,8 @@ public class ThreadService {
         return conversation;
     }
 
-    private void requireParentMember(User user, Long parentConversationId) {
-        if (!conversationService.isUserMember(parentConversationId, user.getId())) {
+    private void requireParentMember(Long userId, Long parentConversationId) {
+        if (!conversationService.isUserMember(parentConversationId, userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this conversation");
         }
     }

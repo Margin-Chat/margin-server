@@ -66,7 +66,7 @@ public class MarginController {
 
     @GetMapping("/get_margins")
     public Set<MarginDTO> getMargins(@AuthenticationPrincipal AuthenticatedUser user) {
-        return marginService.getMarginsForUser(entityOf(user));
+        return marginService.getMarginsForUser(user.id());
     }
 
     @PostMapping("/update_margin")

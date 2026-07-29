@@ -30,23 +30,23 @@ public class MessageActions {
     }
 
     @Transactional
-    public Message createMessage(User fromUser, Conversation conversation, String content, List<Long> attachmentIds) {
+    public Message createMessage(Long fromUserId, Conversation conversation, String content, List<Long> attachmentIds) {
         Message message = new Message();
         message.setConversation(conversation);
-        message.setFromUserId(fromUser.getId());
+        message.setFromUserId(fromUserId);
         message.setMessage(content);
         message.setCreatedAt(Instant.now());
         Message saved = messageRepository.save(message);
 
         if (attachmentIds != null && !attachmentIds.isEmpty()) {
-            attachFiles(saved, fromUser, conversation, attachmentIds);
+            attachFiles(saved, fromUserId, conversation, attachmentIds);
         }
         return saved;
     }
 
-    private void attachFiles(Message message, User sender, Conversation conversation, List<Long> attachmentIds) {
+    private void attachFiles(Message message, Long senderId, Conversation conversation, List<Long> attachmentIds) {
         Long channelId = conversation.getChannel() == null ? null : conversation.getChannel().getId();
-        eventPublisher.publishEvent(new MessageAttachmentsCreatedEvent(message.getId(), sender.getId(), channelId, attachmentIds));
+        eventPublisher.publishEvent(new MessageAttachmentsCreatedEvent(message.getId(), senderId, channelId, attachmentIds));
     }
 
     @Transactional
@@ -63,7 +63,7 @@ public class MessageActions {
     }
 
     @Transactional
-    public MessageReaction createMessageReaction(User user, Message message, String emoji) {
-        return messageReactionRepository.save(new MessageReaction(message, user.getId(), emoji));
+    public MessageReaction createMessageReaction(Long userId, Message message, String emoji) {
+        return messageReactionRepository.save(new MessageReaction(message, userId, emoji));
     }
 }

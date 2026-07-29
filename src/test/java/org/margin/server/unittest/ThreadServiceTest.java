@@ -95,7 +95,7 @@ class ThreadServiceTest {
         threadChannel.setChannelType(ChannelType.Communication);
         when(channelLookup.getById(5L)).thenReturn(threadChannel);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "title", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "title", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -106,7 +106,7 @@ class ThreadServiceTest {
         stubThreadChannel();
         when(conversationService.isUserMember(10L, alice.getId())).thenReturn(false);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "title", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "title", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
@@ -117,7 +117,7 @@ class ThreadServiceTest {
         stubThreadChannel();
         when(conversationService.isUserMember(10L, alice.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "  ", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "  ", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -136,10 +136,10 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, alice.getId()))
                 .thenReturn(Optional.empty());
 
-        threadService.createPost(alice, 5L, "title", "the body");
+        threadService.createPost(alice.getId(), 5L, "title", "the body");
 
         verify(conversationCreationService).createConversationMember(post, alice.getId());
-        verify(messageService).sendMessage(alice, "the body", post.getId(), List.of());
+        verify(messageService).sendMessage(alice.getId(), "the body", post.getId(), List.of());
         verify(conversationService).toThreadDTO(post, alice.getId());
     }
 
@@ -163,7 +163,6 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, bob.getId()))
                 .thenReturn(Optional.empty(), Optional.empty());
         when(conversationService.getById(11L)).thenReturn(post);
-        when(userLookup.findById(bob.getId())).thenReturn(Optional.of(bob));
 
         threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
@@ -189,7 +188,7 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findThreadMembershipsByUserId(alice.getId()))
                 .thenReturn(List.of());
 
-        assertThat(threadService.getFollowedThreads(alice)).isEmpty();
+        assertThat(threadService.getFollowedThreads(alice.getId())).isEmpty();
         verify(conversationRepository, never()).findThreadSummariesForThreads(anyList(), anyLong());
     }
 }

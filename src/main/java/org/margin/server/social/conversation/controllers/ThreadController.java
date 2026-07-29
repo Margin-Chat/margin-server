@@ -30,37 +30,37 @@ public class ThreadController {
     public ThreadConversationDTO createPost(@AuthenticationPrincipal AuthenticatedUser user,
                                             @PathVariable Long channelId,
                                             @RequestBody CreateThreadPostRequest request) {
-        return threadService.createPost(entityOf(user), channelId, request.title(), request.body());
+        return threadService.createPost(user.id(), channelId, request.title(), request.body());
     }
 
     @GetMapping("/channels/{channelId}/threads")
     public List<ThreadSummaryDTO> getPostsForChannel(@AuthenticationPrincipal AuthenticatedUser user,
                                                      @PathVariable Long channelId) {
-        return threadService.getPostsForChannel(entityOf(user), channelId);
+        return threadService.getPostsForChannel(user.id(), channelId);
     }
 
     @GetMapping("/threads")
     public List<ThreadSummaryDTO> getFollowedThreads(@AuthenticationPrincipal AuthenticatedUser user) {
-        return threadService.getFollowedThreads(entityOf(user));
+        return threadService.getFollowedThreads(user.id());
     }
 
     @GetMapping("/threads/{conversationId}")
     public ThreadConversationDTO getThread(@AuthenticationPrincipal AuthenticatedUser user,
                                            @PathVariable Long conversationId) {
-        return threadService.getThread(entityOf(user), conversationId);
+        return threadService.getThread(user.id(), conversationId);
     }
 
     @PostMapping("/threads/{conversationId}/follow")
     public ResponseEntity<Void> followThread(@AuthenticationPrincipal AuthenticatedUser user,
                                              @PathVariable Long conversationId) {
-        threadService.followThread(entityOf(user), conversationId);
+        threadService.followThread(user.id(), conversationId);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/threads/{conversationId}/follow")
     public ResponseEntity<Void> unfollowThread(@AuthenticationPrincipal AuthenticatedUser user,
                                                @PathVariable Long conversationId) {
-        threadService.unfollowThread(entityOf(user), conversationId);
+        threadService.unfollowThread(user.id(), conversationId);
         return ResponseEntity.ok().build();
     }
 

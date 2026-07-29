@@ -56,9 +56,9 @@ class TypingIndicatorProcessorTest {
 
         processor.process(sender, message);
 
-        verify(conversationValidationService).validateUserIsInConversation(sender, conversation.getId());
+        verify(conversationValidationService).validateUserIsInConversation(sender.getId(), conversation.getId());
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation.getId()), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender.getId()), eq(conversation.getId()), isTypingCaptor.capture());
         assertTrue(isTypingCaptor.getValue());
     }
 
@@ -78,7 +78,7 @@ class TypingIndicatorProcessorTest {
         processor.process(sender, message);
 
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation.getId()), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender.getId()), eq(conversation.getId()), isTypingCaptor.capture());
         assertFalse(isTypingCaptor.getValue());
     }
 
@@ -95,7 +95,7 @@ class TypingIndicatorProcessorTest {
         message.setPayload(new TypingIndicatorPayload(true));
 
         doThrow(new ConversationValidationException("User is not a part of the conversation"))
-                .when(conversationValidationService).validateUserIsInConversation(sender, conversation.getId());
+                .when(conversationValidationService).validateUserIsInConversation(sender.getId(), conversation.getId());
 
         assertThrows(ConversationValidationException.class, () -> processor.process(sender, message));
 

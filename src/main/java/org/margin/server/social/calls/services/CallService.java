@@ -72,9 +72,9 @@ public class CallService {
     }
 
     @Transactional
-    public void endCall(User user, Long callId, Integer durationSeconds, Long recipientId) {
+    public void endCall(Long userId, Long callId, Integer durationSeconds, Long recipientId) {
         Call call = getById(callId);
-        callValidationService.validateUserIsInCall(call, user);
+        callValidationService.validateUserIsInCall(call, userId);
 
         call.setStatus(CallStatus.ENDED);
         call.setEndedAt(Instant.now());
@@ -87,11 +87,10 @@ public class CallService {
     }
 
     @Transactional
-    public void callNoAnswer(Long callId, User user, Long recipientId) {
+    public void callNoAnswer(Long callId, Long userId, Long recipientId) {
         Call call = getById(callId);
 
-        callValidationService.validateUserIsSender(call, user);
-        User recepientUser = userService.getById(recipientId);
+        callValidationService.validateUserIsSender(call, userId);
 
         call.setEndedAt(Instant.now());
         call.setDurationSeconds(0);
@@ -100,13 +99,13 @@ public class CallService {
 
         log.debug("Call {} wasn't answered", call.getId());
 
-        eventPublisher.publishEvent(new MissedCallEvent(recepientUser.getId(), user.getId(), call.getId()));
+        eventPublisher.publishEvent(new MissedCallEvent(recipientId, userId, call.getId()));
     }
 
     @Transactional
-    public void rejectCall(Long callId, Long recipientId, User user) {
+    public void rejectCall(Long callId, Long recipientId, Long userId) {
         Call call = getById(callId);
-        callValidationService.validateUserIsReceiver(call, user);
+        callValidationService.validateUserIsReceiver(call, userId);
 
         call.setStatus(CallStatus.REJECTED);
         call.setEndedAt(Instant.now());

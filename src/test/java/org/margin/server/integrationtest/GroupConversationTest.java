@@ -312,13 +312,13 @@ class GroupConversationTest extends MarginTestRunner {
                 creator, List.of(), "Group", false);
         Conversation conversation = ConversationTestUtils.getConversationById(dto.id());
 
-        MessageResult result = messageService.createMessageForUsers(creator, conversation, "hello", List.of());
+        MessageResult result = messageService.createMessageForUsers(creator.getId(), conversation, "hello", List.of());
         Long messageId = result.message().id();
 
         User outsider = UserTestUtils.createUser("outsider", "outsider@margin.chat");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> messageService.editMessage(outsider, dto.id(), messageId, "tampered"));
+                () -> messageService.editMessage(outsider.getId(), dto.id(), messageId, "tampered"));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }

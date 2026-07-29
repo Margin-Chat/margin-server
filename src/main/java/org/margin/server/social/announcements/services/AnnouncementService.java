@@ -10,7 +10,6 @@ import org.margin.server.social.announcements.repositories.AnnouncementRepositor
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.repositories.MarginRepository;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -51,12 +50,12 @@ public class AnnouncementService {
         );
     }
 
-    public Announcement createAnnouncement(CreateAnnouncementRequest createAnnouncementRequest, User author) {
+    public Announcement createAnnouncement(CreateAnnouncementRequest createAnnouncementRequest, Long authorId) {
         Margin margin = marginRepository.findById(createAnnouncementRequest.marginId()).orElseThrow();
 
         Announcement announcement = new Announcement();
         announcement.setMargin(margin);
-        announcement.setAuthorId(author.getId());
+        announcement.setAuthorId(authorId);
         announcement.setTitle(createAnnouncementRequest.title());
         announcement.setContent(createAnnouncementRequest.content());
         announcement.setCreatedAt(Instant.now());
@@ -67,7 +66,7 @@ public class AnnouncementService {
                 .toList();
 
         eventPublisher.publishEvent(
-                new AnnouncementCreatedEvent(members, new UserSummary(author.getId(), author.getDisplayName()), saved.getAnnouncementId(), margin.getId()));
+                new AnnouncementCreatedEvent(members, new UserSummary(authorId, userLookup.dtoOf(authorId).displayName()), saved.getAnnouncementId(), margin.getId()));
 
         return saved;
     }

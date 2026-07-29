@@ -7,7 +7,6 @@ import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.repositories.MarginInviteRepository;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,16 +82,16 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public Margin acceptLinkInvite(MarginInvite invite, User user) {
+    public Margin acceptLinkInvite(MarginInvite invite, Long userId) {
         marginService.addUserToMargin(
                 invite.getMargin().getId(),
-                user.getId(),
+                userId,
                 MarginRole.MEMBER,
                 invite.getInvitedByUserId(),
                 false
         );
 
-        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user.getId());
+        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), userId);
 
         invite.setCurrentUses(invite.getCurrentUses() + 1);
         marginInviteRepository.save(invite);
@@ -101,16 +100,16 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public Margin acceptDirectInvite(MarginInvite invite, User user) {
+    public Margin acceptDirectInvite(MarginInvite invite, Long userId) {
         marginService.addUserToMargin(
                 invite.getMargin().getId(),
-                user.getId(),
+                userId,
                 MarginRole.MEMBER,
                 invite.getInvitedByUserId(),
                 false
         );
 
-        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user.getId());
+        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), userId);
 
         invite.setStatus(MarginInvite.InviteStatus.ACCEPTED);
         marginInviteRepository.save(invite);

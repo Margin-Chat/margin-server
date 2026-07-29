@@ -151,7 +151,7 @@ class MarginInviteServiceTest {
 
         when(marginService.getById(margin.getId())).thenReturn(margin);
 
-        marginInviteService.acceptLinkInvite(invite, targetUser);
+        marginInviteService.acceptLinkInvite(invite, targetUser.getId());
 
         verify(marginService).addUserToMargin(
                 eq(margin.getId()),
@@ -173,7 +173,7 @@ class MarginInviteServiceTest {
 
         when(marginService.getById(margin.getId())).thenReturn(margin);
 
-        marginInviteService.acceptDirectInvite(invite, targetUser);
+        marginInviteService.acceptDirectInvite(invite, targetUser.getId());
 
         verify(marginService).addUserToMargin(
                 eq(margin.getId()),

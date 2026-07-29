@@ -57,11 +57,11 @@ class SendMessageProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new SendMessagePayload("Hello", List.of(7L)));
 
-        doNothing().when(messageService).sendMessage(sender, "Hello", conversation.getId(), List.of(7L));
+        doNothing().when(messageService).sendMessage(sender.getId(), "Hello", conversation.getId(), List.of(7L));
 
         processor.process(sender, message);
 
-        verify(messageService).sendMessage(sender, "Hello", conversation.getId(), List.of(7L));
+        verify(messageService).sendMessage(sender.getId(), "Hello", conversation.getId(), List.of(7L));
     }
 
     @Test
@@ -83,7 +83,7 @@ class SendMessageProcessorTest {
         processor.process(sender, message);
 
         ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).sendMessage(eq(sender), contentCaptor.capture(), eq(conversation.getId()), eq(ids));
+        verify(messageService).sendMessage(eq(sender.getId()), contentCaptor.capture(), eq(conversation.getId()), eq(ids));
         assertEquals(content, contentCaptor.getValue());
     }
 
@@ -96,7 +96,7 @@ class SendMessageProcessorTest {
         message.setPayload(new SendMessagePayload("Hello", null));
 
         doThrow(new RuntimeException("Conversation not found"))
-                .when(conversationValidationService).validateUserIsInConversation(sender, 999L);
+                .when(conversationValidationService).validateUserIsInConversation(sender.getId(), 999L);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
         verifyNoInteractions(messageService);
@@ -114,7 +114,7 @@ class SendMessageProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new SendMessagePayload("Hello", null));
 
-        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender, "Hello", conversation.getId(), null);
+        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender.getId(), "Hello", conversation.getId(), null);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
     }

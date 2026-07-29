@@ -23,7 +23,7 @@ public class AddReactionProcessor implements WebSocketMessageProcessor<MessageRe
     @Override
     public void process(User user, WebSocketMessageIn<MessageReactionPayload> message) {
         messageService.addReaction(
-                user,
+                user.getId(),
                 message.getRecipientId(),
                 message.getPayload().messageId(),
                 message.getPayload().emoji()

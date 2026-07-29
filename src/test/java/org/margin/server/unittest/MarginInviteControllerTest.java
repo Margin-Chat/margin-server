@@ -111,7 +111,7 @@ class MarginInviteControllerTest {
     void createDirectInvite_shouldReturnInvite() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
         when(marginInviteService.createDirectInvite(margin, targetUser.getId(), adminUser.getId())).thenReturn(invite);
@@ -135,7 +135,7 @@ class MarginInviteControllerTest {
     @Test
     void createDirectInvite_whenUserAlreadyMember_shouldThrow409() {
         when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(true);
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
@@ -144,7 +144,7 @@ class MarginInviteControllerTest {
     @Test
     void createDirectInvite_whenPendingInviteExists_shouldThrow409() {
         when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser)))
@@ -178,14 +178,14 @@ class MarginInviteControllerTest {
     void acceptLinkInvite_shouldSucceed() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
-        when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(false);
-        when(marginInviteService.acceptLinkInvite(invite, targetUser)).thenReturn(margin);
+        when(marginService.isUserMember(margin.getId(), targetUser.getId())).thenReturn(false);
+        when(marginInviteService.acceptLinkInvite(invite, targetUser.getId())).thenReturn(margin);
         when(marginMapper.marginToDto(margin)).thenReturn(null);
 
         ResponseEntity<?> response = marginInviteController.acceptLinkInvite("abc-123", principalOf(targetUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(marginInviteService).acceptLinkInvite(invite, targetUser);
+        verify(marginInviteService).acceptLinkInvite(invite, targetUser.getId());
         verify(marginMapper).marginToDto(margin);
     }
 
@@ -203,7 +203,7 @@ class MarginInviteControllerTest {
     void acceptLinkInvite_whenAlreadyMember_shouldThrow409() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
-        when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(true);
+        when(marginService.isUserMember(margin.getId(), targetUser.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", principalOf(targetUser)))
                 .isInstanceOf(ResponseStatusException.class);
@@ -214,7 +214,7 @@ class MarginInviteControllerTest {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
 
         when(marginInviteService.getById(1L)).thenReturn(invite);
-        when(marginInviteService.acceptDirectInvite(invite, targetUser)).thenReturn(margin);
+        when(marginInviteService.acceptDirectInvite(invite, targetUser.getId())).thenReturn(margin);
 
         MarginDTO dto = new MarginDTO(
                 margin.getId(),

@@ -70,14 +70,14 @@ public class SpacesService implements ChannelAudience {
     }
 
     @Transactional(readOnly = true)
-    public List<SpaceDTO> getSpacesForUserInMargin(User user, Long marginId) {
-        return spacesRepository.findVisibleSpacesForUser(user.getId(), marginId).stream()
+    public List<SpaceDTO> getSpacesForUserInMargin(Long userId, Long marginId) {
+        return spacesRepository.findVisibleSpacesForUser(userId, marginId).stream()
                 .map(marginMapper::spaceToDto)
                 .toList();
     }
 
     @Transactional
-    public SpaceDTO createNewSpace(CreateSpaceDTO dto, User user, Margin margin) {
+    public SpaceDTO createNewSpace(CreateSpaceDTO dto, Long userId, Margin margin) {
         Optional<Space> spaceByName = spacesRepository.getSpaceByName(dto.name(), margin.getId());
         if (spaceByName.isPresent()) {
             throw new DuplicateKeyException("Space name already exists");
@@ -85,12 +85,12 @@ public class SpacesService implements ChannelAudience {
 
         Space space = spacesCreationService.create(dto.name(), dto.description(), dto.visibility(), margin);
         channelService.createNewChannel(space, "General Chat", "A channel for general conversation");
-        spacesActions.addUserToSpace(user.getId(), space, SpaceRole.ADMIN);
+        spacesActions.addUserToSpace(userId, space, SpaceRole.ADMIN);
 
         if (dto.visibility() == Visibility.PUBLIC) {
             marginMemberRepository.findByMargin_Id(margin.getId()).stream()
                     .map(MarginMember::getUserId)
-                    .filter(memberId -> !memberId.equals(user.getId()))
+                    .filter(memberId -> !memberId.equals(userId))
                     .forEach(memberId -> spacesActions.addUserToSpace(memberId, space, SpaceRole.MEMBER));
         }
 

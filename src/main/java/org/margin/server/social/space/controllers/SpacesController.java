@@ -52,7 +52,7 @@ public class SpacesController {
     @GetMapping("get_all_spaces_for_user/{marginId}")
     public List<SpaceDTO> getAllSpacesForUser(@AuthenticationPrincipal AuthenticatedUser user,
                                               @PathVariable Long marginId) {
-        return spacesService.getSpacesForUserInMargin(entityOf(user), marginId);
+        return spacesService.getSpacesForUserInMargin(user.id(), marginId);
     }
 
     @PostMapping("create_space")
@@ -60,7 +60,7 @@ public class SpacesController {
                                                 @RequestBody CreateSpaceDTO dto) {
         marginAuthorizationService.requireMarginAdmin(user.id(), dto.marginId());
         Margin margin = marginService.getById(dto.marginId());
-        SpaceDTO created = spacesService.createNewSpace(dto, entityOf(user), margin);
+        SpaceDTO created = spacesService.createNewSpace(dto, user.id(), margin);
         return ResponseEntity.ok(created);
     }
 

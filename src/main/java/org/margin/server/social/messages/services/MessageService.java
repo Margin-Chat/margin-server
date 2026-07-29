@@ -16,7 +16,6 @@ import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -62,8 +61,8 @@ public class MessageService {
         this.conversationValidationService = conversationValidationService;
     }
 
-    public MessageResult createMessageForUsers(User fromUser, Conversation conversation, String content, List<Long> attachmentIds) {
-        Message message = messageActions.createMessage(fromUser, conversation, content, attachmentIds);
+    public MessageResult createMessageForUsers(Long fromUserId, Conversation conversation, String content, List<Long> attachmentIds) {
+        Message message = messageActions.createMessage(fromUserId, conversation, content, attachmentIds);
         List<Long> recipientIds = conversationService.getConversationMembers(conversation.getId());
         Conversation channelScope = channelScopeOf(conversation);
         return new MessageResult(
@@ -76,10 +75,10 @@ public class MessageService {
                 recipientIds);
     }
 
-    public void editMessage(User editor, Long recipientId, Long messageId, String content) {
+    public void editMessage(Long editorId, Long recipientId, Long messageId, String content) {
         Conversation conversation = conversationService.getById(recipientId);
         Message message = getById(messageId);
-        if (!message.getFromUserId().equals(editor.getId())) {
+        if (!message.getFromUserId().equals(editorId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's message");
         }
         message = messageActions.editMessage(message, content);
@@ -95,9 +94,9 @@ public class MessageService {
         eventPublisher.publishEvent(new MessageEditedEvent(result.message(), result.recipientIds(), conversation.getType()));
     }
 
-    public void deleteMessage(User user, Long messageId, Long recipientId) {
+    public void deleteMessage(Long userId, Long messageId, Long recipientId) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
+        conversationValidationService.validateUserIsInConversation(userId, conversation.getId());
 
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -113,11 +112,11 @@ public class MessageService {
         eventPublisher.publishEvent(new MessageDeletedEvent(messageResult));
     }
 
-    public void sendMessage(User fromUser, String content, Long conversationId, List<Long> attachmentIds) {
+    public void sendMessage(Long fromUserId, String content, Long conversationId, List<Long> attachmentIds) {
         Conversation conversation = conversationService.getById(conversationId);
-        messageValidationService.validateConversationIsNotPending(fromUser, conversation);
+        messageValidationService.validateConversationIsNotPending(fromUserId, conversation);
         messageValidationService.validateNotThreadChannelConversation(conversation);
-        MessageResult result = createMessageForUsers(fromUser, conversation, content, attachmentIds);
+        MessageResult result = createMessageForUsers(fromUserId, conversation, content, attachmentIds);
         eventPublisher.publishEvent(new MessageSentEvent(result.message(), result.recipientIds()));
     }
 
@@ -146,12 +145,12 @@ public class MessageService {
     }
 
     @Transactional
-    public MessageReactionDTO addReaction(User user, Long recipientId, Long messageId, String emoji) {
+    public MessageReactionDTO addReaction(Long userId, Long recipientId, Long messageId, String emoji) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
+        conversationValidationService.validateUserIsInConversation(userId, conversation.getId());
 
-        messageValidationService.validateDuplicateEmojiForMessage(user, messageId, emoji);
-        MessageReaction reaction = messageActions.createMessageReaction(user, getById(messageId), emoji);
+        messageValidationService.validateDuplicateEmojiForMessage(userId, messageId, emoji);
+        MessageReaction reaction = messageActions.createMessageReaction(userId, getById(messageId), emoji);
         MessageReactionDTO reactionDTO = MessageReactionDTO.from(reaction, conversation.getId(), userLookup.dtoOf(reaction.getUserId()).displayName());
 
         List<Long> recipientIds = conversationService.getConversationMembers(conversation.getId());
@@ -161,15 +160,15 @@ public class MessageService {
     }
 
     @Transactional
-    public MessageReactionDTO removeReaction(User user,
+    public MessageReactionDTO removeReaction(Long userId,
                                              Long messageId,
                                              String emoji,
                                              Long recipientId) {
         Conversation conversation = conversationService.getById(recipientId);
-        conversationValidationService.validateUserIsInConversation(user, conversation.getId());
+        conversationValidationService.validateUserIsInConversation(userId, conversation.getId());
 
         MessageReaction reaction = messageReactionRepository
-                .findByMessageIdAndUserIdAndEmoji(messageId, user.getId(), emoji)
+                .findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         MessageReactionDTO dto = MessageReactionDTO.from(reaction, conversation.getId(), userLookup.dtoOf(reaction.getUserId()).displayName());
         messageReactionRepository.delete(reaction);

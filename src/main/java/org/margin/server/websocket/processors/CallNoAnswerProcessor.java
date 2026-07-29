@@ -21,6 +21,6 @@ public class CallNoAnswerProcessor implements WebSocketMessageProcessor<String> 
 
     @Override
     public void process(User user, WebSocketMessageIn<String> message) {
-        callService.callNoAnswer(Long.valueOf(message.getPayload()), user, message.getRecipientId());
+        callService.callNoAnswer(Long.valueOf(message.getPayload()), user.getId(), message.getRecipientId());
     }
 }

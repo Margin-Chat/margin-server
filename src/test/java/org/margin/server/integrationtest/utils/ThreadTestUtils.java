@@ -56,6 +56,6 @@ public class ThreadTestUtils {
 
     public static void sendMessage(User from, Long conversationId, String content) {
         Conversation conversation = conversationService.getById(conversationId);
-        messageService.sendMessage(from, content, conversation.getId(), List.of());
+        messageService.sendMessage(from.getId(), content, conversation.getId(), List.of());
     }
 }

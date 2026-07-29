@@ -32,7 +32,7 @@ public class SendMessageProcessor implements WebSocketMessageProcessor<SendMessa
     @Transactional
     @Override
     public void process(User user, WebSocketMessageIn<SendMessagePayload> message) {
-        conversationValidationService.validateUserIsInConversation(user, message.getRecipientId());
-        messageService.sendMessage(user, message.getPayload().content(), message.getRecipientId(), message.getPayload().attachmentIds());
+        conversationValidationService.validateUserIsInConversation(user.getId(), message.getRecipientId());
+        messageService.sendMessage(user.getId(), message.getPayload().content(), message.getRecipientId(), message.getPayload().attachmentIds());
     }
 }

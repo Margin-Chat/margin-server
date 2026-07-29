@@ -24,6 +24,6 @@ public class EditMessageProcessor implements WebSocketMessageProcessor<EditMessa
     @Transactional
     @Override
     public void process(User user, WebSocketMessageIn<EditMessagePayload> message) {
-        messageService.editMessage(user, message.getRecipientId(), message.getPayload().messageId(), message.getPayload().content());
+        messageService.editMessage(user.getId(), message.getRecipientId(), message.getPayload().messageId(), message.getPayload().content());
     }
 }

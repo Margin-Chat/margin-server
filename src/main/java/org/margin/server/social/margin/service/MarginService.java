@@ -115,7 +115,7 @@ public class MarginService {
                         Visibility.PUBLIC,
                         margin.getId()
                 ),
-                user,
+                user.getId(),
                 margin
         );
 
@@ -123,8 +123,8 @@ public class MarginService {
     }
 
     @Transactional
-    public Set<MarginDTO> getMarginsForUser(User user) {
-        List<MarginMember> memberships = marginMemberRepository.findMarginMembersByUser(user.getId());
+    public Set<MarginDTO> getMarginsForUser(Long userId) {
+        List<MarginMember> memberships = marginMemberRepository.findMarginMembersByUser(userId);
         if (memberships.isEmpty()) return Collections.emptySet();
 
         return memberships.stream()
@@ -276,8 +276,8 @@ public class MarginService {
         log.info("Soft deleted margin with id {}", marginId);
     }
 
-    public boolean isUserMember(Long margin, User targetUser) {
-        return marginMemberRepository.existsByMarginIdAndUserId(margin, targetUser.getId());
+    public boolean isUserMember(Long margin, Long targetUserId) {
+        return marginMemberRepository.existsByMarginIdAndUserId(margin, targetUserId);
     }
 
     private void validateMemberIsNotTheLastAdmin(MarginMember member, List<MarginMember> members) {

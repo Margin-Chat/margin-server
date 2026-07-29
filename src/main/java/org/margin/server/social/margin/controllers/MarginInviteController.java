@@ -64,7 +64,7 @@ public class MarginInviteController {
 
         User targetUser = userService.getByEmail(email);
 
-        if (marginService.isUserMember(marginId, targetUser)) {
+        if (marginService.isUserMember(marginId, targetUser.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");
         }
 
@@ -106,11 +106,11 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        if (marginService.isUserMember(invite.getMargin().getId(), entityOf(user))) {
+        if (marginService.isUserMember(invite.getMargin().getId(), user.id())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");
         }
 
-        Margin margin = marginInviteService.acceptLinkInvite(invite, entityOf(user));
+        Margin margin = marginInviteService.acceptLinkInvite(invite, user.id());
 
         return ResponseEntity.ok(marginMapper.marginToDto(margin));
     }
@@ -130,7 +130,7 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        Margin margin = marginInviteService.acceptDirectInvite(invite, entityOf(user));
+        Margin margin = marginInviteService.acceptDirectInvite(invite, user.id());
 
         return ResponseEntity.ok(marginService.getMarginAsDto(margin.getId()));
     }

@@ -23,7 +23,7 @@ public class RemoveReactionProcessor implements WebSocketMessageProcessor<Messag
     @Override
     public void process(User user, WebSocketMessageIn<MessageReactionPayload> message) {
         messageService.removeReaction(
-                user,
+                user.getId(),
                 message.getPayload().messageId(),
                 message.getPayload().emoji(),
                 message.getRecipientId()

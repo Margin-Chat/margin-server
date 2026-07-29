@@ -99,7 +99,7 @@ class SpacesServiceTest {
 
         User user = createUser(1L);
         assertThrows(DuplicateKeyException.class,
-                () -> spacesService.createNewSpace(dto, user, margin));
+                () -> spacesService.createNewSpace(dto, user.getId(), margin));
     }
 
     @Test
@@ -134,7 +134,7 @@ class SpacesServiceTest {
         );
         when(marginMapper.spaceToDto(space)).thenReturn(mappedDto);
 
-        SpaceDTO result = spacesService.createNewSpace(dto, user, margin);
+        SpaceDTO result = spacesService.createNewSpace(dto, user.getId(), margin);
 
         assertNotNull(result);
         assertEquals(10L, result.spaceId());

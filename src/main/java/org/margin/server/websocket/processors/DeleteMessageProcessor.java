@@ -25,6 +25,6 @@ public class DeleteMessageProcessor implements WebSocketMessageProcessor<String>
     @Override
     @Transactional
     public void process(User user, WebSocketMessageIn<String> message) {
-        messageService.deleteMessage(user, Long.parseLong(message.getPayload()), message.getRecipientId());
+        messageService.deleteMessage(user.getId(), Long.parseLong(message.getPayload()), message.getRecipientId());
     }
 }

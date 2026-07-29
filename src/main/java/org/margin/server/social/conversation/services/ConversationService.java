@@ -91,12 +91,12 @@ public class ConversationService {
     }
 
 
-    public void notifyTyping(User user, Long conversationId, boolean isTyping) {
+    public void notifyTyping(Long userId, Long conversationId, boolean isTyping) {
         Conversation conversation = getById(conversationId);
         List<Long> recipientIds = getConversationMembers(conversation.getId()).stream()
-                .filter(memberId -> !memberId.equals(user.getId()))
+                .filter(memberId -> !memberId.equals(userId))
                 .toList();
-        eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), new UserSummary(user.getId(), user.getDisplayName()), isTyping,
+        eventPublisher.publishEvent(new TypingIndicatorEvent(conversation.getId(), new UserSummary(userId, userLookup.dtoOf(userId).displayName()), isTyping,
                 recipientIds));
     }
 

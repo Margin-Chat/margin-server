@@ -27,7 +27,7 @@ public class TypingIndicatorProcessor implements WebSocketMessageProcessor<Typin
 
     @Override
     public void process(User user, WebSocketMessageIn<TypingIndicatorPayload> message) {
-        conversationValidationService.validateUserIsInConversation(user, message.getRecipientId());
-        conversationService.notifyTyping(user, message.getRecipientId(), message.getPayload().isTyping());
+        conversationValidationService.validateUserIsInConversation(user.getId(), message.getRecipientId());
+        conversationService.notifyTyping(user.getId(), message.getRecipientId(), message.getPayload().isTyping());
     }
 }

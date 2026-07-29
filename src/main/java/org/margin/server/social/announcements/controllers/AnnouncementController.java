@@ -42,7 +42,7 @@ public class AnnouncementController {
     public AnnouncementDTO createAnnouncement(@RequestBody CreateAnnouncementRequest announcementDTO,
                                               @AuthenticationPrincipal AuthenticatedUser author) {
         marginAuthorizationService.requireMarginAdmin(author.id(), announcementDTO.marginId());
-        return announcementService.toDTO(announcementService.createAnnouncement(announcementDTO, entityOf(author)));
+        return announcementService.toDTO(announcementService.createAnnouncement(announcementDTO, author.id()));
     }
 
     @PostMapping("/edit")

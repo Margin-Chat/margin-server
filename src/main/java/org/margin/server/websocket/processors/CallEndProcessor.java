@@ -25,6 +25,6 @@ public class CallEndProcessor implements WebSocketMessageProcessor<IncomingCallE
     @Override
     public void process(User user, WebSocketMessageIn<IncomingCallEndPayload> message) {
         IncomingCallEndPayload payload = message.getPayload();
-        callService.endCall(user, payload.callId(), payload.callDuration(), message.getRecipientId());
+        callService.endCall(user.getId(), payload.callId(), payload.callDuration(), message.getRecipientId());
     }
 }

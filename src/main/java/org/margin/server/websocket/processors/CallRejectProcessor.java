@@ -21,6 +21,6 @@ public class CallRejectProcessor implements WebSocketMessageProcessor<String> {
 
     @Override
     public void process(User user, WebSocketMessageIn<String> message) {
-        callService.rejectCall(Long.valueOf(message.getPayload()), message.getRecipientId(), user);
+        callService.rejectCall(Long.valueOf(message.getPayload()), message.getRecipientId(), user.getId());
     }
 }

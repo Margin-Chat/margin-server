@@ -56,6 +56,10 @@ class ConversationServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
+
         // 1. Create the real instance
         ConversationService serviceImpl = new ConversationService(
                 conversationCreationService,
@@ -173,7 +177,7 @@ class ConversationServiceTest {
         when(conversationMemberRepository.findUserIdsByConversationId(10L))
                 .thenReturn(List.of(sender.getId(), other.getId()));
 
-        conversationService.notifyTyping(sender, conversation.getId(), true);
+        conversationService.notifyTyping(sender.getId(), conversation.getId(), true);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);
@@ -197,7 +201,7 @@ class ConversationServiceTest {
         when(conversationMemberRepository.findUserIdsByConversationId(10L))
                 .thenReturn(List.of(sender.getId(), other.getId()));
 
-        conversationService.notifyTyping(sender, conversation.getId(), false);
+        conversationService.notifyTyping(sender.getId(), conversation.getId(), false);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);

@@ -98,7 +98,7 @@ class CallServiceTest {
 
         when(callRepository.findById(1L)).thenReturn(Optional.of(call));
 
-        callService.endCall(caller, 1L, 120, 2L);
+        callService.endCall(caller.getId(), 1L, 120, 2L);
 
         ArgumentCaptor<Call> captor = ArgumentCaptor.forClass(Call.class);
         verify(callRepository).save(captor.capture());
@@ -115,7 +115,7 @@ class CallServiceTest {
         when(callRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(CallNotFoundException.class,
-                () -> callService.rejectCall(999L, 2L, caller));
+                () -> callService.rejectCall(999L, 2L, caller.getId()));
     }
 
 }
