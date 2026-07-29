@@ -66,10 +66,7 @@ public class StoredFileController {
                                                                @AuthenticationPrincipal User viewer) {
         marginAccessChecker.requireMarginMember(viewer.getId(), marginId);
 
-        List<StoredFileDTO> out = storedFileService.findMarginFiles(marginId).stream()
-                .map(f -> StoredFileDTO.from(f, false))
-                .toList();
-        return ResponseEntity.ok(out);
+        return ResponseEntity.ok(storedFileService.toDTOs(storedFileService.findMarginFiles(marginId)));
     }
 
     @GetMapping("/channels/{channelId}/stored-files")
@@ -77,10 +74,7 @@ public class StoredFileController {
                                                                 @AuthenticationPrincipal User viewer) {
         conversationAuthorizationService.requireConversationMemberForChannel(channelId, viewer.getId());
 
-        List<StoredFileDTO> out = storedFileService.findChannelFiles(channelId).stream()
-                .map(f -> StoredFileDTO.from(f, false))
-                .toList();
-        return ResponseEntity.ok(out);
+        return ResponseEntity.ok(storedFileService.toDTOs(storedFileService.findChannelFiles(channelId)));
     }
 
     @PostMapping("/margins/{marginId}/stored-files")
@@ -88,9 +82,8 @@ public class StoredFileController {
                                                           @RequestParam("file") MultipartFile file,
                                                           @AuthenticationPrincipal User uploader) {
         marginAccessChecker.requireMarginAdmin(uploader.getId(), marginId);
-        Margin margin = marginLookup.getById(marginId);
-        StoredFile saved = storedFileService.uploadMarginFile(margin, file, uploader);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, false));
+        StoredFile saved = storedFileService.uploadMarginFile(marginId, file, uploader);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
     }
 
     @PostMapping("/channels/{channelId}/stored-files")
@@ -99,9 +92,8 @@ public class StoredFileController {
                                                            @RequestParam(value = "inline", defaultValue = "false") boolean inline,
                                                            @AuthenticationPrincipal User uploader) {
         marginAccessChecker.requireChannelMember(uploader.getId(), channelId);
-        Channel channel = channelLookup.getById(channelId);
-        StoredFile saved = storedFileService.uploadChannelFile(channel, file, uploader, inline);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, false));
+        StoredFile saved = storedFileService.uploadChannelFile(channelId, file, uploader, inline);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
     }
 
     @PostMapping("/conversations/{conversationId}/stored-files")
@@ -111,9 +103,8 @@ public class StoredFileController {
                                                                 @AuthenticationPrincipal User uploader) {
         StorageUtils.requireConversationFileSize(file);
         conversationAuthorizationService.requireConversationMember(conversationId, uploader.getId());
-        Conversation conversation = conversationService.getById(conversationId);
-        StoredFile saved = storedFileService.uploadConversationFile(conversation, file, uploader, inline);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, false));
+        StoredFile saved = storedFileService.uploadConversationFile(conversationId, file, uploader, inline);
+        return ResponseEntity.ok(StoredFileDTO.from(saved, uploader, false));
     }
 
     @PatchMapping("/stored-files/{fileId}")
@@ -130,13 +121,13 @@ public class StoredFileController {
 
         StoredFile f = storedFileService.getById(fileId);
 
-        if (!f.getUploadedBy().getId().equals(actor.getId())) {
-            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMargin().getId());
+        if (!f.getUploadedByUserId().equals(actor.getId())) {
+            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMarginId());
         }
 
         f.setFileName(newName);
         StoredFile saved = storedFileService.save(f);
-        return ResponseEntity.ok(StoredFileDTO.from(saved, false));
+        return ResponseEntity.ok(StoredFileDTO.from(saved, actor, false));
     }
 
     public record RenameRequest(String fileName) {
@@ -147,8 +138,8 @@ public class StoredFileController {
                                            @AuthenticationPrincipal User actor) {
         StoredFile f = storedFileService.getById(fileId);
 
-        if (!f.getUploadedBy().getId().equals(actor.getId())) {
-            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMargin().getId());
+        if (!f.getUploadedByUserId().equals(actor.getId())) {
+            marginAccessChecker.requireMarginAdmin(actor.getId(), f.getMarginId());
         }
 
         f.setDeletedAt(Instant.now());
@@ -165,11 +156,11 @@ public class StoredFileController {
         StoredFile f = storedFileService.getById(fileId);
 
         if (f.getScope() == StoredFileScope.MARGIN) {
-            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMargin().getId());
+            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMarginId());
         } else if (f.getScope() == StoredFileScope.CHANNEL) {
-            marginAccessChecker.requireChannelMember(viewer.getId(), f.getChannel().getId());
+            marginAccessChecker.requireChannelMember(viewer.getId(), f.getChannelId());
         } else {
-            conversationAuthorizationService.requireConversationMember(f.getConversation().getId(), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.getId());
         }
 
         if ("s3".equals(storageProperties.getType())) {

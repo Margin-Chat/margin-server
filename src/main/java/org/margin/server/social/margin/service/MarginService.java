@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.api.MarginIconStore;
 import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.social.margin.events.UserAddedToMarginEvent;
-import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
@@ -36,7 +35,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class MarginService implements MarginLookup {
+public class MarginService {
 
     private final MarginRepository marginRepository;
     private final MarginIconStore marginIconStore;
@@ -65,14 +64,12 @@ public class MarginService implements MarginLookup {
         this.marginSubscriptionPolicy = marginSubscriptionPolicy;
     }
 
-    @Override
     @Transactional(readOnly = true)
     public Margin getById(Long marginId) {
         return marginRepository.findById(marginId)
                 .orElseThrow(() -> new MarginNotFoundException(marginId));
     }
 
-    @Override
     @Transactional(readOnly = true)
     public Margin findByIconFileName(String fileName) {
         return marginRepository.findFirstByIconUrlEndsWith("/margin-icons/" + fileName)

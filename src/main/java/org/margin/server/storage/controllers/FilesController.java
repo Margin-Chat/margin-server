@@ -1,5 +1,6 @@
 package org.margin.server.storage.controllers;
 
+import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
@@ -37,19 +38,22 @@ public class FilesController {
     private final StoredFileService storedFileService;
     private final MarginAccessChecker marginAccessChecker;
     private final ConversationAuthorizationService conversationAuthorizationService;
+    private final ChannelDirectory channelDirectory;
 
     public FilesController(StorageService storageService,
                            StorageProperties storageProperties,
                            MarginLookup marginLookup,
                            StoredFileService storedFileService,
                            MarginAccessChecker marginAccessChecker,
-                           ConversationAuthorizationService conversationAuthorizationService) {
+                           ConversationAuthorizationService conversationAuthorizationService,
+                           ChannelDirectory channelDirectory) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
         this.marginLookup = marginLookup;
         this.storedFileService = storedFileService;
         this.marginAccessChecker = marginAccessChecker;
         this.conversationAuthorizationService = conversationAuthorizationService;
+        this.channelDirectory = channelDirectory;
     }
 
     @GetMapping("/user-profiles/{fileName}")
@@ -81,11 +85,11 @@ public class FilesController {
         StoredFile f = storedFileService.findByStoredFileName(fileName);
 
         if (f.getScope() == StoredFileScope.CHANNEL) {
-            conversationAuthorizationService.requireConversationMember(f.getChannel().getConversation().getId(), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(f.getChannelId()), viewer.getId());
         } else if (f.getScope() == StoredFileScope.CONVERSATION) {
-            conversationAuthorizationService.requireConversationMember(f.getConversation().getId(), viewer.getId());
+            conversationAuthorizationService.requireConversationMember(f.getConversationId(), viewer.getId());
         } else {
-            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMargin().getId());
+            marginAccessChecker.requireMarginMember(viewer.getId(), f.getMarginId());
         }
 
         return serve(f.getStorageUrl(), fileName);
@@ -98,10 +102,10 @@ public class FilesController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         StoredFile file = storedFileService.findByConversationImageFileName(fileName);
-        if (file.getMessageId() == null || file.getChannel() == null) {
+        if (file.getMessageId() == null || file.getChannelId() == null) {
             return ResponseEntity.notFound().build();
         }
-        conversationAuthorizationService.requireConversationMember(file.getChannel().getConversation().getId(), viewer.getId());
+        conversationAuthorizationService.requireConversationMember(channelDirectory.conversationIdOf(file.getChannelId()), viewer.getId());
         return serve(file.getStorageUrl(), fileName);
     }
 

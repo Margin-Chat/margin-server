@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
@@ -48,6 +49,8 @@ class FilesControllerTest {
     private MarginLookup marginLookup;
     @Mock
     private StoredFileService storedFileService;
+    @Mock
+    private ChannelDirectory channelDirectory;
     @Mock
     private MarginAuthorizationService marginAuthorizationService;
     @Mock
@@ -155,6 +158,7 @@ class FilesControllerTest {
     @Test
     void getStoredFileByName_requiresConversationMembershipForChannelFile() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
@@ -259,6 +263,7 @@ class FilesControllerTest {
     @Test
     void getConversationImage_requiresConversationMembership() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
@@ -271,6 +276,7 @@ class FilesControllerTest {
     @Test
     void getConversationImage_servesFileAfterAuthCheck() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelDirectory.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile(f.getStorageUrl()))

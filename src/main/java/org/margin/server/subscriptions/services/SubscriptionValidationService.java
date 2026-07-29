@@ -2,6 +2,7 @@ package org.margin.server.subscriptions.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
+import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
@@ -24,11 +25,14 @@ public class SubscriptionValidationService {
 
     private final SubscriptionService subscriptionService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MarginLookup marginLookup;
 
     public SubscriptionValidationService(SubscriptionService subscriptionService,
-                                         ApplicationEventPublisher eventPublisher) {
+                                         ApplicationEventPublisher eventPublisher,
+                                         MarginLookup marginLookup) {
         this.subscriptionService = subscriptionService;
         this.eventPublisher = eventPublisher;
+        this.marginLookup = marginLookup;
     }
 
     public Subscription getSubscriptionForMargin(Margin margin) {
@@ -71,8 +75,8 @@ public class SubscriptionValidationService {
         return getSubscriptionForMargin(margin).getLimits().getMaxCallParticipants();
     }
 
-    public void validateStorageQuota(Margin margin, long usedBytes, long newFileBytes) {
-        Subscription subscription = getSubscriptionForMargin(margin);
+    public void validateStorageQuota(Long marginId, long usedBytes, long newFileBytes) {
+        Subscription subscription = getSubscriptionForMargin(marginLookup.getById(marginId));
         long maxBytes = subscription.getLimits().getMaxStorageGb() * BYTES_PER_GB;
         if (usedBytes + newFileBytes > maxBytes) {
             throw new SubscriptionLimitExceededException(

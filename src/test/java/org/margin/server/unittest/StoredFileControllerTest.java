@@ -99,7 +99,9 @@ class StoredFileControllerTest {
 
     @Test
     void listMarginFilesReturnsDtosForMembers() {
-        when(storedFileService.findMarginFiles(7L)).thenReturn(List.of(fileEntity(1L, "a.txt")));
+        StoredFile stored = fileEntity(1L, "a.txt");
+        when(storedFileService.findMarginFiles(7L)).thenReturn(List.of(stored));
+        when(storedFileService.toDTOs(List.of(stored))).thenReturn(List.of(StoredFileDTO.from(stored, user, false)));
 
         ResponseEntity<List<StoredFileDTO>> response = controller.listMarginFiles(7L, user);
 
@@ -119,15 +121,14 @@ class StoredFileControllerTest {
 
     @Test
     void uploadMarginFileDelegatesToService() {
-        when(marginLookup.getById(7L)).thenReturn(margin);
-        when(storedFileService.uploadMarginFile(eq(margin), any(), eq(user)))
+        when(storedFileService.uploadMarginFile(eq(7L), any(), eq(user)))
                 .thenReturn(fileEntity(101L, "a.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadMarginFile(
                 7L, fakeFile("a.txt", "text/plain", "hi"), user);
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        verify(storedFileService).uploadMarginFile(eq(margin), any(), eq(user));
+        verify(storedFileService).uploadMarginFile(eq(7L), any(), eq(user));
     }
 
     @Test
@@ -142,22 +143,20 @@ class StoredFileControllerTest {
 
     @Test
     void uploadChannelFileDelegatesToService() {
-        when(channelLookup.getById(3L)).thenReturn(channelOnMargin());
-        when(storedFileService.uploadChannelFile(eq(channel), any(), eq(user), eq(false)))
+        when(storedFileService.uploadChannelFile(eq(3L), any(), eq(user), eq(false)))
                 .thenReturn(fileEntity(102L, "b.txt"));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadChannelFile(
                 3L, fakeFile("b.txt", "text/plain", "x"), false, user);
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        verify(storedFileService).uploadChannelFile(eq(channel), any(), eq(user), eq(false));
+        verify(storedFileService).uploadChannelFile(eq(3L), any(), eq(user), eq(false));
     }
 
     @Test
     void uploadMarginFileForbiddenWhenServiceThrowsQuotaException() {
-        when(marginLookup.getById(7L)).thenReturn(margin);
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(storedFileService).uploadMarginFile(eq(margin), any(), eq(user));
+                .when(storedFileService).uploadMarginFile(eq(7L), any(), eq(user));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
                 controller.uploadMarginFile(7L, fakeFile("big.bin", "application/octet-stream", "data"), user));
@@ -165,9 +164,8 @@ class StoredFileControllerTest {
 
     @Test
     void uploadChannelFileForbiddenWhenServiceThrowsQuotaException() {
-        when(channelLookup.getById(3L)).thenReturn(channelOnMargin());
         doThrow(new SubscriptionLimitExceededException("Storage quota exceeded", SubscriptionTier.FREE, LimitType.STORAGE))
-                .when(storedFileService).uploadChannelFile(eq(channel), any(), eq(user), eq(false));
+                .when(storedFileService).uploadChannelFile(eq(3L), any(), eq(user), eq(false));
 
         assertThrows(SubscriptionLimitExceededException.class, () ->
                 controller.uploadChannelFile(3L, fakeFile("img.png", "image/png", "bytes"), false, user));
@@ -175,8 +173,7 @@ class StoredFileControllerTest {
 
     @Test
     void uploadConversationFileDelegatesToService() {
-        when(conversationService.getById(13L)).thenReturn(conversation);
-        when(storedFileService.uploadConversationFile(eq(conversation), any(), eq(user), eq(true)))
+        when(storedFileService.uploadConversationFile(eq(13L), any(), eq(user), eq(true)))
                 .thenReturn(conversationFile(103L, "img.png", conversation, user));
 
         ResponseEntity<StoredFileDTO> response = controller.uploadConversationFile(
@@ -186,7 +183,7 @@ class StoredFileControllerTest {
         assertEquals("img.png", response.getBody().fileName());
         assertNull(response.getBody().marginId());
         assertEquals(13L, response.getBody().conversationId());
-        verify(storedFileService).uploadConversationFile(eq(conversation), any(), eq(user), eq(true));
+        verify(storedFileService).uploadConversationFile(eq(13L), any(), eq(user), eq(true));
     }
 
     @Test
@@ -231,7 +228,7 @@ class StoredFileControllerTest {
     @Test
     void deleteByUploaderSoftDeletesRowAndDeletesBytes() {
         StoredFile existing = fileEntity(55L, "old.txt");
-        existing.setUploadedBy(user);
+        existing.setUploadedByUserId(user.getId());
         existing.setStorageUrl("/api/files/stored-files/abc_old.txt");
         when(storedFileService.getById(55L)).thenReturn(existing);
 
@@ -248,7 +245,7 @@ class StoredFileControllerTest {
     void deleteByNonUploaderNonManagerIsForbidden() {
         User someoneElse = createUser(999L);
         StoredFile existing = fileEntity(55L, "old.txt");
-        existing.setUploadedBy(someoneElse);
+        existing.setUploadedByUserId(someoneElse.getId());
         when(storedFileService.getById(55L)).thenReturn(existing);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginAdmin(42L, 7L);
@@ -262,7 +259,7 @@ class StoredFileControllerTest {
     void deleteByMarginAdminAllowedEvenWhenNotUploader() {
         User otherUploader = createUser(999L);
         StoredFile existing = fileEntity(55L, "old.txt");
-        existing.setUploadedBy(otherUploader);
+        existing.setUploadedByUserId(otherUploader.getId());
         existing.setStorageUrl("/api/files/stored-files/x");
         when(storedFileService.getById(55L)).thenReturn(existing);
 

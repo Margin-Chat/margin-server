@@ -1,5 +1,6 @@
 package org.margin.server.social.channel.services;
 
+import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.channel.models.ChannelDTO;
@@ -23,7 +24,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
-public class ChannelService implements ChannelLookup {
+public class ChannelService implements ChannelLookup, ChannelDirectory {
     private final ChannelCreationService channelCreationService;
     private final ConversationService conversationService;
     private final ChannelRepository channelRepository;
@@ -113,5 +114,17 @@ public class ChannelService implements ChannelLookup {
         channel.setConversation(conversation);
         channelRepository.save(channel);
         return channel;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long marginIdOf(Long channelId) {
+        return getById(channelId).getSpace().getMargin().getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long conversationIdOf(Long channelId) {
+        return getById(channelId).getConversation().getId();
     }
 }

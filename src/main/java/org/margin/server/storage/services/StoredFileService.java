@@ -1,17 +1,16 @@
 package org.margin.server.storage.services;
 
 import org.margin.server.presence.PresenceService;
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
+import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,63 +31,67 @@ public class StoredFileService implements MessageAttachments {
     private final PresenceService presenceService;
     private final StorageService storageService;
     private final SubscriptionValidationService subscriptionValidationService;
+    private final ChannelDirectory channelDirectory;
+    private final UserLookup userLookup;
 
     public StoredFileService(StoredFileRepository storedFileRepository,
                              PresenceService presenceService,
                              StorageService storageService,
-                             SubscriptionValidationService subscriptionValidationService) {
+                             SubscriptionValidationService subscriptionValidationService,
+                             ChannelDirectory channelDirectory,
+                             UserLookup userLookup) {
         this.storedFileRepository = storedFileRepository;
         this.presenceService = presenceService;
         this.storageService = storageService;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.channelDirectory = channelDirectory;
+        this.userLookup = userLookup;
     }
 
     @Transactional
-    public StoredFile uploadMarginFile(Margin margin, MultipartFile file, User uploader) {
-        subscriptionValidationService.validateStorageQuota(margin,
-                storedFileRepository.sumSizeBytesByMargin(margin.getId()), file.getSize());
+    public StoredFile uploadMarginFile(Long marginId, MultipartFile file, User uploader) {
+        validateQuota(marginId, file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.MARGIN);
-        entity.setMargin(margin);
+        entity.setMarginId(marginId);
         entity.setFileName(file.getOriginalFilename());
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedBy(uploader);
+        entity.setUploadedByUserId(uploader.getId());
         return storedFileRepository.save(entity);
     }
 
     @Transactional
-    public StoredFile uploadChannelFile(Channel channel, MultipartFile file, User uploader, boolean inline) {
-        Margin margin = channel.getSpace().getMargin();
-        subscriptionValidationService.validateStorageQuota(margin,
-                storedFileRepository.sumSizeBytesByMargin(margin.getId()), file.getSize());
+    public StoredFile uploadChannelFile(Long channelId, MultipartFile file, User uploader, boolean inline) {
+        Long marginId = channelDirectory.marginIdOf(channelId);
+        validateQuota(marginId, file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.CHANNEL);
-        entity.setMargin(margin);
-        entity.setChannel(channel);
+        entity.setMarginId(marginId);
+        entity.setChannelId(channelId);
         entity.setFileName(file.getOriginalFilename());
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedBy(uploader);
+        entity.setUploadedByUserId(uploader.getId());
         entity.setInline(inline);
         return storedFileRepository.save(entity);
     }
 
     @Transactional
-    public StoredFile uploadConversationFile(Conversation conversation, MultipartFile file, User uploader, boolean inline) {
+    public StoredFile uploadConversationFile(Long conversationId, MultipartFile file, User uploader, boolean inline) {
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.CONVERSATION);
-        entity.setConversation(conversation);
+        entity.setConversationId(conversationId);
         entity.setFileName(file.getOriginalFilename());
         entity.setContentType(file.getContentType());
         entity.setSizeBytes(file.getSize());
         entity.setStorageUrl(url);
-        entity.setUploadedBy(uploader);
+        entity.setUploadedByUserId(uploader.getId());
         entity.setInline(inline);
         return storedFileRepository.save(entity);
     }
@@ -111,11 +114,11 @@ public class StoredFileService implements MessageAttachments {
     @Override
     @Transactional(readOnly = true)
     public Map<Long, List<MessageAttachmentDTO>> findByMessageIds(List<Long> messageIds) {
-        return storedFileRepository.findByMessageIds(messageIds).stream()
+        return storedFileRepository.findByMessageIdIn(messageIds).stream()
                 .collect(Collectors.groupingBy(
                         StoredFile::getMessageId,
                         Collectors.mapping(
-                                f -> toAttachment(StoredFileDTO.from(f, presenceService.isUserOnline(f.getUploadedBy().getId()))),
+                                f -> toAttachment(StoredFileDTO.from(f, userLookup.findById(f.getUploadedByUserId()).orElseThrow(), presenceService.isUserOnline(f.getUploadedByUserId()))),
                                 Collectors.toList()
                         )
                 ));
@@ -156,17 +159,34 @@ public class StoredFileService implements MessageAttachments {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "One or more attachments not found");
         }
         for (StoredFile file : files) {
-            if (!file.getUploadedBy().getId().equals(senderId)) {
+            if (!file.getUploadedByUserId().equals(senderId)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Attachment not owned by sender");
             }
             if (file.getMessageId() != null) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Attachment already linked to a message");
             }
-            if (channelId != null && (file.getChannel() == null || !file.getChannel().getId().equals(channelId))) {
+            if (channelId != null && (file.getChannelId() == null || !file.getChannelId().equals(channelId))) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment from different channel");
             }
             file.setMessageId(messageId);
         }
         storedFileRepository.saveAll(files);
+    }
+
+    private void validateQuota(Long marginId, long newFileBytes) {
+        subscriptionValidationService.validateStorageQuota(marginId,
+                storedFileRepository.sumSizeBytesByMargin(marginId), newFileBytes);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StoredFileDTO> toDTOs(List<StoredFile> files) {
+        Map<Long, User> uploaders = userLookup.findAllById(
+                        files.stream().map(StoredFile::getUploadedByUserId).distinct().toList()).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return files.stream()
+                .map(f -> StoredFileDTO.from(f, uploaders.get(f.getUploadedByUserId()),
+                        presenceService.isUserOnline(f.getUploadedByUserId())))
+                .toList();
     }
 }

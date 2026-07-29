@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -26,6 +28,11 @@ public class UserLookupService implements UserLookup {
     @Override
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public List<User> findAllById(Collection<Long> userIds) {
+        return userRepository.findAllById(userIds);
     }
 
     @Override

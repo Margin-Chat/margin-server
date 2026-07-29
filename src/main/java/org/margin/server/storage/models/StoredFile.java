@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -34,17 +30,14 @@ public class StoredFile {
     @Column(name = "scope", nullable = false)
     private StoredFileScope scope;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "margin_id")
-    private Margin margin;
+    @Column(name = "margin_id")
+    private Long marginId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "channel_id")
-    private Channel channel;
+    @Column(name = "channel_id")
+    private Long channelId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversation_id")
-    private Conversation conversation;
+    @Column(name = "conversation_id")
+    private Long conversationId;
 
     @Column(name = "message_id")
     private Long messageId;
@@ -66,9 +59,8 @@ public class StoredFile {
     private String storageUrl;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "uploaded_by_user_id", nullable = false)
-    private User uploadedBy;
+    @Column(name = "uploaded_by_user_id", nullable = false)
+    private Long uploadedByUserId;
 
     @CreationTimestamp
     @Column(name = "uploaded_at", nullable = false, updatable = false)

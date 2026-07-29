@@ -33,13 +33,10 @@ Module 'social' depends on non-exposed type org.margin.server.users.models.UserE
 Module 'social' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!
 Module 'social' depends on non-exposed type org.margin.server.users.services.UserService within module 'users'!
 Module 'storage' depends on non-exposed type org.margin.server.social.channel.ChannelLookup within module 'social'!
-Module 'storage' depends on non-exposed type org.margin.server.social.channel.entities.Channel within module 'social'!
-Module 'storage' depends on non-exposed type org.margin.server.social.conversation.models.Conversation within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.conversation.services.ConversationService within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.conversation.validations.ConversationAuthorizationService within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.margin.MarginLookup within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.social.margin.entities.Margin within module 'social'!
-Module 'storage' depends on non-exposed type org.margin.server.social.space.models.Space within module 'social'!
 Module 'storage' depends on non-exposed type org.margin.server.subscriptions.services.SubscriptionValidationService within module 'subscriptions'!
 Module 'storage' depends on non-exposed type org.margin.server.users.models.User within module 'users'!
 Module 'storage' depends on non-exposed type org.margin.server.users.models.dtos.UserDTO within module 'users'!
