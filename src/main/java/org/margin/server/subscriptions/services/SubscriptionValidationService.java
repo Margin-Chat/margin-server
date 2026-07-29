@@ -6,7 +6,6 @@ import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
-import org.margin.server.storage.api.StorageQuota;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.margin.server.subscriptions.exceptions.SubscriptionLimitExceededException;
 import org.margin.server.subscriptions.models.LimitType;
@@ -25,14 +24,11 @@ public class SubscriptionValidationService {
 
     private final SubscriptionService subscriptionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final StorageQuota storageQuota;
 
     public SubscriptionValidationService(SubscriptionService subscriptionService,
-                                         ApplicationEventPublisher eventPublisher,
-                                         StorageQuota storageQuota) {
+                                         ApplicationEventPublisher eventPublisher) {
         this.subscriptionService = subscriptionService;
         this.eventPublisher = eventPublisher;
-        this.storageQuota = storageQuota;
     }
 
     public Subscription getSubscriptionForMargin(Margin margin) {
@@ -75,10 +71,9 @@ public class SubscriptionValidationService {
         return getSubscriptionForMargin(margin).getLimits().getMaxCallParticipants();
     }
 
-    public void validateStorageQuota(Margin margin, long newFileBytes) {
+    public void validateStorageQuota(Margin margin, long usedBytes, long newFileBytes) {
         Subscription subscription = getSubscriptionForMargin(margin);
         long maxBytes = subscription.getLimits().getMaxStorageGb() * BYTES_PER_GB;
-        long usedBytes = storageQuota.sumStoredBytesForMargin(margin.getId());
         if (usedBytes + newFileBytes > maxBytes) {
             throw new SubscriptionLimitExceededException(
                     "Storage quota exceeded",
