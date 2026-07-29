@@ -6,7 +6,6 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

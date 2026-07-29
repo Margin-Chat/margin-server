@@ -10,7 +10,6 @@ import org.margin.server.social.announcements.repositories.AnnouncementRepositor
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.repositories.MarginRepository;
-import org.margin.server.users.services.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -23,14 +22,12 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final UserLookup userLookup;
     private final MarginRepository marginRepository;
-    private final UserService userService;
     private final ApplicationEventPublisher eventPublisher;
 
-    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, UserService userService, ApplicationEventPublisher eventPublisher,
+    public AnnouncementService(AnnouncementRepository announcementRepository, MarginRepository marginRepository, ApplicationEventPublisher eventPublisher,
                               UserLookup userLookup) {
         this.announcementRepository = announcementRepository;
         this.marginRepository = marginRepository;
-        this.userService = userService;
         this.eventPublisher = eventPublisher;
         this.userLookup = userLookup;
     }

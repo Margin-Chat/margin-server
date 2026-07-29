@@ -13,7 +13,6 @@ import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
-import org.margin.server.users.models.User;
 import org.margin.server.social.space.events.UserJoinedSpaceEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;

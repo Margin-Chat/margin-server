@@ -18,8 +18,6 @@ import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.exceptions.UserNotFoundException;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -41,7 +39,6 @@ public class MarginService {
     private final MarginRepository marginRepository;
     private final MarginIconStore marginIconStore;
     private final MarginMemberRepository marginMemberRepository;
-    private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -51,7 +48,6 @@ public class MarginService {
     public MarginService(MarginRepository marginRepository,
                          MarginIconStore marginIconStore,
                          MarginMemberRepository marginMemberRepository,
-                         UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
                          ApplicationEventPublisher eventPublisher,
@@ -60,7 +56,6 @@ public class MarginService {
         this.marginRepository = marginRepository;
         this.marginIconStore = marginIconStore;
         this.marginMemberRepository = marginMemberRepository;
-        this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
         this.eventPublisher = eventPublisher;
@@ -90,7 +85,7 @@ public class MarginService {
                                   String description,
                                   Visibility visibility,
                                   MultipartFile marginIcon,
-                                  User user) {
+                                  Long userId) {
 
         String iconUrl = null;
         if (marginIcon != null && !marginIcon.isEmpty()) {
@@ -106,7 +101,7 @@ public class MarginService {
 
         marginSubscriptionPolicy.onMarginCreated(margin.getId());
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user.getId(), true);
+        addUserToMargin(margin.getId(), userId, MarginRole.OWNER, userId, true);
 
         spacesService.createNewSpace(
                 new CreateSpaceDTO(
@@ -115,7 +110,7 @@ public class MarginService {
                         Visibility.PUBLIC,
                         margin.getId()
                 ),
-                user.getId(),
+                userId,
                 margin
         );
 
@@ -141,7 +136,6 @@ public class MarginService {
                                         boolean isNewlyCreated) {
 
         Margin margin = getById(marginId);
-        User user = userService.getById(userId);
 
         marginSubscriptionPolicy.validateAddMarginMember(marginId);
 

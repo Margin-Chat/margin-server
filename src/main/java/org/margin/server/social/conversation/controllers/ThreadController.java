@@ -6,7 +6,6 @@ import org.margin.server.social.conversation.models.dtos.CreateThreadPostRequest
 import org.margin.server.social.conversation.models.dtos.ThreadConversationDTO;
 import org.margin.server.social.conversation.models.dtos.ThreadSummaryDTO;
 import org.margin.server.social.conversation.services.ThreadService;
-import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -64,7 +63,4 @@ public class ThreadController {
         return ResponseEntity.ok().build();
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
-    }
 }

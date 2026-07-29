@@ -6,6 +6,7 @@ import org.margin.server.users.models.dtos.UserDTO;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface UserLookup {
@@ -22,6 +23,12 @@ public interface UserLookup {
     UserContact contactOf(Long userId);
 
     UserDTO dtoOf(Long userId);
+
+    UserSummary summaryOf(Long userId);
+
+    Optional<Long> idByEmail(String email);
+
+    Map<Long, String> publicKeysOf(Collection<Long> userIds);
 
     List<UserDTO> dtosOf(Collection<Long> userIds);
 

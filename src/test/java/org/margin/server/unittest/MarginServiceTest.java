@@ -84,14 +84,13 @@ class MarginServiceTest {
             m.setMembers(new ArrayList<>());
             return Optional.of(m);
         });
-        when(userService.getById(1L)).thenReturn(createUser(1L, "testuser"));
     }
 
     @Test
     void shouldCreateMargin() {
         stubMarginSave();
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, createUser(1L, "testuser"));
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, createUser(1L, "testuser").getId());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -139,7 +138,7 @@ class MarginServiceTest {
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
         when(marginIconStore.save(profilePicture)).thenReturn(expectedUrl);
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser"));
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser").getId());
 
         verify(marginIconStore, times(1)).save(profilePicture);
 
@@ -164,7 +163,7 @@ class MarginServiceTest {
                 new byte[0]
         );
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser"));
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser").getId());
 
         verify(marginIconStore, never()).save(any());
 
@@ -188,7 +187,7 @@ class MarginServiceTest {
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->
-                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser"))
+                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser").getId())
         );
 
         verify(marginRepository, never()).save(any());

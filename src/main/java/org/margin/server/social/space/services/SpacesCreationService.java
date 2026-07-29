@@ -9,7 +9,6 @@ import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;

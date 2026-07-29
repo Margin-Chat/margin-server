@@ -9,7 +9,6 @@ import org.margin.server.social.margin.models.dtos.*;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
-import org.margin.server.users.models.User;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,7 +51,7 @@ public class MarginController {
                 request.marginDescription(),
                 Visibility.valueOf(request.visibility()),
                 marginIcon,
-                entityOf(user));
+                user.id());
 
         return ResponseEntity.ok(created);
     }
@@ -116,7 +115,4 @@ public class MarginController {
         return ResponseEntity.ok().build();
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
-    }
 }

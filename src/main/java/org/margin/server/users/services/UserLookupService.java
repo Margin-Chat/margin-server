@@ -1,6 +1,7 @@
 package org.margin.server.users.services;
 
 import org.margin.server.users.api.UserLookup;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -10,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -37,6 +40,31 @@ public class UserLookupService implements UserLookup {
     @Override
     public List<User> findAllById(Collection<Long> userIds) {
         return userRepository.findAllById(userIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserSummary summaryOf(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        return new UserSummary(user.getId(), user.getDisplayName());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Long> idByEmail(String email) {
+        return userRepository.findByEmail(email).map(User::getId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, String> publicKeysOf(Collection<Long> userIds) {
+        Map<Long, String> keys = new LinkedHashMap<>();
+        for (User user : userRepository.findAllById(userIds)) {
+            if (user.getEncryption() != null && user.getEncryption().getPublicKey() != null) {
+                keys.put(user.getId(), user.getEncryption().getPublicKey());
+            }
+        }
+        return keys;
     }
 
     @Override

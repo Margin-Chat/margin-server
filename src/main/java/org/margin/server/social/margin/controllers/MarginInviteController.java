@@ -2,6 +2,7 @@ package org.margin.server.social.margin.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.margin.server.users.api.UserLookup;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
@@ -11,8 +12,6 @@ import org.margin.server.social.margin.service.MarginInviteService;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,7 +29,7 @@ public class MarginInviteController {
     private final MarginAuthorizationService marginAuthorizationService;
     private final MarginService marginService;
     private final MarginMapper marginMapper;
-    private final UserService userService;
+    private final UserLookup userLookup;
 
     @PostMapping("/margins/{marginId}/link")
     public ResponseEntity<MarginInviteDTO> createLinkInvite(
@@ -62,19 +61,20 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is empty");
         }
 
-        User targetUser = userService.getByEmail(email);
+        Long targetUserId = userLookup.idByEmail(email.toLowerCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        if (marginService.isUserMember(marginId, targetUser.getId())) {
+        if (marginService.isUserMember(marginId, targetUserId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");
         }
 
-        if (marginInviteService.hasPendingInviteForMargin(marginId, targetUser.getId())) {
+        if (marginInviteService.hasPendingInviteForMargin(marginId, targetUserId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has a pending invite to this margin");
         }
 
         MarginInvite invite = marginInviteService.createDirectInvite(
                 marginService.getById(marginId),
-                targetUser.getId(),
+                targetUserId,
                 user.id()
         );
 
@@ -164,9 +164,6 @@ public class MarginInviteController {
         );
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userService.getById(principal.id());
-    }
 
     private MarginInviteDTO toDTO(MarginInvite invite) {
         return MarginInviteDTO.from(invite,
@@ -175,6 +172,6 @@ public class MarginInviteController {
     }
 
     private String nameOf(Long userId) {
-        return userId == null ? null : userService.getById(userId).getDisplayName();
+        return userId == null ? null : userLookup.summaryOf(userId).displayName();
     }
 }

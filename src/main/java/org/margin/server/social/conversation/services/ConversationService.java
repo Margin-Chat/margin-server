@@ -16,11 +16,9 @@ import org.margin.server.social.conversation.repositories.ConversationMemberRepo
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.users.api.UserSummary;
 import org.margin.server.users.exceptions.UserNotFoundException;
-import org.margin.server.users.models.User;
 import org.margin.server.social.conversation.models.dtos.RecentChatUsersDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.api.UserLookup;
-import org.margin.server.users.services.UserService;
 import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +45,6 @@ public class ConversationService {
     private final ConversationService self;
     private final PresenceService presenceService;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserService userService;
 
     @Autowired
     public ConversationService(ConversationCreationService conversationCreationService,
@@ -56,8 +53,7 @@ public class ConversationService {
                                UserLookup userLookup,
                                @Lazy ConversationService self,
                                PresenceService presenceService,
-                               ApplicationEventPublisher eventPublisher,
-                               UserService userService) {
+                               ApplicationEventPublisher eventPublisher) {
         this.conversationCreationService = conversationCreationService;
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
@@ -65,7 +61,6 @@ public class ConversationService {
         this.self = self;
         this.presenceService = presenceService;
         this.eventPublisher = eventPublisher;
-        this.userService = userService;
     }
 
     @Cacheable(value = "conversations", key = "#id")
@@ -183,19 +178,19 @@ public class ConversationService {
     }
 
     @Transactional
-    public Conversation createGroupConversation(User creator, List<String> memberEmails, String name, boolean encrypted) {
+    public Conversation createGroupConversation(Long creatorId, List<String> memberEmails, String name, boolean encrypted) {
         Conversation conversation = conversationCreationService.createGroupConversation(name, encrypted);
 
         // Creator is immediately an accepted member
-        conversationCreationService.createConversationMember(conversation, creator.getId());
+        conversationCreationService.createConversationMember(conversation, creatorId);
 
         // All other members are invited (PENDING)
         for (String email : memberEmails) {
-            User invitee = userLookup.findByEmail(email)
+            Long inviteeId = userLookup.idByEmail(email)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "User not found: " + email));
             conversationCreationService.createConversationMemberWithStatus(
-                    conversation, invitee.getId(), ConversationInviteStatus.PENDING);
+                    conversation, inviteeId, ConversationInviteStatus.PENDING);
 
             GroupConversationDTO groupDTO = new GroupConversationDTO(
                     conversation.getId(),
@@ -205,7 +200,7 @@ public class ConversationService {
                     List.of(),
                     encrypted
             );
-            eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, new UserSummary(creator.getId(), creator.getDisplayName()), invitee.getId()));
+            eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, userLookup.summaryOf(creatorId), inviteeId));
         }
 
         return conversation;
@@ -213,17 +208,15 @@ public class ConversationService {
 
     @Transactional
     @CacheEvict(value = "conversations", key = "#conversationId")
-    public void addMember(Long conversationId, Long userId, User adder) {
+    public void addMember(Long conversationId, Long userId, Long adderId) {
         Conversation conversation = self.getById(conversationId);
-        User invitee = userLookup.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
         if (conversationMemberRepository.findByConversationIdAndUserId(conversationId, userId).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member or has a pending invite");
         }
 
         conversationCreationService.createConversationMemberWithStatus(
-                conversation, invitee.getId(), ConversationInviteStatus.PENDING);
+                conversation, userId, ConversationInviteStatus.PENDING);
 
         GroupConversationDTO groupDTO = new GroupConversationDTO(
                 conversation.getId(),
@@ -233,7 +226,7 @@ public class ConversationService {
                 List.of(),
                 conversation.isEncrypted()
         );
-        eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, new UserSummary(adder.getId(), adder.getDisplayName()), invitee.getId()));
+        eventPublisher.publishEvent(new ConversationInviteEvent(groupDTO, userLookup.summaryOf(adderId), userId));
     }
 
     @Transactional
@@ -332,29 +325,29 @@ public class ConversationService {
     }
 
     @Transactional
-    public Conversation createNewDirectConversation(User user, User recipientUser, boolean encrypted) {
+    public Conversation createNewDirectConversation(Long userId, Long recipientUserId, boolean encrypted) {
         Conversation directConversation = conversationCreationService.createDirectConversation(encrypted);
-        conversationCreationService.createConversationMember(directConversation, user.getId());
-        conversationCreationService.createConversationMember(directConversation, recipientUser.getId());
+        conversationCreationService.createConversationMember(directConversation, userId);
+        conversationCreationService.createConversationMember(directConversation, recipientUserId);
         return directConversation;
     }
 
     @Transactional
-    public DirectConversationDTO sendConversationInvite(User sender, User recipient, boolean encrypted) {
-        Conversation existing = findDirectConversationBetweenUsers(sender.getId(), recipient.getId());
+    public DirectConversationDTO sendConversationInvite(Long senderId, Long recipientId, boolean encrypted) {
+        Conversation existing = findDirectConversationBetweenUsers(senderId, recipientId);
         if (existing != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Conversation already exists");
         }
 
         Conversation conversation = conversationCreationService.createDirectConversation(encrypted);
-        conversationCreationService.createConversationMember(conversation, sender.getId());
-        conversationCreationService.createConversationMemberWithStatus(conversation, recipient.getId(),
+        conversationCreationService.createConversationMember(conversation, senderId);
+        conversationCreationService.createConversationMemberWithStatus(conversation, recipientId,
                 ConversationInviteStatus.PENDING);
 
         DirectConversationDTO dto = new DirectConversationDTO(
                 conversation.getId(),
                 conversation.getCreatedAt(),
-                recipient.getId(),
+                recipientId,
                 null,
                 ConversationInviteStatus.ACCEPTED,
                 encrypted
@@ -364,22 +357,22 @@ public class ConversationService {
                 new DirectConversationDTO(
                         conversation.getId(),
                         conversation.getCreatedAt(),
-                        sender.getId(),
+                        senderId,
                         null,
                         ConversationInviteStatus.PENDING,
                         encrypted
                 ),
-                new UserSummary(sender.getId(), sender.getDisplayName()),
-                recipient.getId()
+                userLookup.summaryOf(senderId),
+                recipientId
         ));
 
         return dto;
     }
 
     @Transactional
-    public void acceptConversationInvite(Long conversationId, User user) {
+    public void acceptConversationInvite(Long conversationId, Long userId) {
         ConversationMember member = conversationMemberRepository
-                .findByConversationIdAndUserId(conversationId, user.getId())
+                .findByConversationIdAndUserId(conversationId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
 
         if (member.getInviteStatus() != ConversationInviteStatus.PENDING) {
@@ -392,30 +385,30 @@ public class ConversationService {
 
         if (conversation.getType() == ConversationType.DIRECT) {
             ConversationMember otherMember = conversation.getMembers().stream()
-                    .filter(m -> !m.getUserId().equals(user.getId()))
+                    .filter(m -> !m.getUserId().equals(userId))
                     .findFirst()
                     .orElseThrow(UserNotFoundException::new);
 
             eventPublisher.publishEvent(new ConversationInviteAcceptedEvent(
-                    this.getConversationDTO(conversation, user.getId()),
+                    this.getConversationDTO(conversation, userId),
                     userLookup.dtoOf(member.getUserId()),
                     otherMember.getId().getUserId()));
         } else {
             // Notify all other ACCEPTED members that someone joined so their member list stays current
-            ConversationDTO updatedDTO = getConversationDTO(conversation, user.getId());
+            ConversationDTO updatedDTO = getConversationDTO(conversation, userId);
             for (Long memberId : getConversationMembers(conversationId)) {
-                if (!memberId.equals(user.getId())) {
+                if (!memberId.equals(userId)) {
                     eventPublisher.publishEvent(new ConversationInviteAcceptedEvent(
-                            updatedDTO, userService.toDTO(user), memberId));
+                            updatedDTO, userLookup.dtoOf(userId), memberId));
                 }
             }
         }
     }
 
     @Transactional
-    public void declineConversationInvite(Long conversationId, User user) {
+    public void declineConversationInvite(Long conversationId, Long userId) {
         ConversationMember member = conversationMemberRepository
-                .findByConversationIdAndUserId(conversationId, user.getId())
+                .findByConversationIdAndUserId(conversationId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
 
         if (member.getInviteStatus() != ConversationInviteStatus.PENDING) {
@@ -430,12 +423,12 @@ public class ConversationService {
             conversationMemberRepository.save(member);
 
             ConversationMember sender = conversation.getMembers().stream()
-                    .filter(m -> !m.getUserId().equals(user.getId()))
+                    .filter(m -> !m.getUserId().equals(userId))
                     .findFirst()
                     .orElseThrow(UserNotFoundException::new);
 
             eventPublisher.publishEvent(new ConversationInviteDeclinedEvent(
-                    conversationId, userService.toDTO(user), sender.getId().getUserId()));
+                    conversationId, userLookup.dtoOf(userId), sender.getId().getUserId()));
         }
     }
 
@@ -517,13 +510,6 @@ public class ConversationService {
         if (!conversationMemberRepository.isUserMemberOfConversation(conversationId, requestingUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this conversation");
         }
-        java.util.Map<Long, String> keys = new java.util.LinkedHashMap<>();
-        for (Long memberId : getConversationMembers(conversationId)) {
-            User member = userLookup.findById(memberId).orElseThrow();
-            if (member.getEncryption() != null && member.getEncryption().getPublicKey() != null) {
-                keys.put(member.getId(), member.getEncryption().getPublicKey());
-            }
-        }
-        return keys;
+        return userLookup.publicKeysOf(getConversationMembers(conversationId));
     }
 }

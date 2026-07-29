@@ -11,8 +11,6 @@ import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.social.conversation.models.dtos.SentConversationInvitePayload;
 import org.springframework.http.HttpStatus;
@@ -30,21 +28,19 @@ public class ConversationController {
 
     private final MessageService messageService;
     private final ConversationService conversationService;
-    private final UserService userService;
     private final ConversationAuthorizationService conversationAuthorizationService;
     private final MarginAuthorizationService marginAuthorizationService;
     private final RateLimitService rateLimitService;
     private final UserLookup userLookup;
 
     public ConversationController(MessageService messageService,
-                                  ConversationService conversationService, UserService userService,
+                                  ConversationService conversationService,
                                   ConversationAuthorizationService conversationAuthorizationService,
                                   MarginAuthorizationService marginAuthorizationService,
                                   RateLimitService rateLimitService,
                               UserLookup userLookup) {
         this.messageService = messageService;
         this.conversationService = conversationService;
-        this.userService = userService;
         this.conversationAuthorizationService = conversationAuthorizationService;
         this.marginAuthorizationService = marginAuthorizationService;
         this.rateLimitService = rateLimitService;
@@ -118,11 +114,11 @@ public class ConversationController {
     @PostMapping("/conversations/create_private")
     public ConversationDTO startNewPrivateConversation(@RequestBody CreatePrivateConversationRequest request,
                                                        @AuthenticationPrincipal AuthenticatedUser user) {
-        User recipientUser = userService.getById(request.recipientUserId());
-        Conversation existing = conversationService.findDirectConversationBetweenUsers(user.id(), recipientUser.getId());
+        Long recipientUserId = request.recipientUserId();
+        Conversation existing = conversationService.findDirectConversationBetweenUsers(user.id(), recipientUserId);
         Conversation directConversation = existing != null
                 ? existing
-                : conversationService.createNewDirectConversation(entityOf(user), recipientUser, request.encrypted());
+                : conversationService.createNewDirectConversation(user.id(), recipientUserId, request.encrypted());
         messageService.sendMessage(user.id(), request.encryptedContent(), directConversation.getId(), null);
         return conversationService.getConversationDTO(directConversation, user.id());
     }
@@ -133,7 +129,7 @@ public class ConversationController {
             @AuthenticationPrincipal AuthenticatedUser user) {
 
         Conversation conversation = conversationService.createGroupConversation(
-                entityOf(user),
+                user.id(),
                 request.memberEmails(),
                 request.name(),
                 request.encrypted()
@@ -165,8 +161,9 @@ public class ConversationController {
         if (!rateLimitService.tryConsume(key, RateLimitConfig.sendInvite())) {
             throw new TooManyRequestsException("Too many invites. Try again later.");
         }
-        User recipient = userService.getByEmail(request.email());
-        return conversationService.sendConversationInvite(entityOf(user), recipient, request.isEncrypted());
+        Long recipientId = userLookup.idByEmail(request.email())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        return conversationService.sendConversationInvite(user.id(), recipientId, request.isEncrypted());
     }
 
     @GetMapping("/conversations/pending_invites")
@@ -183,7 +180,7 @@ public class ConversationController {
     public ResponseEntity<Void> acceptConversationInvite(
             @PathVariable Long conversationId,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        conversationService.acceptConversationInvite(conversationId, entityOf(user));
+        conversationService.acceptConversationInvite(conversationId, user.id());
         return ResponseEntity.ok().build();
     }
 
@@ -191,7 +188,7 @@ public class ConversationController {
     public ResponseEntity<Void> declineConversationInvite(
             @PathVariable Long conversationId,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        conversationService.declineConversationInvite(conversationId, entityOf(user));
+        conversationService.declineConversationInvite(conversationId, user.id());
         return ResponseEntity.noContent().build();
     }
 
@@ -211,7 +208,7 @@ public class ConversationController {
 
         conversationAuthorizationService.requireConversationMember(conversationId, user.id());
 
-        conversationService.addMember(conversationId, request.userId(), entityOf(user));
+        conversationService.addMember(conversationId, request.userId(), user.id());
         return ResponseEntity.ok().build();
     }
 
@@ -245,7 +242,4 @@ public class ConversationController {
         return conversationService.getRecentChatUsers(user.id());
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
-    }
 }

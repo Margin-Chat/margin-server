@@ -7,7 +7,6 @@ import org.margin.server.social.announcements.models.dtos.CreateAnnouncementRequ
 import org.margin.server.social.announcements.models.dtos.DeleteAnnouncementRequest;
 import org.margin.server.social.announcements.services.AnnouncementService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -60,7 +59,4 @@ public class AnnouncementController {
         return ResponseEntity.ok().build();
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
-    }
 }

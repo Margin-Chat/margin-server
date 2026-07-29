@@ -5,7 +5,6 @@ import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

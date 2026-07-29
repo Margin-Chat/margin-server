@@ -11,8 +11,6 @@ import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -26,18 +24,15 @@ public class SpacesController {
 
     private final SpacesService spacesService;
     private final MarginAuthorizationService marginAuthorizationService;
-    private final UserService userService;
     private final MarginService marginService;
     private final UserLookup userLookup;
 
     public SpacesController(SpacesService spacesService,
                             MarginAuthorizationService marginAuthorizationService,
-                            UserService userService,
                             MarginService marginService,
                               UserLookup userLookup) {
         this.spacesService = spacesService;
         this.marginAuthorizationService = marginAuthorizationService;
-        this.userService = userService;
         this.marginService = marginService;
         this.userLookup = userLookup;
     }
@@ -69,12 +64,12 @@ public class SpacesController {
                                                          @RequestBody SpaceMemberDTO spaceMemberDTO) {
         marginAuthorizationService.requireSpaceAdmin(user.id(), spaceMemberDTO.spaceId());
 
-        User userToAdd = userService.getById(spaceMemberDTO.user().id());
+        Long userToAddId = spaceMemberDTO.user().id();
         SpaceRole role = spaceMemberDTO.role() == null
                 ? SpaceRole.MEMBER
                 : SpaceRole.valueOf(spaceMemberDTO.role().name());
 
-        SpaceMemberDTO memberDto = spacesService.addNewUserToSpace(userToAdd.getId(), spaceMemberDTO.spaceId(), role);
+        SpaceMemberDTO memberDto = spacesService.addNewUserToSpace(userToAddId, spaceMemberDTO.spaceId(), role);
         return ResponseEntity.ok(memberDto);
     }
 
@@ -114,7 +109,4 @@ public class SpacesController {
         return ResponseEntity.ok().build();
     }
 
-    private User entityOf(AuthenticatedUser principal) {
-        return principal == null ? null : userLookup.findById(principal.id()).orElseThrow();
-    }
 }

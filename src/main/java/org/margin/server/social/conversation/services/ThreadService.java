@@ -19,7 +19,6 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.api.UserLookup;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;

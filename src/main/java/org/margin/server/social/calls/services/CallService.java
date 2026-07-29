@@ -11,8 +11,6 @@ import org.margin.server.social.calls.models.Call;
 import org.margin.server.social.calls.models.CallStatus;
 import org.margin.server.social.calls.models.CallType;
 import org.margin.server.social.calls.repositories.CallRepository;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.margin.server.social.calls.models.CallSessionDescription;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -24,13 +22,11 @@ import java.time.Instant;
 public class CallService {
     private final CallRepository callRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserService userService;
     private final CallValidationService callValidationService;
 
-    public CallService(CallRepository callRepository, ApplicationEventPublisher eventPublisher, UserService userService, CallValidationService callValidationService) {
+    public CallService(CallRepository callRepository, ApplicationEventPublisher eventPublisher, CallValidationService callValidationService) {
         this.callRepository = callRepository;
         this.eventPublisher = eventPublisher;
-        this.userService = userService;
         this.callValidationService = callValidationService;
     }
 

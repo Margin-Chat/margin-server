@@ -20,7 +20,6 @@ import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.shared.authorization.ChannelAudience;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;

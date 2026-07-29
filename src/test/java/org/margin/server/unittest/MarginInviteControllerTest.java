@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.margin.controllers.MarginInviteController;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
@@ -14,7 +15,6 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -48,7 +48,7 @@ class MarginInviteControllerTest {
     @Mock
     private MarginService marginService;
     @Mock
-    private UserService userService;
+    private UserLookup userLookup;
     @Mock
     private MarginMapper marginMapper;
 
@@ -64,8 +64,10 @@ class MarginInviteControllerTest {
         adminUser = createUser(1L, "admin");
         targetUser = createUser(2L, "targetUser");
         margin = createMargin(1L, "Test Margin");
-        lenient().when(userService.getById(adminUser.getId())).thenReturn(adminUser);
-        lenient().when(userService.getById(targetUser.getId())).thenReturn(targetUser);
+        lenient().when(userLookup.summaryOf(adminUser.getId()))
+                .thenReturn(new org.margin.server.users.api.UserSummary(adminUser.getId(), adminUser.getDisplayName()));
+        lenient().when(userLookup.summaryOf(targetUser.getId()))
+                .thenReturn(new org.margin.server.users.api.UserSummary(targetUser.getId(), targetUser.getDisplayName()));
     }
 
     @Test
@@ -110,7 +112,7 @@ class MarginInviteControllerTest {
     @Test
     void createDirectInvite_shouldReturnInvite() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
         when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
@@ -134,7 +136,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_whenUserAlreadyMember_shouldThrow409() {
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
         when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser)))
@@ -143,7 +145,7 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_whenPendingInviteExists_shouldThrow409() {
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
         when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(true);
 

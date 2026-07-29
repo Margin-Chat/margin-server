@@ -13,7 +13,6 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
-import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -87,7 +86,7 @@ class MarginControllerTest {
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
                 eq(null),
-                any(User.class));
+                any(Long.class));
     }
 
     @Test
@@ -113,7 +112,7 @@ class MarginControllerTest {
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
                 any(),
-                any(User.class));
+                any(Long.class));
     }
 
     @Test
