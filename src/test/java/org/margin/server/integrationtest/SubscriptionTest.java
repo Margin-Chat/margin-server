@@ -34,7 +34,7 @@ class SubscriptionTest extends MarginTestRunner {
 
         assertEquals(SubscriptionTier.FREE, subscription.getTier());
         assertEquals(SubscriptionStatus.ACTIVE, subscription.getStatus());
-        assertEquals(margin.getId(), subscription.getMargin().getId());
+        assertEquals(margin.getId(), subscription.getMarginId());
     }
 
     @Test

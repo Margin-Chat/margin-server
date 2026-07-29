@@ -125,7 +125,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
 
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
 
-        subscriptionWebhookService.cancelPendingPayment(margin);
+        subscriptionWebhookService.cancelPendingPayment(margin.getId());
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getPendingPaymentId()).isNull();

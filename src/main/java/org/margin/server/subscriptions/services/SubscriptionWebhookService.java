@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.email.EmailService;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
-import org.margin.server.social.margin.entities.Margin;
-import org.margin.server.social.margin.entities.MarginMember;
-import org.margin.server.social.margin.service.MarginService;
+import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.users.api.UserLookup;
+
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -49,7 +49,8 @@ public class SubscriptionWebhookService {
     private final SubscriptionPricingProperties pricingProperties;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
-    private final MarginService marginService;
+    private final MarginDirectory marginDirectory;
+    private final UserLookup userLookup;
     private final SubscriptionWebhookService self;
 
     public SubscriptionWebhookService(MollieClient mollieClient,
@@ -59,7 +60,8 @@ public class SubscriptionWebhookService {
                                       SubscriptionPricingProperties pricingProperties,
                                       EmailService emailService,
                                       ApplicationEventPublisher eventPublisher,
-                                      MarginService marginService,
+                                      MarginDirectory marginDirectory,
+                                      UserLookup userLookup,
                                       @Lazy SubscriptionWebhookService self) {
         this.mollieClient = mollieClient;
         this.subscriptionRepository = subscriptionRepository;
@@ -68,7 +70,8 @@ public class SubscriptionWebhookService {
         this.pricingProperties = pricingProperties;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
-        this.marginService = marginService;
+        this.marginDirectory = marginDirectory;
+        this.userLookup = userLookup;
         this.self = self;
     }
 
@@ -83,7 +86,7 @@ public class SubscriptionWebhookService {
 
         for (Subscription subscription : stale) {
             try {
-                self.reconcilePendingPayment(subscription.getMargin());
+                self.reconcilePendingPayment(subscription.getMarginId());
             } catch (Exception e) {
                 log.warn("Failed to reconcile stale pending payment for subscription {}",
                         subscription.getId(), e);
@@ -92,32 +95,32 @@ public class SubscriptionWebhookService {
     }
 
     @Transactional
-    public SubscriptionDTO reconcilePendingPayment(Margin margin) {
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+    public SubscriptionDTO reconcilePendingPayment(Long marginId) {
+        Subscription subscription = subscriptionRepository.findByMarginId(marginId).orElseThrow();
         if (subscription.getPendingPaymentId() != null) {
             try {
                 self.handleWebhook(subscription.getPendingPaymentId());
             } catch (Exception e) {
                 log.warn("Failed to reconcile pending payment {} for margin {}",
-                        subscription.getPendingPaymentId(), margin.getId(), e);
+                        subscription.getPendingPaymentId(), marginId, e);
             }
         }
-        return subscriptionService.getSubscriptionDtoForMargin(margin);
+        return subscriptionService.getSubscriptionDtoForMargin(marginId);
     }
 
     @Transactional
-    public SubscriptionDTO cancelPendingPayment(Margin margin) {
-        self.reconcilePendingPayment(margin);
+    public SubscriptionDTO cancelPendingPayment(Long marginId) {
+        self.reconcilePendingPayment(marginId);
 
-        Subscription subscription = subscriptionRepository.findByMargin(margin).orElseThrow();
+        Subscription subscription = subscriptionRepository.findByMarginId(marginId).orElseThrow();
         if (subscription.getPendingPaymentId() != null) {
             log.info("Cancelling pending payment {} for margin {}",
-                    subscription.getPendingPaymentId(), margin.getId());
+                    subscription.getPendingPaymentId(), marginId);
             subscription.setPendingPaymentId(null);
             subscription.setPendingTier(null);
             subscriptionRepository.save(subscription);
         }
-        return subscriptionService.getSubscriptionDtoForMargin(margin);
+        return subscriptionService.getSubscriptionDtoForMargin(marginId);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -198,7 +201,7 @@ public class SubscriptionWebhookService {
             return;
         }
 
-        String description = "margin %s — %s plan".formatted(subscription.getMargin().getName(), targetTier);
+        String description = "margin %s — %s plan".formatted(marginDirectory.summaryOf(subscription.getMarginId()).name(), targetTier);
         SubscriptionResponse mollieSubscription;
         try {
             mollieSubscription = mollieClient.createSubscription(
@@ -267,9 +270,9 @@ public class SubscriptionWebhookService {
 
     private void notifyOwner(Subscription subscription, NotificationType type) {
         try {
-            MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
+            Long ownerUserId = marginDirectory.ownerUserIdOf(subscription.getMarginId());
             eventPublisher.publishEvent(new SubscriptionStatusChangedEvent(
-                    owner.getUser().getId(), type, subscription.getMargin().getId()));
+                    ownerUserId, type, subscription.getMarginId()));
         } catch (Exception e) {
             log.warn("Failed to send {} notification for subscription {}", type, subscription.getId(), e);
         }
@@ -277,9 +280,9 @@ public class SubscriptionWebhookService {
 
     private void pushSubscriptionUpdate(Subscription subscription) {
         try {
-            MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
-            SubscriptionDTO dto = subscriptionService.getSubscriptionDtoForMargin(subscription.getMargin());
-            eventPublisher.publishEvent(new SubscriptionUpdatedEvent(owner.getUser().getId(), dto));
+            Long ownerUserId = marginDirectory.ownerUserIdOf(subscription.getMarginId());
+            SubscriptionDTO dto = subscriptionService.getSubscriptionDtoForMargin(subscription.getMarginId());
+            eventPublisher.publishEvent(new SubscriptionUpdatedEvent(ownerUserId, dto));
         } catch (Exception e) {
             log.warn("Failed to push subscription update for subscription {}", subscription.getId(), e);
         }
@@ -287,11 +290,11 @@ public class SubscriptionWebhookService {
 
     private void sendPaymentConfirmation(Subscription subscription, PaymentResponse payment, SubscriptionTier tier) {
         try {
-            MarginMember owner = marginService.getOwner(subscription.getMargin().getId());
+            UserLookup.UserContact owner = userLookup.contactOf(marginDirectory.ownerUserIdOf(subscription.getMarginId()));
             Amount amount = payment.amount();
             String html = emailService.buildInvoiceMail(
-                    owner.getUser().getDisplayName(),
-                    subscription.getMargin().getName(),
+                    owner.displayName(),
+                    marginDirectory.summaryOf(subscription.getMarginId()).name(),
                     tier.name(),
                     amount.value(),
                     amount.currency(),
@@ -299,8 +302,8 @@ public class SubscriptionWebhookService {
                     subscription.getCurrentPeriodEnd()
             );
             emailService.sendEmail(
-                    owner.getUser().getEmail(),
-                    "Payment receipt — " + subscription.getMargin().getName(),
+                    owner.email(),
+                    "Payment receipt — " + marginDirectory.summaryOf(subscription.getMarginId()).name(),
                     html
             );
         } catch (Exception e) {

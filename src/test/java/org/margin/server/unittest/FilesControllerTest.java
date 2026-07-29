@@ -6,7 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.margin.MarginLookup;
+import org.margin.server.social.api.MarginDirectory;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
@@ -46,7 +46,7 @@ class FilesControllerTest {
     @Mock
     private StorageProperties.S3Properties s3Properties;
     @Mock
-    private MarginLookup marginLookup;
+    private MarginDirectory marginDirectory;
     @Mock
     private StoredFileService storedFileService;
     @Mock
@@ -126,7 +126,8 @@ class FilesControllerTest {
 
     @Test
     void getMarginIcon_requiresMarginMembership() throws IOException {
-        when(marginLookup.findByIconFileName("icon.png")).thenReturn(margin);
+        when(marginDirectory.iconByFileName("icon.png"))
+                .thenReturn(new MarginDirectory.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginMember(1L, 10L);
 
@@ -137,7 +138,8 @@ class FilesControllerTest {
 
     @Test
     void getMarginIcon_servesFileForMarginMember() throws IOException {
-        when(marginLookup.findByIconFileName("icon.png")).thenReturn(margin);
+        when(marginDirectory.iconByFileName("icon.png"))
+                .thenReturn(new MarginDirectory.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile("/api/files/margin-icons/icon.png"))
                 .thenReturn(new ByteArrayResource("icon".getBytes()));

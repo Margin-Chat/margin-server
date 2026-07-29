@@ -1,6 +1,5 @@
 package org.margin.server.subscriptions.services;
 
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.springframework.stereotype.Component;
@@ -18,17 +17,17 @@ public class MarginSubscriptionPolicyAdapter implements MarginSubscriptionPolicy
     }
 
     @Override
-    public void onMarginCreated(Margin margin) {
-        subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
+    public void onMarginCreated(Long marginId) {
+        subscriptionService.createSubscriptionForMargin(marginId, SubscriptionTier.FREE);
     }
 
     @Override
-    public void validateAddMarginMember(Margin margin) {
-        subscriptionValidationService.validateAddMarginMember(margin);
+    public void validateAddMarginMember(Long marginId) {
+        subscriptionValidationService.validateAddMarginMember(marginId);
     }
 
     @Override
-    public void notifyIfApproachingMemberLimit(Margin margin) {
-        subscriptionValidationService.notifyIfApproachingMemberLimit(margin);
+    public void notifyIfApproachingMemberLimit(Long marginId) {
+        subscriptionValidationService.notifyIfApproachingMemberLimit(marginId);
     }
 }

@@ -11,7 +11,8 @@ import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
-import org.margin.server.social.margin.service.MarginService;
+import org.margin.server.social.api.MarginDirectory;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -57,7 +58,9 @@ class SubscriptionWebhookServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
-    private MarginService marginService;
+    private MarginDirectory marginDirectory;
+    @Mock
+    private UserLookup userLookup;
 
     private SubscriptionWebhookService service;
 
@@ -75,12 +78,11 @@ class SubscriptionWebhookServiceTest {
                 Map.of(SubscriptionTier.SMALL, smallConfig));
         service = new SubscriptionWebhookService(mollieClient, subscriptionRepository,
                 subscriptionService, mollie, pricing, emailService,
-                eventPublisher, marginService, null);
+                eventPublisher, marginDirectory, userLookup, null);
         ReflectionTestUtils.setField(service, "self", service);
     }
 
     private Subscription localSubscription() {
-        Margin margin = createMargin(1L, "Test Margin");
 
         SubscriptionLimits limits = new SubscriptionLimits();
         limits.setMaxMembers(25);
@@ -89,7 +91,7 @@ class SubscriptionWebhookServiceTest {
 
         Subscription sub = new Subscription();
         sub.setId(42L);
-        sub.setMargin(margin);
+        sub.setMarginId(1L);
         sub.setMollieCustomerId(CUSTOMER_ID);
         sub.setTier(SubscriptionTier.FREE);
         sub.setStatus(SubscriptionStatus.ACTIVE);
@@ -214,13 +216,13 @@ class SubscriptionWebhookServiceTest {
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
         verify(eventPublisher).publishEvent(statusCaptor.capture());
         assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_PAYMENT_FAILED);
-        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription).getId());
-        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
+        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMarginId());
 
         ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =
                 ArgumentCaptor.forClass(SubscriptionUpdatedEvent.class);
         verify(eventPublisher).publishEvent(pushCaptor.capture());
-        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription).getId());
+        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription));
     }
 
     @Test
@@ -292,13 +294,13 @@ class SubscriptionWebhookServiceTest {
                 ArgumentCaptor.forClass(SubscriptionStatusChangedEvent.class);
         verify(eventPublisher).publishEvent(statusCaptor.capture());
         assertThat(statusCaptor.getValue().getType()).isEqualTo(NotificationType.SUBSCRIPTION_UPGRADED);
-        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription).getId());
-        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMargin().getId());
+        assertThat(statusCaptor.getValue().getOwnerId()).isEqualTo(ownerUserOf(subscription));
+        assertThat(statusCaptor.getValue().getMarginId()).isEqualTo(subscription.getMarginId());
 
         ArgumentCaptor<SubscriptionUpdatedEvent> pushCaptor =
                 ArgumentCaptor.forClass(SubscriptionUpdatedEvent.class);
         verify(eventPublisher).publishEvent(pushCaptor.capture());
-        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription).getId());
+        assertThat(pushCaptor.getValue().recipientId()).isEqualTo(ownerUserOf(subscription));
     }
 
     @Test
@@ -316,7 +318,7 @@ class SubscriptionWebhookServiceTest {
         service.handleWebhook(PAYMENT_ID);
 
         verify(emailService).buildInvoiceMail(any(), any(), any(), any(), any(), any(), any());
-        verify(emailService).sendEmail(eq(ownerUserOf(subscription).getEmail()), anyString(), any());
+        verify(emailService).sendEmail(eq("owner@test.com"), anyString(), any());
     }
 
     @Test
@@ -336,7 +338,7 @@ class SubscriptionWebhookServiceTest {
         service.handleWebhook(PAYMENT_ID);
 
         verify(emailService).buildInvoiceMail(any(), any(), any(), any(), any(), any(), any());
-        verify(emailService).sendEmail(eq(ownerUserOf(subscription).getEmail()), anyString(), any());
+        verify(emailService).sendEmail(eq("owner@test.com"), anyString(), any());
     }
 
     @Test
@@ -364,7 +366,7 @@ class SubscriptionWebhookServiceTest {
         PaymentResponse payment = mockPayment(PAYMENT_ID, "open", CUSTOMER_ID, "first");
 
         when(subscriptionRepository.findStalePendingPayments(any())).thenReturn(List.of(subscription));
-        when(subscriptionRepository.findByMargin(subscription.getMargin())).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByMarginId(subscription.getMarginId())).thenReturn(Optional.of(subscription));
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
 
@@ -385,20 +387,20 @@ class SubscriptionWebhookServiceTest {
     @Test
     void reconcileStalePendingPayments_continuesAfterExceptionOnOneSub() {
         Subscription sub1 = localSubscription();
-        sub1.getMargin().setId(1L);
+        sub1.setMarginId(1L);
         sub1.setPendingPaymentId(PAYMENT_ID);
 
         Subscription sub2 = localSubscription();
-        sub2.getMargin().setId(2L);
+        sub2.setMarginId(2L);
         sub2.setMollieCustomerId("cst_second");
         sub2.setPendingPaymentId("tr_second");
 
         PaymentResponse payment2 = mockPayment("tr_second", "open", "cst_second", "first");
 
         when(subscriptionRepository.findStalePendingPayments(any())).thenReturn(List.of(sub1, sub2));
-        when(subscriptionRepository.findByMargin(sub1.getMargin()))
+        when(subscriptionRepository.findByMarginId(sub1.getMarginId()))
                 .thenThrow(new RuntimeException("db error"));
-        when(subscriptionRepository.findByMargin(sub2.getMargin())).thenReturn(Optional.of(sub2));
+        when(subscriptionRepository.findByMarginId(sub2.getMarginId())).thenReturn(Optional.of(sub2));
         when(mollieClient.getPayment("tr_second")).thenReturn(payment2);
         when(subscriptionRepository.findByMollieCustomerId("cst_second")).thenReturn(Optional.of(sub2));
 
@@ -411,15 +413,15 @@ class SubscriptionWebhookServiceTest {
     @Test
     void cancelPendingPayment_clearsIdWhenWebhookNotYetProcessed() {
         Subscription subscription = localSubscription();
-        Margin margin = subscription.getMargin();
+        Long marginId = subscription.getMarginId();
         subscription.setPendingPaymentId(PAYMENT_ID);
         PaymentResponse payment = mockPayment(PAYMENT_ID, "open", CUSTOMER_ID, "first");
 
-        when(subscriptionRepository.findByMargin(margin)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByMarginId(marginId)).thenReturn(Optional.of(subscription));
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
 
-        service.cancelPendingPayment(margin);
+        service.cancelPendingPayment(marginId);
 
         assertThat(subscription.getPendingPaymentId()).isNull();
         verify(subscriptionRepository).save(subscription);
@@ -428,36 +430,33 @@ class SubscriptionWebhookServiceTest {
     @Test
     void reconcilePendingPayment_delegatesToHandleWebhook() {
         Subscription subscription = localSubscription();
-        Margin margin = subscription.getMargin();
+        Long marginId = subscription.getMarginId();
         subscription.setPendingPaymentId(PAYMENT_ID);
         PaymentResponse payment = mockPayment(PAYMENT_ID, "open", CUSTOMER_ID, "first");
 
-        when(subscriptionRepository.findByMargin(margin)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByMarginId(marginId)).thenReturn(Optional.of(subscription));
         when(subscriptionRepository.findByMollieCustomerId(CUSTOMER_ID)).thenReturn(Optional.of(subscription));
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
 
-        service.reconcilePendingPayment(margin);
+        service.reconcilePendingPayment(marginId);
 
         verify(mollieClient).getPayment(PAYMENT_ID);
     }
 
+    private static final Long OWNER_ID = 99L;
+
     private Subscription localSubscriptionWithOwner() {
-        User owner = createUser(99L, "Owner", "owner@test.com");
-
-        MarginMember ownerMember = new MarginMember();
-        ownerMember.setUser(owner);
-        ownerMember.setRole(MarginRole.OWNER);
-
         Subscription subscription = localSubscription();
-        subscription.getMargin().getMembers().add(ownerMember);
-        lenient().when(marginService.getOwner(subscription.getMargin().getId())).thenReturn(ownerMember);
+        lenient().when(marginDirectory.ownerUserIdOf(subscription.getMarginId())).thenReturn(OWNER_ID);
+        lenient().when(userLookup.contactOf(OWNER_ID))
+                .thenReturn(new UserLookup.UserContact(OWNER_ID, "Owner", "owner@test.com"));
+        lenient().when(marginDirectory.summaryOf(subscription.getMarginId()))
+                .thenReturn(new MarginDirectory.MarginSummary(subscription.getMarginId(), "Test Margin", 1));
         return subscription;
     }
 
-    private static User ownerUserOf(Subscription subscription) {
-        return subscription.getMargin().getMembers().stream()
-                .filter(m -> m.getRole() == MarginRole.OWNER)
-                .findFirst().orElseThrow().getUser();
+    private static Long ownerUserOf(Subscription subscription) {
+        return OWNER_ID;
     }
 
     private static PaymentResponse mockPayment(String id, String status, String customerId, String sequenceType) {

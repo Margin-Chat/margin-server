@@ -1,8 +1,6 @@
 package org.margin.server.subscriptions;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.margin.MarginLookup;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.models.SubscriptionTier;
@@ -31,20 +29,17 @@ public class SubscriptionController {
     private final SubscriptionWebhookService subscriptionWebhookService;
     private final MarginAccessChecker marginAccessChecker;
     private final SubscriptionPricingProperties pricingProperties;
-    private final MarginLookup marginLookup;
     private final Executor webhookExecutor;
 
     public SubscriptionController(SubscriptionService subscriptionService,
                                   SubscriptionWebhookService subscriptionWebhookService,
                                   MarginAccessChecker marginAccessChecker,
                                   SubscriptionPricingProperties pricingProperties,
-                                  MarginLookup marginLookup,
                                   @Qualifier("webhookExecutor") Executor webhookExecutor) {
         this.subscriptionService = subscriptionService;
         this.subscriptionWebhookService = subscriptionWebhookService;
         this.marginAccessChecker = marginAccessChecker;
         this.pricingProperties = pricingProperties;
-        this.marginLookup = marginLookup;
         this.webhookExecutor = webhookExecutor;
     }
 
@@ -52,8 +47,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDTO> getSubscriptionForMargin(@PathVariable Long marginId,
                                                                     @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginMember(user.getId(), marginId);
-        Margin margin = marginLookup.getById(marginId);
-        return ResponseEntity.ok(subscriptionService.getSubscriptionDtoForMargin(margin));
+        return ResponseEntity.ok(subscriptionService.getSubscriptionDtoForMargin(marginId));
     }
 
     @GetMapping("/tiers")
@@ -80,7 +74,7 @@ public class SubscriptionController {
                                                           @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginOwner(user.getId(), request.marginId());
         String checkoutUrl = subscriptionService.createCheckout(
-                marginLookup.getById(request.marginId()), request.tier(), user
+                request.marginId(), request.tier(), user
         );
         return ResponseEntity.ok(new CheckoutResponse(checkoutUrl));
     }
@@ -91,7 +85,7 @@ public class SubscriptionController {
                                                       @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginOwner(user.getId(), marginId);
         SubscriptionTier newTier = SubscriptionTier.valueOf(body.get("tier"));
-        SubscriptionDTO dto = subscriptionService.downgrade(marginLookup.getById(marginId), newTier);
+        SubscriptionDTO dto = subscriptionService.downgrade(marginId, newTier);
         return ResponseEntity.ok(dto);
     }
 
@@ -99,7 +93,7 @@ public class SubscriptionController {
     public ResponseEntity<Void> cancelSubscription(@PathVariable Long marginId,
                                                    @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginOwner(user.getId(), marginId);
-        subscriptionService.cancelSubscription(marginLookup.getById(marginId));
+        subscriptionService.cancelSubscription(marginId);
         return ResponseEntity.ok().build();
     }
 
@@ -107,7 +101,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDTO> reconcilePending(@PathVariable Long marginId,
                                                             @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginOwner(user.getId(), marginId);
-        SubscriptionDTO dto = subscriptionWebhookService.reconcilePendingPayment(marginLookup.getById(marginId));
+        SubscriptionDTO dto = subscriptionWebhookService.reconcilePendingPayment(marginId);
         return ResponseEntity.ok(dto);
     }
 
@@ -115,7 +109,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDTO> cancelPending(@PathVariable Long marginId,
                                                          @AuthenticationPrincipal User user) {
         marginAccessChecker.requireMarginOwner(user.getId(), marginId);
-        SubscriptionDTO dto = subscriptionWebhookService.cancelPendingPayment(marginLookup.getById(marginId));
+        SubscriptionDTO dto = subscriptionWebhookService.cancelPendingPayment(marginId);
         return ResponseEntity.ok(dto);
     }
 

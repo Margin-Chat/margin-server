@@ -3,7 +3,7 @@ package org.margin.server.subscriptions.services;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
-import org.margin.server.social.margin.MarginLookup;
+import org.margin.server.social.api.MarginDirectory;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.models.MarginRole;
@@ -25,23 +25,23 @@ public class SubscriptionValidationService {
 
     private final SubscriptionService subscriptionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final MarginLookup marginLookup;
+    private final MarginDirectory marginDirectory;
 
     public SubscriptionValidationService(SubscriptionService subscriptionService,
                                          ApplicationEventPublisher eventPublisher,
-                                         MarginLookup marginLookup) {
+                                         MarginDirectory marginDirectory) {
         this.subscriptionService = subscriptionService;
         this.eventPublisher = eventPublisher;
-        this.marginLookup = marginLookup;
+        this.marginDirectory = marginDirectory;
     }
 
-    public Subscription getSubscriptionForMargin(Margin margin) {
-        return subscriptionService.getByMargin(margin);
+    public Subscription getSubscriptionForMargin(Long marginId) {
+        return subscriptionService.getByMarginId(marginId);
     }
 
-    public void validateAddMarginMember(Margin margin) {
-        Subscription subscription = getSubscriptionForMargin(margin);
-        if (margin.getMembers().size() >= subscription.getLimits().getMaxMembers()) {
+    public void validateAddMarginMember(Long marginId) {
+        Subscription subscription = getSubscriptionForMargin(marginId);
+        if (marginDirectory.summaryOf(marginId).memberCount() >= subscription.getLimits().getMaxMembers()) {
             throw new SubscriptionLimitExceededException(
                     "Maximum number of margin members exceeded",
                     subscription.getTier(),
@@ -50,37 +50,33 @@ public class SubscriptionValidationService {
         }
     }
 
-    public void notifyIfApproachingMemberLimit(Margin margin) {
-        Subscription subscription = getSubscriptionForMargin(margin);
+    public void notifyIfApproachingMemberLimit(Long marginId) {
+        Subscription subscription = getSubscriptionForMargin(marginId);
         int max = subscription.getLimits().getMaxMembers();
         int thresholdCount = (int) Math.ceil(max * WARNING_THRESHOLD);
-        if (margin.getMembers().size() != thresholdCount) {
+        if (marginDirectory.summaryOf(marginId).memberCount() != thresholdCount) {
             return;
         }
 
-        List<Long> recipients = margin.getMembers().stream()
-                .filter(m -> m.getRole() == MarginRole.OWNER || m.getRole() == MarginRole.ADMIN)
-                .map(m -> m.getUser().getId())
-                .toList();
+        List<Long> recipients = marginDirectory.adminUserIdsOf(marginId);
 
         try {
-            eventPublisher.publishEvent(new MemberLimitWarningEvent(recipients, margin.getId()));
+            eventPublisher.publishEvent(new MemberLimitWarningEvent(recipients, marginId));
         } catch (Exception e) {
-            log.warn("Failed to send limit warning for margin {}", margin.getId(), e);
+            log.warn("Failed to send limit warning for margin {}", marginId, e);
         }
     }
 
     public SubscriptionTier tierForMargin(Long marginId) {
-        return getSubscriptionForMargin(marginLookup.getById(marginId)).getTier();
+        return getSubscriptionForMargin(marginId).getTier();
     }
 
     public int getMaxCallParticipants(Long marginId) {
-        Margin margin = marginLookup.getById(marginId);
-        return getSubscriptionForMargin(margin).getLimits().getMaxCallParticipants();
+        return getSubscriptionForMargin(marginId).getLimits().getMaxCallParticipants();
     }
 
     public void validateStorageQuota(Long marginId, long usedBytes, long newFileBytes) {
-        Subscription subscription = getSubscriptionForMargin(marginLookup.getById(marginId));
+        Subscription subscription = getSubscriptionForMargin(marginId);
         long maxBytes = subscription.getLimits().getMaxStorageGb() * BYTES_PER_GB;
         if (usedBytes + newFileBytes > maxBytes) {
             throw new SubscriptionLimitExceededException(
@@ -92,8 +88,7 @@ public class SubscriptionValidationService {
     }
 
     public int validateChannelVoiceJoin(Long marginId, int currentParticipants) {
-        Margin margin = marginLookup.getById(marginId);
-        Subscription subscription = getSubscriptionForMargin(margin);
+        Subscription subscription = getSubscriptionForMargin(marginId);
         int max = subscription.getLimits().getMaxCallParticipants();
         if (currentParticipants >= max) {
             throw new SubscriptionLimitExceededException(

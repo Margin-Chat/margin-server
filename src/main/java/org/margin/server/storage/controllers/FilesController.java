@@ -2,8 +2,7 @@ package org.margin.server.storage.controllers;
 
 import org.margin.server.social.api.ChannelDirectory;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.margin.MarginLookup;
-import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.api.MarginDirectory;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.models.StoredFile;
@@ -34,7 +33,7 @@ import java.util.Optional;
 public class FilesController {
     private final StorageService storageService;
     private final StorageProperties storageProperties;
-    private final MarginLookup marginLookup;
+    private final MarginDirectory marginDirectory;
     private final StoredFileService storedFileService;
     private final MarginAccessChecker marginAccessChecker;
     private final ConversationAuthorizationService conversationAuthorizationService;
@@ -42,14 +41,14 @@ public class FilesController {
 
     public FilesController(StorageService storageService,
                            StorageProperties storageProperties,
-                           MarginLookup marginLookup,
+                           MarginDirectory marginDirectory,
                            StoredFileService storedFileService,
                            MarginAccessChecker marginAccessChecker,
                            ConversationAuthorizationService conversationAuthorizationService,
                            ChannelDirectory channelDirectory) {
         this.storageService = storageService;
         this.storageProperties = storageProperties;
-        this.marginLookup = marginLookup;
+        this.marginDirectory = marginDirectory;
         this.storedFileService = storedFileService;
         this.marginAccessChecker = marginAccessChecker;
         this.conversationAuthorizationService = conversationAuthorizationService;
@@ -71,9 +70,9 @@ public class FilesController {
         if (viewer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Margin margin = marginLookup.findByIconFileName(fileName);
-        marginAccessChecker.requireMarginMember(viewer.getId(), margin.getId());
-        return serve(margin.getIconUrl(), fileName);
+        MarginDirectory.MarginIcon icon = marginDirectory.iconByFileName(fileName);
+        marginAccessChecker.requireMarginMember(viewer.getId(), icon.marginId());
+        return serve(icon.iconUrl(), fileName);
     }
 
     @GetMapping("/stored-files/{fileName}")

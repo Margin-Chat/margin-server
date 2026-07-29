@@ -2,7 +2,6 @@ package org.margin.server.storage.controllers;
 
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
 import org.margin.server.social.margin.MarginLookup;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.shared.authorization.MarginAccessChecker;
 import org.margin.server.storage.StorageProperties;
 import org.margin.server.storage.StorageUtils;

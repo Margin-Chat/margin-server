@@ -36,6 +36,13 @@ public class UserLookupService implements UserLookup {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UserContact contactOf(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        return new UserContact(user.getId(), user.getDisplayName(), user.getEmail());
+    }
+
+    @Override
     @Transactional
     public void markLastSeen(Long userId, Instant lastSeenAt) {
         userRepository.findById(userId).ifPresent(user -> {

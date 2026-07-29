@@ -100,7 +100,7 @@ public class MarginService {
         margin.setIconUrl(iconUrl);
         margin = marginRepository.save(margin);
 
-        marginSubscriptionPolicy.onMarginCreated(margin);
+        marginSubscriptionPolicy.onMarginCreated(margin.getId());
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
 
@@ -139,7 +139,7 @@ public class MarginService {
         Margin margin = getById(marginId);
         User user = userService.getById(userId);
 
-        marginSubscriptionPolicy.validateAddMarginMember(margin);
+        marginSubscriptionPolicy.validateAddMarginMember(marginId);
 
         MarginMember member = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(userId))
@@ -158,7 +158,7 @@ public class MarginService {
             eventPublisher.publishEvent(new UserAddedToMarginEvent(user.getId(), addingUser.getId(), marginId));
         }
 
-        marginSubscriptionPolicy.notifyIfApproachingMemberLimit(margin);
+        marginSubscriptionPolicy.notifyIfApproachingMemberLimit(marginId);
 
         return member;
     }

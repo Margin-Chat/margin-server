@@ -4,7 +4,7 @@ import com.mollie.mollie.models.components.CustomerResponse;
 import com.mollie.mollie.models.components.PaymentResponse;
 import com.mollie.mollie.models.components.SubscriptionResponse;
 import com.mollie.mollie.models.components.Url;
-import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.api.MarginDirectory;
 import org.margin.server.subscriptions.config.MollieProperties;
 import org.margin.server.subscriptions.config.SubscriptionPricingProperties;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -41,12 +41,14 @@ public class SubscriptionService {
     private final MollieProperties mollieProperties;
     private final SubscriptionLimitsFactory subscriptionLimitsFactory;
     private final SubscriptionService self;
+    private final MarginDirectory marginDirectory;
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
                                SubscriptionPricingProperties subscriptionPricingProperties,
                                MollieClient mollieClient,
                                MollieProperties mollieProperties,
                                SubscriptionLimitsFactory subscriptionLimitsFactory,
+                               MarginDirectory marginDirectory,
                                @Lazy SubscriptionService self) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPricingProperties = subscriptionPricingProperties;
@@ -54,17 +56,18 @@ public class SubscriptionService {
         this.mollieProperties = mollieProperties;
         this.subscriptionLimitsFactory = subscriptionLimitsFactory;
         this.self = self;
+        this.marginDirectory = marginDirectory;
     }
 
-    public Subscription getByMargin(Margin margin) {
-        return subscriptionRepository.findByMargin(margin)
-                .orElseThrow(() -> new SubscriptionNotFoundException(margin.getId()));
+    public Subscription getByMarginId(Long marginId) {
+        return subscriptionRepository.findByMarginId(marginId)
+                .orElseThrow(() -> new SubscriptionNotFoundException(marginId));
     }
 
     @Transactional
-    public void createSubscriptionForMargin(Margin margin, SubscriptionTier tier) {
+    public void createSubscriptionForMargin(Long marginId, SubscriptionTier tier) {
         Subscription subscription = new Subscription();
-        subscription.setMargin(margin);
+        subscription.setMarginId(marginId);
         subscription.setTier(tier);
 
         SubscriptionLimits limits = subscriptionLimitsFactory.forTier(SubscriptionTier.FREE);
@@ -73,12 +76,12 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-        log.info("Created subscription for margin {}", margin.getId());
+        log.info("Created subscription for margin {}", marginId);
     }
 
     @Transactional(readOnly = true)
-    public SubscriptionDTO getSubscriptionDtoForMargin(Margin margin) {
-        Subscription subscription = getByMargin(margin);
+    public SubscriptionDTO getSubscriptionDtoForMargin(Long marginId) {
+        Subscription subscription = getByMarginId(marginId);
         SubscriptionLimits limits = subscription.getLimits();
         return new SubscriptionDTO(
                 subscription.getTier(),
@@ -88,7 +91,7 @@ public class SubscriptionService {
                         limits.getMaxStorageGb(),
                         limits.getMaxCallParticipants()
                 ),
-                subscription.getMargin().getMembers().size(),
+                marginDirectory.summaryOf(subscription.getMarginId()).memberCount(),
                 subscription.getTrialEndsAt(),
                 subscription.getCurrentPeriodEnd(),
                 subscription.getPendingPaymentId() != null,
@@ -97,16 +100,16 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDTO downgrade(Margin margin, SubscriptionTier newTier) {
-        Subscription subscription = getByMargin(margin);
+    public SubscriptionDTO downgrade(Long marginId, SubscriptionTier newTier) {
+        Subscription subscription = getByMarginId(marginId);
 
         if (!newTier.isLowerTier(subscription.getTier())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Margin cannot be upgrade without a checkout");
         }
 
         if (newTier == SubscriptionTier.FREE) {
-            self.cancelSubscription(margin);
-            return self.getSubscriptionDtoForMargin(margin);
+            self.cancelSubscription(marginId);
+            return self.getSubscriptionDtoForMargin(marginId);
         }
 
         SubscriptionPricingProperties.TierConfig config = subscriptionPricingProperties.tiers().get(newTier);
@@ -133,7 +136,7 @@ public class SubscriptionService {
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
                 "1 month",
-                "margin %s — %s plan".formatted(margin.getName(), newTier),
+                "margin %s — %s plan".formatted(marginDirectory.summaryOf(marginId).name(), newTier),
                 "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
                 startDate
         );
@@ -141,18 +144,18 @@ public class SubscriptionService {
         subscription.setSubscriptionId(mollieSubscription.id());
         self.applyTier(subscription, newTier);
 
-        return self.getSubscriptionDtoForMargin(margin);
+        return self.getSubscriptionDtoForMargin(marginId);
     }
 
     @Transactional
-    public void cancelSubscription(Margin margin) {
-        Subscription subscription = getByMargin(margin);
+    public void cancelSubscription(Long marginId) {
+        Subscription subscription = getByMarginId(marginId);
         if (subscription.getSubscriptionId() != null) {
             mollieClient.cancelSubscription(subscription.getMollieCustomerId(), subscription.getSubscriptionId());
         }
         subscription.setStatus(SubscriptionStatus.CANCELLED);
         subscriptionRepository.save(subscription);
-        log.info("Cancelled subscription {} for margin {}", subscription.getId(), margin.getId());
+        log.info("Cancelled subscription {} for margin {}", subscription.getId(), marginId);
     }
 
     @Transactional
@@ -168,7 +171,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public String createCheckout(Margin margin, SubscriptionTier targetTier, User user) {
+    public String createCheckout(Long marginId, SubscriptionTier targetTier, User user) {
         SubscriptionPricingProperties.TierConfig config = subscriptionPricingProperties.tiers().get(targetTier);
         if (config == null || config.price() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -176,15 +179,15 @@ public class SubscriptionService {
         }
         BigDecimal price = config.price();
 
-        Subscription subscription = getByMargin(margin);
+        Subscription subscription = getByMarginId(marginId);
 
         String customerId = subscription.getMollieCustomerId();
         if (customerId == null) {
-            CustomerResponse customer = mollieClient.createCustomer(margin.getName(), user.getEmail());
+            CustomerResponse customer = mollieClient.createCustomer(marginDirectory.summaryOf(marginId).name(), user.getEmail());
             customerId = customer.id();
             subscription.setMollieCustomerId(customerId);
             subscriptionRepository.save(subscription);
-            log.info("Created Mollie customer {} for margin {}", customerId, margin.getId());
+            log.info("Created Mollie customer {} for margin {}", customerId, marginId);
         }
 
         if (subscription.getPendingPaymentId() != null) {
@@ -197,13 +200,13 @@ public class SubscriptionService {
                 customerId,
                 price.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 subscriptionPricingProperties.currency(),
-                "margin %s — %s plan".formatted(margin.getName(), targetTier),
-                "%s/payment-return?marginId=%d".formatted(mollieProperties.redirectBaseUrl(), margin.getId()),
+                "margin %s — %s plan".formatted(marginDirectory.summaryOf(marginId).name(), targetTier),
+                "%s/payment-return?marginId=%d".formatted(mollieProperties.redirectBaseUrl(), marginId),
                 "%s/api/subscriptions/mollie/webhook".formatted(mollieProperties.webhookBaseUrl()),
                 targetTier.name()
         );
 
-        log.info("Created payment for subscription {} for margin {}", subscription.getId(), margin.getName());
+        log.info("Created payment for subscription {} for margin {}", subscription.getId(), marginDirectory.summaryOf(marginId).name());
 
         subscription.setPendingPaymentId(payment.id());
         subscription.setPendingTier(targetTier);

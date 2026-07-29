@@ -1,12 +1,10 @@
 package org.margin.server.social.api;
 
-import org.margin.server.social.margin.entities.Margin;
-
 public interface MarginSubscriptionPolicy {
 
-    void onMarginCreated(Margin margin);
+    void onMarginCreated(Long marginId);
 
-    void validateAddMarginMember(Margin margin);
+    void validateAddMarginMember(Long marginId);
 
-    void notifyIfApproachingMemberLimit(Margin margin);
+    void notifyIfApproachingMemberLimit(Long marginId);
 }
