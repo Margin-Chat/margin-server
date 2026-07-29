@@ -51,12 +51,12 @@ class PasswordResetServiceTest {
 
         passwordResetService.requestPasswordReset("alice@margin.chat");
 
-        verify(tokenRepository).deleteByUser(user);
+        verify(tokenRepository).deleteByUserId(user.getId());
         ArgumentCaptor<PasswordResetToken> captor = ArgumentCaptor.forClass(PasswordResetToken.class);
         verify(tokenRepository).save(captor.capture());
         PasswordResetToken saved = captor.getValue();
         assertNotNull(saved.getToken());
-        assertEquals(user, saved.getUser());
+        assertEquals(user.getId(), saved.getUserId());
         assertTrue(saved.getExpiresAt().isAfter(Instant.now()));
     }
 
@@ -97,6 +97,7 @@ class PasswordResetServiceTest {
         User user = makeUser();
         PasswordResetToken token = makeToken(user, false, false);
         when(tokenRepository.findByToken("valid-token")).thenReturn(Optional.of(token));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("new-pass")).thenReturn("hashed");
 
         passwordResetService.resetPassword("valid-token", "new-pass");
@@ -157,7 +158,7 @@ class PasswordResetServiceTest {
 
     private static PasswordResetToken makeToken(User user, boolean expired, boolean used) {
         PasswordResetToken token = new PasswordResetToken();
-        token.setUser(user);
+        token.setUserId(user.getId());
         token.setToken("valid-token");
         token.setExpiresAt(expired ? Instant.now().minusSeconds(60) : Instant.now().plusSeconds(3600));
         if (used) token.setUsedAt(Instant.now().minusSeconds(30));

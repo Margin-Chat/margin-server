@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -22,9 +21,8 @@ public class BetaKey {
     @Column(nullable = false, unique = true)
     private String key;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "used_by")
-    private User usedBy;
+    @Column(name = "used_by")
+    private Long usedByUserId;
 
     @Column(name = "used_at")
     private Instant usedAt;
@@ -33,6 +31,6 @@ public class BetaKey {
     private Instant createdAt;
 
     public boolean isUsed() {
-        return usedBy != null;
+        return usedByUserId != null;
     }
 }

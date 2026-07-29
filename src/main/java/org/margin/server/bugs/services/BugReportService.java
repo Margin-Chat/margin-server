@@ -2,7 +2,6 @@ package org.margin.server.bugs.services;
 
 import org.margin.server.bugs.entities.BugReport;
 import org.margin.server.bugs.repositories.BugReportRepository;
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +16,11 @@ public class BugReportService {
     }
 
     @Transactional
-    public void createBug(String title, String description, User reportingUser) {
+    public void createBug(String title, String description, Long reportingUserId) {
         BugReport bugReport = new BugReport();
         bugReport.setTitle(title);
         bugReport.setDescription(description);
-        bugReport.setUser(reportingUser);
+        bugReport.setUserId(reportingUserId);
         bugReport.setCreatedAt(Instant.now());
         bugReportRepository.save(bugReport);
     }

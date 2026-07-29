@@ -75,7 +75,7 @@ public class AuthenticationService {
             User user = userRepository.findByEmail(normalisedEmail)
                     .orElseThrow(() -> new BadCredentialsException("user not found"));
 
-            if (!activationKeyService.isUserActivated(user)) {
+            if (!activationKeyService.isUserActivated(user.getId())) {
                 log.warn("Login blocked — userId {} not yet activated", user.getId());
                 return new AuthResponse(false, "User is not yet activated",
                         null, null, null, null, null);
@@ -153,7 +153,7 @@ public class AuthenticationService {
         security.setFailedLoginAttempts(0);
         userSecurityService.save(security);
 
-        ActivationKey activationKey = activationKeyService.generateActivationKey(user);
+        ActivationKey activationKey = activationKeyService.generateActivationKey(user.getId());
 
         if (!requireEmailActivation) {
             activationKeyService.findAndConsumeActivationKey(activationKey.getToken());

@@ -23,7 +23,7 @@ public class BugReportController {
     @PostMapping("/report_bug")
     public ResponseEntity<Void> reportBug(@RequestBody BugReportRequest request,
                                           @AuthenticationPrincipal User user) {
-        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user);
+        bugReportService.createBug(request.bugTitle(), request.bugDescription(), user.getId());
         return ResponseEntity.ok().build();
     }
 }

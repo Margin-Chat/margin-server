@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -18,9 +17,8 @@ public class ActivationKey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    @Column(name = "user_id", nullable = false, unique = true)
+    private Long userId;
 
     @Column(nullable = false, unique = true)
     private String token;
@@ -33,12 +31,6 @@ public class ActivationKey {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
-
-    public ActivationKey(User user, String token, Instant expiresAt) {
-        this.user = user;
-        this.token = token;
-        this.expiresAt = expiresAt;
-    }
 
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);

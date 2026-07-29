@@ -9,6 +9,7 @@ import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.ActivationTestUtils;
 import org.margin.server.integrationtest.utils.AuthTestUtils;
 import org.margin.server.integrationtest.utils.PasswordResetTestUtils;
+import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Propagation;
@@ -124,6 +125,6 @@ class PasswordResetTest extends MarginTestRunner {
         BetaKey key = AuthTestUtils.createBetaKey();
         ActivationKey activationKey = AuthTestUtils.register(displayName, email, "password", key.getKey());
         ActivationTestUtils.activate(activationKey.getToken());
-        return activationKey.getUser();
+        return UserTestUtils.findById(activationKey.getUserId());
     }
 }

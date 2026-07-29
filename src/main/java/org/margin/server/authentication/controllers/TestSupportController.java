@@ -62,7 +62,7 @@ class TestSupportController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No user with email: " + request.email()));
 
-        ActivationKey key = activationKeyRepository.findActivationKeyByUser(user)
+        ActivationKey key = activationKeyRepository.findActivationKeyByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No activation key for: " + request.email()));
 

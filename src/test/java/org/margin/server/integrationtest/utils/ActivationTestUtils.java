@@ -29,12 +29,12 @@ public class ActivationTestUtils {
     }
 
     public static ActivationKey generateActivationKey(User user) {
-        return activationKeyService.generateActivationKey(user);
+        return activationKeyService.generateActivationKey(user.getId());
     }
 
     public static ActivationKey generateExpiredActivationKey(User user) {
         ActivationKey key = new ActivationKey();
-        key.setUser(user);
+        key.setUserId(user.getId());
         key.setToken(UUID.randomUUID().toString());
         key.setExpiresAt(Instant.now().minusSeconds(60));
         return activationKeyRepository.save(key);
@@ -48,7 +48,7 @@ public class ActivationTestUtils {
         return activationKeyRepository.findActivationKeyByToken(token).orElseThrow();
     }
 
-    public static boolean isUserActivated(User user) {
-        return activationKeyService.isUserActivated(user);
+    public static boolean isUserActivated(Long userId) {
+        return activationKeyService.isUserActivated(userId);
     }
 }

@@ -1,6 +1,8 @@
 package org.margin.server.social.messages.services;
 
 import org.margin.server.presence.PresenceService;
+import org.margin.server.social.api.MessageAttachmentDTO;
+import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -13,8 +15,7 @@ import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.repositories.MessageReactionRepository;
 import org.margin.server.social.messages.repositories.MessageRepository;
-import org.margin.server.storage.dtos.StoredFileDTO;
-import org.margin.server.storage.api.StorageLookup;
+import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +32,7 @@ import java.util.stream.Collectors;
 public class MessageService {
     private final MessageRepository messageRepository;
     private final MessageReactionRepository messageReactionRepository;
-    private final StorageLookup storageLookup;
+    private final MessageAttachments messageAttachments;
     private final ConversationService conversationService;
     private final PresenceService presenceService;
     private final ApplicationEventPublisher eventPublisher;
@@ -41,7 +42,7 @@ public class MessageService {
 
     public MessageService(MessageRepository messageRepository,
                           MessageReactionRepository messageReactionRepository,
-                          StorageLookup storageLookup,
+                          MessageAttachments messageAttachments,
                           ConversationService conversationService,
                           PresenceService presenceService,
                           ApplicationEventPublisher eventPublisher,
@@ -49,7 +50,7 @@ public class MessageService {
                           MessageValidationService messageValidationService, ConversationValidationService conversationValidationService) {
         this.messageRepository = messageRepository;
         this.messageReactionRepository = messageReactionRepository;
-        this.storageLookup = storageLookup;
+        this.messageAttachments = messageAttachments;
         this.conversationService = conversationService;
         this.presenceService = presenceService;
         this.eventPublisher = eventPublisher;
@@ -124,7 +125,7 @@ public class MessageService {
 
         List<Long> messageIds = messages.stream().map(Message::getId).toList();
         Map<Long, List<MessageReactionDTO>> reactionsByMessageId = loadReactionsForMessages(messageIds, conversation.getId());
-        Map<Long, List<StoredFileDTO>> attachmentsByMessageId = loadAttachmentsForMessages(messageIds);
+        Map<Long, List<MessageAttachmentDTO>> attachmentsByMessageId = loadAttachmentsForMessages(messageIds);
 
         return messages.stream()
                 .map(msg ->
@@ -184,12 +185,12 @@ public class MessageService {
                 ));
     }
 
-    private Map<Long, List<StoredFileDTO>> loadAttachmentsForMessages(List<Long> messageIds) {
+    private Map<Long, List<MessageAttachmentDTO>> loadAttachmentsForMessages(List<Long> messageIds) {
         if (messageIds.isEmpty()) return Map.of();
-        return storageLookup.findAttachmentsByMessageIds(messageIds);
+        return messageAttachments.findByMessageIds(messageIds);
     }
 
-    private List<StoredFileDTO> attachmentsFor(Long messageId) {
+    private List<MessageAttachmentDTO> attachmentsFor(Long messageId) {
         return loadAttachmentsForMessages(List.of(messageId)).getOrDefault(messageId, List.of());
     }
 

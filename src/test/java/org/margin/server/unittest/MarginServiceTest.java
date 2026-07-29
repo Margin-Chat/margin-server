@@ -14,9 +14,8 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.services.StorageService;
-import org.margin.server.subscriptions.services.SubscriptionService;
-import org.margin.server.subscriptions.services.SubscriptionValidationService;
+import org.margin.server.social.api.MarginIconStore;
+import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
@@ -47,7 +46,7 @@ class MarginServiceTest {
     @Mock
     private MarginMemberRepository marginMemberRepository;
     @Mock
-    private StorageService storageService;
+    private MarginIconStore marginIconStore;
     @Mock
     private SpacesService spacesService;
     @Mock
@@ -57,9 +56,7 @@ class MarginServiceTest {
     @Mock
     private NotificationService notificationService;
     @Mock
-    private SubscriptionService subscriptionService;
-    @Mock
-    private SubscriptionValidationService subscriptionValidationService;
+    private MarginSubscriptionPolicy marginSubscriptionPolicy;
 
     @InjectMocks
     private MarginService marginService;
@@ -94,7 +91,7 @@ class MarginServiceTest {
         assertThat(capturedMargin.getDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
 
-        verify(storageService, never()).saveMarginIcon(any());
+        verify(marginIconStore, never()).save(any());
     }
 
     @Test
@@ -130,11 +127,11 @@ class MarginServiceTest {
         );
 
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
-        when(storageService.saveMarginIcon(profilePicture)).thenReturn(expectedUrl);
+        when(marginIconStore.save(profilePicture)).thenReturn(expectedUrl);
 
         marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser"));
 
-        verify(storageService, times(1)).saveMarginIcon(profilePicture);
+        verify(marginIconStore, times(1)).save(profilePicture);
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -159,7 +156,7 @@ class MarginServiceTest {
 
         marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser"));
 
-        verify(storageService, never()).saveMarginIcon(any());
+        verify(marginIconStore, never()).save(any());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -177,7 +174,7 @@ class MarginServiceTest {
                 "test image content".getBytes()
         );
 
-        when(storageService.saveMarginIcon(profilePicture))
+        when(marginIconStore.save(profilePicture))
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->

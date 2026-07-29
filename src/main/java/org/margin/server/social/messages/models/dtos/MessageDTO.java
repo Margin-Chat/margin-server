@@ -1,8 +1,8 @@
 package org.margin.server.social.messages.models.dtos;
 
+import org.margin.server.social.api.MessageAttachmentDTO;
 import org.margin.server.social.conversation.models.ConversationType;
 import org.margin.server.social.messages.models.Message;
-import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
@@ -19,7 +19,7 @@ public record MessageDTO(
         Long marginId,
         String channelName,
         List<MessageReactionDTO> reactions,
-        List<StoredFileDTO> attachments,
+        List<MessageAttachmentDTO> attachments,
         Long parentConversationId
 ) {
 
@@ -33,7 +33,7 @@ public record MessageDTO(
         private Long marginId = null;
         private String channelName = null;
         private List<MessageReactionDTO> reactions = List.of();
-        private List<StoredFileDTO> attachments = List.of();
+        private List<MessageAttachmentDTO> attachments = List.of();
 
         private Builder(Message message) {
             this.message = message;
@@ -59,7 +59,7 @@ public record MessageDTO(
             return this;
         }
 
-        public Builder withAttachments(List<StoredFileDTO> attachments) {
+        public Builder withAttachments(List<MessageAttachmentDTO> attachments) {
             this.attachments = attachments != null ? attachments : List.of();
             return this;
         }

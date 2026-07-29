@@ -1,6 +1,8 @@
 package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.social.api.MarginIconStore;
+import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.social.margin.events.UserAddedToMarginEvent;
 import org.margin.server.social.margin.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
@@ -15,10 +17,6 @@ import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.services.StorageService;
-import org.margin.server.subscriptions.models.SubscriptionTier;
-import org.margin.server.subscriptions.services.SubscriptionService;
-import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
@@ -41,33 +39,30 @@ import java.util.stream.Collectors;
 public class MarginService implements MarginLookup {
 
     private final MarginRepository marginRepository;
-    private final StorageService storageService;
+    private final MarginIconStore marginIconStore;
     private final MarginMemberRepository marginMemberRepository;
     private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
     private final ApplicationEventPublisher eventPublisher;
-    private final SubscriptionService subscriptionService;
-    private final SubscriptionValidationService subscriptionValidationService;
+    private final MarginSubscriptionPolicy marginSubscriptionPolicy;
 
     public MarginService(MarginRepository marginRepository,
-                         StorageService storageService,
+                         MarginIconStore marginIconStore,
                          MarginMemberRepository marginMemberRepository,
                          UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
                          ApplicationEventPublisher eventPublisher,
-                         SubscriptionService subscriptionService,
-                         SubscriptionValidationService subscriptionValidationService) {
+                         MarginSubscriptionPolicy marginSubscriptionPolicy) {
         this.marginRepository = marginRepository;
-        this.storageService = storageService;
+        this.marginIconStore = marginIconStore;
         this.marginMemberRepository = marginMemberRepository;
         this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
         this.eventPublisher = eventPublisher;
-        this.subscriptionService = subscriptionService;
-        this.subscriptionValidationService = subscriptionValidationService;
+        this.marginSubscriptionPolicy = marginSubscriptionPolicy;
     }
 
     @Override
@@ -98,7 +93,7 @@ public class MarginService implements MarginLookup {
 
         String iconUrl = null;
         if (marginIcon != null && !marginIcon.isEmpty()) {
-            iconUrl = storageService.saveMarginIcon(marginIcon);
+            iconUrl = marginIconStore.save(marginIcon);
         }
 
         Margin margin = new Margin();
@@ -108,7 +103,7 @@ public class MarginService implements MarginLookup {
         margin.setIconUrl(iconUrl);
         margin = marginRepository.save(margin);
 
-        subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
+        marginSubscriptionPolicy.onMarginCreated(margin);
 
         addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
 
@@ -147,7 +142,7 @@ public class MarginService implements MarginLookup {
         Margin margin = getById(marginId);
         User user = userService.getById(userId);
 
-        subscriptionValidationService.validateAddMarginMember(margin);
+        marginSubscriptionPolicy.validateAddMarginMember(margin);
 
         MarginMember member = margin.getMembers().stream()
                 .filter(m -> m.getUser().getId().equals(userId))
@@ -166,7 +161,7 @@ public class MarginService implements MarginLookup {
             eventPublisher.publishEvent(new UserAddedToMarginEvent(user, addingUser, marginId));
         }
 
-        subscriptionValidationService.notifyIfApproachingMemberLimit(margin);
+        marginSubscriptionPolicy.notifyIfApproachingMemberLimit(margin);
 
         return member;
     }
@@ -224,7 +219,7 @@ public class MarginService implements MarginLookup {
         margin.setDescription(updateMarginDTO.description());
 
         if (icon != null && !icon.isEmpty()) {
-            margin.setIconUrl(storageService.saveMarginIcon(icon));
+            margin.setIconUrl(marginIconStore.save(icon));
         }
 
         Margin saved = marginRepository.save(margin);

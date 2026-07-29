@@ -18,7 +18,7 @@ import org.margin.server.social.messages.repositories.MessageRepository;
 import org.margin.server.social.messages.services.MessageActions;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.social.messages.services.MessageValidationService;
-import org.margin.server.storage.api.StorageLookup;
+import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.users.models.User;
 import org.margin.server.presence.PresenceService;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,7 +48,7 @@ class MessageServiceTest {
     @Mock
     private MessageReactionRepository messageReactionRepository;
     @Mock
-    private StorageLookup storageLookup;
+    private MessageAttachments messageAttachments;
     @Mock
     private ConversationMemberRepository conversationMemberRepository;
     @Mock

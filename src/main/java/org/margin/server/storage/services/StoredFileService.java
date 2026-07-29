@@ -8,7 +8,8 @@ import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.exceptions.StoredFileNotFoundException;
 import org.margin.server.storage.models.StoredFile;
 import org.margin.server.storage.models.StoredFileScope;
-import org.margin.server.storage.api.StorageLookup;
+import org.margin.server.social.api.MessageAttachmentDTO;
+import org.margin.server.social.api.MessageAttachments;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class StoredFileService implements StorageLookup {
+public class StoredFileService implements MessageAttachments {
 
     private static final int MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
@@ -44,7 +45,8 @@ public class StoredFileService implements StorageLookup {
 
     @Transactional
     public StoredFile uploadMarginFile(Margin margin, MultipartFile file, User uploader) {
-        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
+        subscriptionValidationService.validateStorageQuota(margin,
+                storedFileRepository.sumSizeBytesByMargin(margin.getId()), file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.MARGIN);
@@ -60,7 +62,8 @@ public class StoredFileService implements StorageLookup {
     @Transactional
     public StoredFile uploadChannelFile(Channel channel, MultipartFile file, User uploader, boolean inline) {
         Margin margin = channel.getSpace().getMargin();
-        subscriptionValidationService.validateStorageQuota(margin, file.getSize());
+        subscriptionValidationService.validateStorageQuota(margin,
+                storedFileRepository.sumSizeBytesByMargin(margin.getId()), file.getSize());
         String url = storageService.saveStoredFile(file);
         StoredFile entity = new StoredFile();
         entity.setScope(StoredFileScope.CHANNEL);
@@ -107,15 +110,21 @@ public class StoredFileService implements StorageLookup {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, List<StoredFileDTO>> findAttachmentsByMessageIds(List<Long> messageIds) {
+    public Map<Long, List<MessageAttachmentDTO>> findByMessageIds(List<Long> messageIds) {
         return storedFileRepository.findByMessageIds(messageIds).stream()
                 .collect(Collectors.groupingBy(
                         StoredFile::getMessageId,
                         Collectors.mapping(
-                                f -> StoredFileDTO.from(f, presenceService.isUserOnline(f.getUploadedBy().getId())),
+                                f -> toAttachment(StoredFileDTO.from(f, presenceService.isUserOnline(f.getUploadedBy().getId()))),
                                 Collectors.toList()
                         )
                 ));
+    }
+
+    private static MessageAttachmentDTO toAttachment(StoredFileDTO f) {
+        return new MessageAttachmentDTO(f.fileId(), f.scope().name(), f.marginId(), f.channelId(),
+                f.conversationId(), f.fileName(), f.contentType(), f.sizeBytes(), f.url(),
+                f.uploadedBy(), f.uploadedAt());
     }
 
     @Transactional(readOnly = true)

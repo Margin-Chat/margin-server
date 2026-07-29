@@ -49,10 +49,10 @@ public class PasswordResetService {
         String normalised = email.toLowerCase();
         log.info("Password reset requested for email {}", normalised);
         userRepository.findByEmail(normalised).ifPresent(user -> {
-            tokenRepository.deleteByUser(user);
+            tokenRepository.deleteByUserId(user.getId());
 
             PasswordResetToken resetToken = new PasswordResetToken();
-            resetToken.setUser(user);
+            resetToken.setUserId(user.getId());
             resetToken.setToken(UUID.randomUUID().toString());
             resetToken.setExpiresAt(Instant.now().plusSeconds(EXPIRY_SECONDS));
             tokenRepository.save(resetToken);
@@ -78,16 +78,17 @@ public class PasswordResetService {
         }
 
         if (resetToken.isExpired()) {
-            log.warn("Password reset failed — token expired at {} userId {}", resetToken.getExpiresAt(), resetToken.getUser().getId());
+            log.warn("Password reset failed — token expired at {} userId {}", resetToken.getExpiresAt(), resetToken.getUserId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has expired");
         }
 
         if (resetToken.isUsed()) {
-            log.warn("Password reset failed — token already used at {} userId {}", resetToken.getUsedAt(), resetToken.getUser().getId());
+            log.warn("Password reset failed — token already used at {} userId {}", resetToken.getUsedAt(), resetToken.getUserId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has already been used");
         }
 
-        User user = resetToken.getUser();
+        User user = userRepository.findById(resetToken.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reset token"));
         user.setPassword(passwordEncoder.encode(newPassword));
         userSecurityService.bumpTokenVersion(user.getId());
         user.getEncryption().setPublicKey(null);
