@@ -22,7 +22,7 @@
         <aws-sdk.version>2.31.3</aws-sdk.version>
         <jackson-bom.version>2.18.2</jackson-bom.version>
         <logback.version>1.5.25</logback.version>
-        <spring-modulith.version>2.0.7</spring-modulith.version>
+        <spring-modulith.version>2.1.0</spring-modulith.version>
     </properties>
 
     <dependencyManagement>

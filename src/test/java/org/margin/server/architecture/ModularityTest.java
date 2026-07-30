@@ -48,14 +48,18 @@ class ModularityTest {
     void hasNoCycles() {
         Map<String, Set<String>> graph = new HashMap<>();
 
-        modules.forEach(module -> graph.put(module.getName(), module.getDirectDependencies(modules)
+        modules.forEach(module -> graph.put(identifierOf(module), module.getDirectDependencies(modules)
                 .uniqueModules()
-                .map(ApplicationModule::getName)
+                .map(ModularityTest::identifierOf)
                 .collect(Collectors.toSet())));
 
         assertThat(graph.keySet().stream().filter(module -> reaches(graph, module, module)).toList())
                 .as("modules participating in a dependency cycle")
                 .isEmpty();
+    }
+
+    private static String identifierOf(ApplicationModule module) {
+        return module.getIdentifier().toString();
     }
 
     private static boolean reaches(Map<String, Set<String>> graph, String from, String target) {
