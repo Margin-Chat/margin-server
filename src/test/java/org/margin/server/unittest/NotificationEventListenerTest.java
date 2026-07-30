@@ -2,7 +2,8 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.notifications.listeners.NotificationEventListener;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
@@ -10,14 +11,14 @@ import org.margin.server.social.conversation.events.ConversationInviteDeclinedEv
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.social.messages.services.MessageService;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -45,7 +46,7 @@ class NotificationEventListenerTest {
     @Mock
     private UserService userService;
     @Mock
-    private MessageService messageService;
+    private MessageLookup messageLookup;
 
     @InjectMocks
     private NotificationEventListener listener;
@@ -54,15 +55,14 @@ class NotificationEventListenerTest {
     void onConversationInvite_createsNotificationForRecipient() {
         User sender = createUser(1L, "Sender");
         User recipient = createUser(2L, "Recipient");
-        when(userService.getById(recipient.getId())).thenReturn(recipient);
 
         DirectConversationDTO conversation = new DirectConversationDTO(
                 42L, Instant.now(), sender.getId(), null, ConversationInviteStatus.PENDING, false);
 
-        listener.onConversationInvite(new ConversationInviteEvent(conversation, sender, recipient.getId()));
+        listener.onConversationInvite(new ConversationInviteEvent(conversation, new UserSummary(sender.getId(), sender.getDisplayName()), recipient.getId()));
 
         verify(notificationService).createForUsers(
-                List.of(recipient), sender, NotificationType.CONVERSATION_INVITE, 42L, null);
+                List.of(recipient.getId()), sender.getId(), NotificationType.CONVERSATION_INVITE, 42L, null);
     }
 
     @Test
@@ -97,45 +97,27 @@ class NotificationEventListenerTest {
 
         Margin margin = new Margin();
         margin.setId(99L);
-        Space space = new Space();
-        space.setMargin(margin);
-        Channel channel = new Channel();
-        channel.setSpace(space);
-        Conversation conversation = new Conversation();
-        conversation.setId(5L);
-        conversation.setType(ConversationType.CHANNEL);
-        conversation.setChannel(channel);
-
-        Message message = new Message();
-        message.setId(10L);
-        message.setFromUser(author);
-        message.setConversation(conversation);
-        when(messageService.getById(10L)).thenReturn(message);
+        when(messageLookup.contextOf(10L))
+                .thenReturn(new MessageLookup.MessageContext(author.getId(), 5L, 99L));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, reactor.getId(), "Reactor", "👍");
 
-        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author, reactor), ConversationType.CHANNEL));
+        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author.getId(), reactor.getId()), ConversationType.CHANNEL));
 
         verify(notificationService).createForUsers(
-                List.of(author), reactor, NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
+                List.of(author.getId()), reactor.getId(), NotificationType.MESSAGE_REACTION, 10L, 99L, 5L);
     }
 
     @Test
     void onReactionAdded_doesNotNotify_whenAuthorReactsToOwnMessage() {
         User author = createUser(2L, "Author");
 
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.DIRECT);
-
-        Message message = new Message();
-        message.setId(10L);
-        message.setFromUser(author);
-        message.setConversation(conversation);
-        when(messageService.getById(10L)).thenReturn(message);
+        when(messageLookup.contextOf(10L))
+                .thenReturn(new MessageLookup.MessageContext(author.getId(), 5L, null));
 
         MessageReactionDTO reaction = new MessageReactionDTO(1L, 10L, 5L, author.getId(), "Author", "👍");
 
-        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author), ConversationType.DIRECT));
+        listener.onReactionAdded(new ReactionAddedEvent(reaction, List.of(author.getId()), ConversationType.DIRECT));
 
         verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any());
         verify(notificationService, never()).createForUsers(any(), any(), any(), any(), any(), any());

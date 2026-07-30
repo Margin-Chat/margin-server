@@ -1,13 +1,13 @@
 package org.margin.server.social.channel.services;
 
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.exceptions.ChannelNotFoundException;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.channel.models.ChannelType;
-import org.margin.server.social.channel.ChannelLookup;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.margin.service.MarginMapper;
@@ -15,7 +15,6 @@ import org.margin.server.social.space.exceptions.SpaceNotFoundException;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,8 +59,8 @@ public class ChannelService implements ChannelLookup {
     public ChannelDTO createChannelAsDto(Long spaceId, String name, String description, ChannelType channelType) {
         Space space = spacesRepository.findById(spaceId).orElseThrow(() -> new SpaceNotFoundException(spaceId));
         Channel channel = channelCreationService.createChannel(space, name, description, channelType);
-        List<User> users = space.getMembers().stream()
-                .map(SpaceMember::getUser)
+        List<Long> users = space.getMembers().stream()
+                .map(SpaceMember::getUserId)
                 .toList();
         Conversation conversation =
                 conversationService.createNewConversationForUsers(ConversationType.CHANNEL, channel, users);
@@ -91,7 +90,6 @@ public class ChannelService implements ChannelLookup {
         channelRepository.save(channel);
     }
 
-    @Override
     public Channel getById(Long channelId) {
         return channelRepository.findById(channelId).orElseThrow(() -> new ChannelNotFoundException(channelId));
     }
@@ -105,13 +103,31 @@ public class ChannelService implements ChannelLookup {
 
     public Channel createNewChannel(Space space, String name, String description) {
         Channel channel = channelCreationService.createChannel(space, name, description);
-        List<User> users = space.getMembers().stream()
-                .map(SpaceMember::getUser)
+        List<Long> users = space.getMembers().stream()
+                .map(SpaceMember::getUserId)
                 .toList();
         Conversation conversation =
                 conversationService.createNewConversationForUsers(ConversationType.CHANNEL, channel, users);
         channel.setConversation(conversation);
         channelRepository.save(channel);
         return channel;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long marginIdOf(Long channelId) {
+        return getById(channelId).getSpace().getMargin().getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long conversationIdOf(Long channelId) {
+        return getById(channelId).getConversation().getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String nameOf(Long channelId) {
+        return getById(channelId).getName();
     }
 }

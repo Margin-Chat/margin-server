@@ -7,7 +7,7 @@ import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.CallOfferPayload;
 import org.margin.server.websocket.models.payloads.CallResponsePayload;
-import org.margin.server.websocket.models.payloads.IncomingCallCandidatePayload;
+import org.margin.server.social.calls.models.CallCandidate;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -31,12 +31,12 @@ public class CallWebSocketEventListener {
     }
 
     @EventListener
-    public void onMissedCall(org.margin.server.notifications.events.MissedCallEvent missedCallEvent) {
+    public void onMissedCall(MissedCallEvent missedCallEvent) {
         String json = webSocketMessageBuilder.buildMessage(
                 WebSocketMessageType.CALL_NO_ANSWER,
-                missedCallEvent.getRecipient().getId(),
+                missedCallEvent.getRecipientId(),
                 null);
-        connectionManager.sendToUser(missedCallEvent.getRecipient().getId(), json);
+        connectionManager.sendToUser(missedCallEvent.getRecipientId(), json);
     }
 
     @EventListener
@@ -106,7 +106,7 @@ public class CallWebSocketEventListener {
 
     @EventListener
     public void onCallCandidateForwarded(CallCandidateForwardedEvent event) {
-        IncomingCallCandidatePayload payload = event.getPayload();
+        CallCandidate payload = event.getPayload();
         String json = webSocketMessageBuilder.buildMessage(WebSocketMessageType.CALL_CANDIDATE, event.getRecipientId(), payload);
         connectionManager.sendToUser(event.getRecipientId(), json);
     }

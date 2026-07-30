@@ -13,7 +13,7 @@ public class MarginInviteTestUtils {
         MarginInvite invite = new MarginInvite();
         invite.setId(1L);
         invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
+        invite.setInvitedByUserId(invitedBy.getId());
         invite.setType(MarginInvite.InviteType.LINK);
         invite.setStatus(MarginInvite.InviteStatus.PENDING);
         invite.setInviteCode("abc-123");
@@ -25,8 +25,8 @@ public class MarginInviteTestUtils {
         MarginInvite invite = new MarginInvite();
         invite.setId(1L);
         invite.setMargin(margin);
-        invite.setInvitedBy(invitedBy);
-        invite.setInvitedUser(invitedUser);
+        invite.setInvitedByUserId(invitedBy.getId());
+        invite.setInvitedUserId(invitedUser.getId());
         invite.setType(MarginInvite.InviteType.DIRECT);
         invite.setStatus(MarginInvite.InviteStatus.PENDING);
         invite.setMaxUses(1);

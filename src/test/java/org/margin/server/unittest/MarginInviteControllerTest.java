@@ -1,8 +1,10 @@
 package org.margin.server.unittest;
 
 import org.junit.jupiter.api.BeforeEach;
+import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.margin.controllers.MarginInviteController;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
@@ -13,7 +15,6 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.margin.server.unittest.utils.UserTestUtils.*;
 import static org.margin.server.unittest.utils.MarginTestUtils.*;
@@ -46,7 +48,7 @@ class MarginInviteControllerTest {
     @Mock
     private MarginService marginService;
     @Mock
-    private UserService userService;
+    private UserLookup userLookup;
     @Mock
     private MarginMapper marginMapper;
 
@@ -62,15 +64,19 @@ class MarginInviteControllerTest {
         adminUser = createUser(1L, "admin");
         targetUser = createUser(2L, "targetUser");
         margin = createMargin(1L, "Test Margin");
+        lenient().when(userLookup.summaryOf(adminUser.getId()))
+                .thenReturn(new org.margin.server.users.api.UserSummary(adminUser.getId(), adminUser.getDisplayName()));
+        lenient().when(userLookup.summaryOf(targetUser.getId()))
+                .thenReturn(new org.margin.server.users.api.UserSummary(targetUser.getId(), targetUser.getDisplayName()));
     }
 
     @Test
     void createLinkInvite_shouldReturnInvite() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createLinkInvite(margin, 10, adminUser)).thenReturn(invite);
+        when(marginInviteService.createLinkInvite(margin, 10, adminUser.getId())).thenReturn(invite);
 
-        ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, 10, adminUser);
+        ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, 10, principalOf(adminUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         MarginInviteDTO body = (MarginInviteDTO) response.getBody();
@@ -84,35 +90,35 @@ class MarginInviteControllerTest {
     void createLinkInvite_withNullMaxUses_shouldSucceed() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createLinkInvite(margin, null, adminUser)).thenReturn(invite);
+        when(marginInviteService.createLinkInvite(margin, null, adminUser.getId())).thenReturn(invite);
 
-        ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, null, adminUser);
+        ResponseEntity<?> response = marginInviteController.createLinkInvite(1L, null, principalOf(adminUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
 
     @Test
     void createLinkInvite_withZeroMaxUses_shouldThrow400() {
-        assertThatThrownBy(() -> marginInviteController.createLinkInvite(1L, 0, adminUser))
+        assertThatThrownBy(() -> marginInviteController.createLinkInvite(1L, 0, principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createLinkInvite_withNegativeMaxUses_shouldThrow400() {
-        assertThatThrownBy(() -> marginInviteController.createLinkInvite(1L, -5, adminUser))
+        assertThatThrownBy(() -> marginInviteController.createLinkInvite(1L, -5, principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createDirectInvite_shouldReturnInvite() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(false);
         when(marginService.getById(1L)).thenReturn(margin);
-        when(marginInviteService.createDirectInvite(margin, targetUser, adminUser)).thenReturn(invite);
+        when(marginInviteService.createDirectInvite(margin, targetUser.getId(), adminUser.getId())).thenReturn(invite);
 
-        ResponseEntity<?> response = marginInviteController.createDirectInvite(1L, "targetUser", adminUser);
+        ResponseEntity<?> response = marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         MarginInviteDTO body = (MarginInviteDTO) response.getBody();
@@ -124,26 +130,26 @@ class MarginInviteControllerTest {
 
     @Test
     void createDirectInvite_withEmptyEmail_shouldThrow400() {
-        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "", adminUser))
+        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "", principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createDirectInvite_whenUserAlreadyMember_shouldThrow409() {
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(true);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", adminUser))
+        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void createDirectInvite_whenPendingInviteExists_shouldThrow409() {
-        when(userService.getByEmail("targetUser")).thenReturn(targetUser);
-        when(marginService.isUserMember(1L, targetUser)).thenReturn(false);
+        when(userLookup.idByEmail("targetuser")).thenReturn(Optional.of(targetUser.getId()));
+        when(marginService.isUserMember(1L, targetUser.getId())).thenReturn(false);
         when(marginInviteService.hasPendingInviteForMargin(1L, targetUser.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", adminUser))
+        assertThatThrownBy(() -> marginInviteController.createDirectInvite(1L, "targetUser", principalOf(adminUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -174,14 +180,14 @@ class MarginInviteControllerTest {
     void acceptLinkInvite_shouldSucceed() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
-        when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(false);
-        when(marginInviteService.acceptLinkInvite(invite, targetUser)).thenReturn(margin);
+        when(marginService.isUserMember(margin.getId(), targetUser.getId())).thenReturn(false);
+        when(marginInviteService.acceptLinkInvite(invite, targetUser.getId())).thenReturn(margin);
         when(marginMapper.marginToDto(margin)).thenReturn(null);
 
-        ResponseEntity<?> response = marginInviteController.acceptLinkInvite("abc-123", targetUser);
+        ResponseEntity<?> response = marginInviteController.acceptLinkInvite("abc-123", principalOf(targetUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(marginInviteService).acceptLinkInvite(invite, targetUser);
+        verify(marginInviteService).acceptLinkInvite(invite, targetUser.getId());
         verify(marginMapper).marginToDto(margin);
     }
 
@@ -191,7 +197,7 @@ class MarginInviteControllerTest {
         invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
 
-        assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", targetUser))
+        assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", principalOf(targetUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -199,9 +205,9 @@ class MarginInviteControllerTest {
     void acceptLinkInvite_whenAlreadyMember_shouldThrow409() {
         MarginInvite invite = createLinkInvite(margin, adminUser);
         when(marginInviteService.findInviteDetails("abc-123")).thenReturn(Optional.of(invite));
-        when(marginService.isUserMember(margin.getId(), targetUser)).thenReturn(true);
+        when(marginService.isUserMember(margin.getId(), targetUser.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", targetUser))
+        assertThatThrownBy(() -> marginInviteController.acceptLinkInvite("abc-123", principalOf(targetUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -210,7 +216,7 @@ class MarginInviteControllerTest {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
 
         when(marginInviteService.getById(1L)).thenReturn(invite);
-        when(marginInviteService.acceptDirectInvite(invite, targetUser)).thenReturn(margin);
+        when(marginInviteService.acceptDirectInvite(invite, targetUser.getId())).thenReturn(margin);
 
         MarginDTO dto = new MarginDTO(
                 margin.getId(),
@@ -224,7 +230,7 @@ class MarginInviteControllerTest {
 
         when(marginService.getMarginAsDto(margin.getId())).thenReturn(dto);
 
-        ResponseEntity<?> response = marginInviteController.acceptDirectInvite(1L, targetUser);
+        ResponseEntity<?> response = marginInviteController.acceptDirectInvite(1L, principalOf(targetUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isEqualTo(dto);
@@ -239,7 +245,7 @@ class MarginInviteControllerTest {
 
         User otherUser = createUser(99L, "other");
 
-        assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, otherUser))
+        assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, principalOf(otherUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -249,7 +255,7 @@ class MarginInviteControllerTest {
         invite.setExpiresAt(Instant.now().minus(Duration.ofDays(1)));
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
-        assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, targetUser))
+        assertThatThrownBy(() -> marginInviteController.acceptDirectInvite(1L, principalOf(targetUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -258,7 +264,7 @@ class MarginInviteControllerTest {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
-        ResponseEntity<?> response = marginInviteController.declineDirectInvite(1L, targetUser);
+        ResponseEntity<?> response = marginInviteController.declineDirectInvite(1L, principalOf(targetUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         verify(marginInviteService).declineDirectInvite(invite);
@@ -271,7 +277,7 @@ class MarginInviteControllerTest {
 
         User otherUser = createUser(99L, "other");
 
-        assertThatThrownBy(() -> marginInviteController.declineDirectInvite(1L, otherUser))
+        assertThatThrownBy(() -> marginInviteController.declineDirectInvite(1L, principalOf(otherUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -281,16 +287,16 @@ class MarginInviteControllerTest {
         invite.setStatus(MarginInvite.InviteStatus.ACCEPTED);
         when(marginInviteService.getById(1L)).thenReturn(invite);
 
-        assertThatThrownBy(() -> marginInviteController.declineDirectInvite(1L, targetUser))
+        assertThatThrownBy(() -> marginInviteController.declineDirectInvite(1L, principalOf(targetUser)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void getPendingInvites_shouldReturnList() {
         MarginInvite invite = createDirectInvite(margin, adminUser, targetUser);
-        when(marginInviteService.getPendingInvites(targetUser)).thenReturn(List.of(invite));
+        when(marginInviteService.getPendingInvites(targetUser.getId())).thenReturn(List.of(invite));
 
-        ResponseEntity<?> response = marginInviteController.getPendingInvites(targetUser);
+        ResponseEntity<?> response = marginInviteController.getPendingInvites(principalOf(targetUser));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         List<MarginInviteDTO> body = (List<MarginInviteDTO>) response.getBody();

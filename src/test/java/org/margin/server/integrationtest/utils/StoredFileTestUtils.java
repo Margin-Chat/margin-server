@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest.utils;
 
 import org.margin.server.storage.controllers.StoredFileController;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.storage.repositories.StoredFileRepository;
 import org.margin.server.users.models.User;
@@ -37,7 +38,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<List<StoredFileDTO>> listMarginFiles(Long marginId, User viewer) {
         try {
-            return storedFileController.listMarginFiles(marginId, viewer);
+            return storedFileController.listMarginFiles(marginId, principalOf(viewer));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -45,7 +46,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<List<StoredFileDTO>> listChannelFiles(Long channelId, User viewer) {
         try {
-            return storedFileController.listChannelFiles(channelId, viewer);
+            return storedFileController.listChannelFiles(channelId, principalOf(viewer));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -53,7 +54,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<StoredFileDTO> uploadMarginFile(Long marginId, MultipartFile file, User user) {
         try {
-            return storedFileController.uploadMarginFile(marginId, file, user);
+            return storedFileController.uploadMarginFile(marginId, file, principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -61,7 +62,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<StoredFileDTO> uploadChannelFile(Long channelId, MultipartFile file, User user) {
         try {
-            return storedFileController.uploadChannelFile(channelId, file, false, user);
+            return storedFileController.uploadChannelFile(channelId, file, false, principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -69,7 +70,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<StoredFileDTO> uploadInlineChannelFile(Long channelId, MultipartFile file, User user) {
         try {
-            return storedFileController.uploadChannelFile(channelId, file, true, user);
+            return storedFileController.uploadChannelFile(channelId, file, true, principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -77,7 +78,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<Void> deleteFile(Long fileId, User user) {
         try {
-            return storedFileController.deleteFile(fileId, user);
+            return storedFileController.deleteFile(fileId, principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -86,7 +87,7 @@ public class StoredFileTestUtils {
     public static ResponseEntity<StoredFileDTO> renameFile(Long fileId, String newName, User user) {
         try {
             return storedFileController.renameFile(fileId,
-                    new StoredFileController.RenameRequest(newName), user);
+                    new StoredFileController.RenameRequest(newName), principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }
@@ -94,7 +95,7 @@ public class StoredFileTestUtils {
 
     public static ResponseEntity<?> download(Long fileId, User user) {
         try {
-            return storedFileController.download(fileId, user);
+            return storedFileController.download(fileId, principalOf(user));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).build();
         }

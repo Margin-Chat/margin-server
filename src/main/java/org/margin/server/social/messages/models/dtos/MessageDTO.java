@@ -1,13 +1,16 @@
 package org.margin.server.social.messages.models.dtos;
 
-import org.margin.server.social.conversation.models.ConversationType;
+import org.springframework.modulith.NamedInterface;
+
+import org.margin.server.social.api.MessageAttachmentDTO;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.models.Message;
-import org.margin.server.storage.dtos.StoredFileDTO;
 import org.margin.server.users.models.dtos.UserDTO;
 
 import java.time.Instant;
 import java.util.List;
 
+@NamedInterface("api")
 public record MessageDTO(
         Long id,
         Long conversationId,
@@ -19,7 +22,7 @@ public record MessageDTO(
         Long marginId,
         String channelName,
         List<MessageReactionDTO> reactions,
-        List<StoredFileDTO> attachments,
+        List<MessageAttachmentDTO> attachments,
         Long parentConversationId
 ) {
 
@@ -29,18 +32,18 @@ public record MessageDTO(
 
     public static class Builder {
         private final Message message;
-        private boolean isUserOnline = false;
+        private UserDTO author;
         private Long marginId = null;
         private String channelName = null;
         private List<MessageReactionDTO> reactions = List.of();
-        private List<StoredFileDTO> attachments = List.of();
+        private List<MessageAttachmentDTO> attachments = List.of();
 
         private Builder(Message message) {
             this.message = message;
         }
 
-        public Builder withOnline(boolean isUserOnline) {
-            this.isUserOnline = isUserOnline;
+        public Builder withAuthor(UserDTO author) {
+            this.author = author;
             return this;
         }
 
@@ -59,7 +62,7 @@ public record MessageDTO(
             return this;
         }
 
-        public Builder withAttachments(List<StoredFileDTO> attachments) {
+        public Builder withAttachments(List<MessageAttachmentDTO> attachments) {
             this.attachments = attachments != null ? attachments : List.of();
             return this;
         }
@@ -69,7 +72,7 @@ public record MessageDTO(
                     message.getId(),
                     message.getConversation().getId(),
                     message.getConversation().getType(),
-                    new UserDTO(message.getFromUser(), isUserOnline),
+                    author,
                     message.getMessage(),
                     message.getIsEdited(),
                     message.getCreatedAt(),

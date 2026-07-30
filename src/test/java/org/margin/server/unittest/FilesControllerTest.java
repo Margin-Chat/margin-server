@@ -1,11 +1,13 @@
 package org.margin.server.unittest;
 
 import org.junit.jupiter.api.BeforeEach;
+import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.validations.ConversationAuthorizationService;
-import org.margin.server.social.margin.MarginLookup;
+import org.margin.server.social.api.MarginLookup;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.storage.StorageProperties;
@@ -49,6 +51,8 @@ class FilesControllerTest {
     @Mock
     private StoredFileService storedFileService;
     @Mock
+    private ChannelLookup channelLookup;
+    @Mock
     private MarginAuthorizationService marginAuthorizationService;
     @Mock
     private ConversationAuthorizationService conversationAuthorizationService;
@@ -82,7 +86,7 @@ class FilesControllerTest {
         when(storageService.getFile("/user-profiles/avatar.png"))
                 .thenReturn(new ByteArrayResource("bytes".getBytes()));
 
-        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", viewer);
+        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", principalOf(viewer));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         verify(storageService).getFile("/user-profiles/avatar.png");
@@ -96,7 +100,7 @@ class FilesControllerTest {
         when(storageProperties.getS3()).thenReturn(s3Properties);
         when(s3Properties.getPresignTtlSeconds()).thenReturn(600L);
 
-        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", viewer);
+        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", principalOf(viewer));
 
         assertEquals(HttpStatus.FOUND, response.getStatusCode());
         assertEquals("https://s3.example/signed",
@@ -108,7 +112,7 @@ class FilesControllerTest {
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile(anyString())).thenThrow(new NoSuchFileException("avatar.png"));
 
-        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", viewer);
+        ResponseEntity<?> response = controller.getProfilePicture("avatar.png", principalOf(viewer));
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
@@ -123,23 +127,25 @@ class FilesControllerTest {
 
     @Test
     void getMarginIcon_requiresMarginMembership() throws IOException {
-        when(marginLookup.findByIconFileName("icon.png")).thenReturn(margin);
+        when(marginLookup.iconByFileName("icon.png"))
+                .thenReturn(new MarginLookup.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(marginAuthorizationService).requireMarginMember(1L, 10L);
 
         assertThrows(ResponseStatusException.class,
-                () -> controller.getMarginIcon("icon.png", viewer));
+                () -> controller.getMarginIcon("icon.png", principalOf(viewer)));
         verify(storageService, never()).getFile(anyString());
     }
 
     @Test
     void getMarginIcon_servesFileForMarginMember() throws IOException {
-        when(marginLookup.findByIconFileName("icon.png")).thenReturn(margin);
+        when(marginLookup.iconByFileName("icon.png"))
+                .thenReturn(new MarginLookup.MarginIcon(10L, "/api/files/margin-icons/icon.png"));
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile("/api/files/margin-icons/icon.png"))
                 .thenReturn(new ByteArrayResource("icon".getBytes()));
 
-        ResponseEntity<?> response = controller.getMarginIcon("icon.png", viewer);
+        ResponseEntity<?> response = controller.getMarginIcon("icon.png", principalOf(viewer));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
     }
@@ -155,12 +161,13 @@ class FilesControllerTest {
     @Test
     void getStoredFileByName_requiresConversationMembershipForChannelFile() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByStoredFileName("file.pdf")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
 
         assertThrows(ResponseStatusException.class,
-                () -> controller.getStoredFileByName("file.pdf", viewer));
+                () -> controller.getStoredFileByName("file.pdf", principalOf(viewer)));
         verify(storageService, never()).getFile(anyString());
     }
 
@@ -172,7 +179,7 @@ class FilesControllerTest {
                 .when(marginAuthorizationService).requireMarginMember(1L, 10L);
 
         assertThrows(ResponseStatusException.class,
-                () -> controller.getStoredFileByName("file.pdf", viewer));
+                () -> controller.getStoredFileByName("file.pdf", principalOf(viewer)));
         verify(storageService, never()).getFile(anyString());
     }
 
@@ -184,7 +191,7 @@ class FilesControllerTest {
         when(storageService.getFile(f.getStorageUrl()))
                 .thenReturn(new ByteArrayResource("data".getBytes()));
 
-        ResponseEntity<?> response = controller.getStoredFileByName("file.pdf", viewer);
+        ResponseEntity<?> response = controller.getStoredFileByName("file.pdf", principalOf(viewer));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         verify(marginAuthorizationService).requireMarginMember(1L, 10L);
@@ -198,7 +205,7 @@ class FilesControllerTest {
                 .when(conversationAuthorizationService).requireConversationMember(77L, 1L);
 
         assertThrows(ResponseStatusException.class,
-                () -> controller.getStoredFileByName("file.pdf", viewer));
+                () -> controller.getStoredFileByName("file.pdf", principalOf(viewer)));
         verify(storageService, never()).getFile(anyString());
     }
 
@@ -210,7 +217,7 @@ class FilesControllerTest {
         when(storageService.getFile(f.getStorageUrl()))
                 .thenReturn(new ByteArrayResource("data".getBytes()));
 
-        ResponseEntity<?> response = controller.getStoredFileByName("file.pdf", viewer);
+        ResponseEntity<?> response = controller.getStoredFileByName("file.pdf", principalOf(viewer));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         verify(conversationAuthorizationService).requireConversationMember(77L, 1L);
@@ -223,7 +230,7 @@ class FilesControllerTest {
                 .thenThrow(new StoredFileNotFoundException("missing.pdf"));
 
         assertThrows(StoredFileNotFoundException.class,
-                () -> controller.getStoredFileByName("missing.pdf", viewer));
+                () -> controller.getStoredFileByName("missing.pdf", principalOf(viewer)));
     }
 
     // --- getConversationImage ---
@@ -240,7 +247,7 @@ class FilesControllerTest {
         f.setMessageId(null);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
 
-        ResponseEntity<?> response = controller.getConversationImage("img.png", viewer);
+        ResponseEntity<?> response = controller.getConversationImage("img.png", principalOf(viewer));
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
@@ -251,7 +258,7 @@ class FilesControllerTest {
         f.setMessageId(42L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
 
-        ResponseEntity<?> response = controller.getConversationImage("img.png", viewer);
+        ResponseEntity<?> response = controller.getConversationImage("img.png", principalOf(viewer));
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
@@ -259,24 +266,26 @@ class FilesControllerTest {
     @Test
     void getConversationImage_requiresConversationMembership() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .when(conversationAuthorizationService).requireConversationMember(99L, 1L);
 
         assertThrows(ResponseStatusException.class,
-                () -> controller.getConversationImage("img.png", viewer));
+                () -> controller.getConversationImage("img.png", principalOf(viewer)));
         verify(storageService, never()).getFile(anyString());
     }
 
     @Test
     void getConversationImage_servesFileAfterAuthCheck() throws IOException {
         StoredFile f = channelStoredFile();
+        when(channelLookup.conversationIdOf(5L)).thenReturn(99L);
         when(storedFileService.findByConversationImageFileName("img.png")).thenReturn(f);
         when(storageProperties.getType()).thenReturn("local");
         when(storageService.getFile(f.getStorageUrl()))
                 .thenReturn(new ByteArrayResource("img".getBytes()));
 
-        ResponseEntity<?> response = controller.getConversationImage("img.png", viewer);
+        ResponseEntity<?> response = controller.getConversationImage("img.png", principalOf(viewer));
 
         assertTrue(response.getStatusCode().is2xxSuccessful());
         verify(conversationAuthorizationService).requireConversationMember(99L, 1L);

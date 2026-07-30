@@ -10,7 +10,7 @@ import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelCreationService;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -57,7 +57,7 @@ class ChannelServiceTest {
         testSpace = createSpace(100L);
 
         SpaceMember member = new SpaceMember();
-        member.setUser(testUser);
+        member.setUserId(testUser.getId());
         testSpace.setMembers(List.of(member));
     }
 
@@ -91,7 +91,7 @@ class ChannelServiceTest {
 
         verify(channelCreationService).createChannel(testSpace, name, desc);
         verify(conversationService).createNewConversationForUsers(
-                eq(ConversationType.CHANNEL), eq(channel), argThat(users -> users.size() == 1 && users.contains(testUser)));
+                eq(ConversationType.CHANNEL), eq(channel), argThat(ids -> ids.size() == 1 && ids.contains(testUser.getId())));
         verify(channelRepository).save(channel);
     }
 

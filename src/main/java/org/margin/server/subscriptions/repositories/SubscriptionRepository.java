@@ -1,6 +1,5 @@
 package org.margin.server.subscriptions.repositories;
 
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.entities.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
-    Optional<Subscription> findByMargin(Margin margin);
+    Optional<Subscription> findByMarginId(Long marginId);
 
     Optional<Subscription> findByMollieCustomerId(String mollieCustomerId);
 

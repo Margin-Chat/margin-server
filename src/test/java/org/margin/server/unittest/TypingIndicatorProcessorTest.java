@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.exceptions.ConversationValidationException;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.TypingIndicatorPayload;
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.UserTestUtils.authUser;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +43,7 @@ class TypingIndicatorProcessorTest {
 
     @Test
     void process_validatesMembershipThenNotifiesTyping() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
@@ -53,19 +53,18 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(true));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
-        verify(conversationValidationService).validateUserIsInConversation(sender, conversation);
+        verify(conversationValidationService).validateUserIsInConversation(sender.id(), conversation.getId());
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender.id()), eq(conversation.getId()), isTypingCaptor.capture());
         assertTrue(isTypingCaptor.getValue());
     }
 
     @Test
     void process_forwardsIsTypingFalse() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
@@ -75,18 +74,17 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(false));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
         ArgumentCaptor<Boolean> isTypingCaptor = ArgumentCaptor.forClass(Boolean.class);
-        verify(conversationService).notifyTyping(eq(sender), eq(conversation), isTypingCaptor.capture());
+        verify(conversationService).notifyTyping(eq(sender.id()), eq(conversation.getId()), isTypingCaptor.capture());
         assertFalse(isTypingCaptor.getValue());
     }
 
     @Test
     void process_doesNotNotifyWhenUserNotInConversation() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
@@ -96,9 +94,8 @@ class TypingIndicatorProcessorTest {
         message.setRecipientId(10L);
         message.setPayload(new TypingIndicatorPayload(true));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
         doThrow(new ConversationValidationException("User is not a part of the conversation"))
-                .when(conversationValidationService).validateUserIsInConversation(sender, conversation);
+                .when(conversationValidationService).validateUserIsInConversation(sender.id(), conversation.getId());
 
         assertThrows(ConversationValidationException.class, () -> processor.process(sender, message));
 

@@ -1,7 +1,10 @@
 package org.margin.server.subscriptions.models;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.Getter;
 
+@NamedInterface("api")
 @Getter
 public enum SubscriptionTier {
     FREE(1),

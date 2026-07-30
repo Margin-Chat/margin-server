@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelService;
@@ -21,7 +22,7 @@ import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.social.space.services.SpacesActions;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.space.services.SpacesCreationService;
 import org.margin.server.social.space.services.SpacesService;
 import org.margin.server.users.models.User;
@@ -46,6 +47,8 @@ class SpacesServiceTest {
     @Mock
     private SpacesRepository spacesRepository;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private SpaceMemberRepository spaceMemberRepository;
     @Mock
     private ChannelRepository channelRepository;
@@ -58,19 +61,26 @@ class SpacesServiceTest {
     @Mock
     private MarginMapper marginMapper;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
     @Mock
     private SpacesActions spacesActions;
 
     @InjectMocks
     private SpacesService spacesService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void stubUserLookup() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
+    }
+
     private Margin testMargin(User... members) {
         Margin margin = new Margin();
         List<MarginMember> marginMembers = new ArrayList<>();
         for (User u : members) {
             MarginMember mm = new MarginMember();
-            mm.setUser(u);
+            mm.setUserId(u.getId());
             marginMembers.add(mm);
         }
         margin.setMembers(marginMembers);
@@ -89,7 +99,7 @@ class SpacesServiceTest {
 
         User user = createUser(1L);
         assertThrows(DuplicateKeyException.class,
-                () -> spacesService.createNewSpace(dto, user, margin));
+                () -> spacesService.createNewSpace(dto, user.getId(), margin));
     }
 
     @Test
@@ -113,9 +123,9 @@ class SpacesServiceTest {
                 .thenReturn(new Channel());
 
         SpaceMember spaceMember = new SpaceMember();
-        spaceMember.setUser(user);
+        spaceMember.setUserId(user.getId());
         spaceMember.setRole(SpaceRole.ADMIN);
-        when(spacesActions.addUserToSpace(user, space, SpaceRole.ADMIN)).thenReturn(spaceMember);
+        when(spacesActions.addUserToSpace(user.getId(), space, SpaceRole.ADMIN)).thenReturn(spaceMember);
         when(marginMemberRepository.findByMargin_Id(margin.getId())).thenReturn(List.of());
 
         SpaceDTO mappedDto = new SpaceDTO(
@@ -124,13 +134,13 @@ class SpacesServiceTest {
         );
         when(marginMapper.spaceToDto(space)).thenReturn(mappedDto);
 
-        SpaceDTO result = spacesService.createNewSpace(dto, user, margin);
+        SpaceDTO result = spacesService.createNewSpace(dto, user.getId(), margin);
 
         assertNotNull(result);
         assertEquals(10L, result.spaceId());
         verify(spacesCreationService).create("General", "Desc", Visibility.PUBLIC, margin);
         verify(channelService).createNewChannel(any(Space.class), eq("General Chat"), anyString());
-        verify(spacesActions).addUserToSpace(user, space, SpaceRole.ADMIN);
+        verify(spacesActions).addUserToSpace(user.getId(), space, SpaceRole.ADMIN);
     }
 
     @Test
@@ -140,17 +150,16 @@ class SpacesServiceTest {
         User newUser = createUser(2L);
 
         SpaceMember spaceMember = new SpaceMember();
-        spaceMember.setUser(newUser);
+        spaceMember.setUserId(newUser.getId());
         spaceMember.setRole(SpaceRole.MEMBER);
         spaceMember.setSpace(space);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
-        when(spacesActions.addUserToSpace(newUser, space, SpaceRole.MEMBER)).thenReturn(spaceMember);
-        when(connectionManager.isUserOnline(newUser.getId())).thenReturn(false);
+        when(spacesActions.addUserToSpace(newUser.getId(), space, SpaceRole.MEMBER)).thenReturn(spaceMember);
 
-        spacesService.addNewUserToSpace(newUser, space.getId(), SpaceRole.MEMBER);
+        spacesService.addNewUserToSpace(newUser.getId(), space.getId(), SpaceRole.MEMBER);
 
-        verify(spacesActions).addUserToSpace(newUser, space, SpaceRole.MEMBER);
+        verify(spacesActions).addUserToSpace(newUser.getId(), space, SpaceRole.MEMBER);
     }
 
     @Test
@@ -160,11 +169,11 @@ class SpacesServiceTest {
         User existingUser = createUser(1L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
-        when(spacesActions.addUserToSpace(existingUser, space, SpaceRole.MEMBER))
+        when(spacesActions.addUserToSpace(existingUser.getId(), space, SpaceRole.MEMBER))
                 .thenThrow(new DuplicateKeyException("Can't add duplicate space member"));
 
         assertThrows(DuplicateKeyException.class, () ->
-                spacesService.addNewUserToSpace(existingUser, space.getId(), SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(existingUser.getId(), space.getId(), SpaceRole.MEMBER)
         );
     }
 
@@ -175,11 +184,11 @@ class SpacesServiceTest {
         User outsider = createUser(3L);
 
         when(spacesRepository.findById(space.getId())).thenReturn(Optional.of(space));
-        when(spacesActions.addUserToSpace(outsider, space, SpaceRole.MEMBER))
+        when(spacesActions.addUserToSpace(outsider.getId(), space, SpaceRole.MEMBER))
                 .thenThrow(new UserNotInMargin(outsider.getId()));
 
         assertThrows(UserNotInMargin.class, () ->
-                spacesService.addNewUserToSpace(outsider, space.getId(), SpaceRole.MEMBER)
+                spacesService.addNewUserToSpace(outsider.getId(), space.getId(), SpaceRole.MEMBER)
         );
     }
 

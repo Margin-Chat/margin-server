@@ -25,7 +25,7 @@ public class CallTestUtils {
     }
 
     public static Call createCall(User caller, User receiver) {
-        return callService.createCall(caller, receiver.getId(), CallStatus.OFFERED, CallType.AUDIO, generateRandomSdp());
+        return callService.createCall(caller.getId(), receiver.getId(), CallStatus.OFFERED, CallType.AUDIO, generateRandomSdp());
     }
 
     public static Call findById(Long callId) {

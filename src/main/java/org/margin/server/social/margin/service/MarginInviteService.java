@@ -1,13 +1,12 @@
 package org.margin.server.social.margin.service;
 
-import org.margin.server.notifications.events.UserInvitedToMarginEvent;
+import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.MarginRole;
 import org.margin.server.social.margin.repositories.MarginInviteRepository;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,10 +38,10 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public MarginInvite createLinkInvite(Margin margin, Integer maxUses, User invitedBy) {
+    public MarginInvite createLinkInvite(Margin margin, Integer maxUses, Long invitedById) {
         MarginInvite marginInvite = new MarginInvite();
         marginInvite.setMargin(margin);
-        marginInvite.setInvitedBy(invitedBy);
+        marginInvite.setInvitedByUserId(invitedById);
         marginInvite.setCreatedAt(Instant.now());
         marginInvite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         marginInvite.setMaxUses(maxUses);
@@ -51,19 +50,19 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public MarginInvite createDirectInvite(Margin margin, User targetUser, User invitedBy) {
-        if (marginMemberRepository.existsByMarginIdAndUserId(margin.getId(), targetUser.getId())) {
+    public MarginInvite createDirectInvite(Margin margin, Long targetUserId, Long invitedById) {
+        if (marginMemberRepository.existsByMarginIdAndUserId(margin.getId(), targetUserId)) {
             throw new IllegalStateException("User is already a member of this margin");
         }
 
-        if (marginInviteRepository.existsPendingInvite(margin.getId(), targetUser.getId(), MarginInvite.InviteStatus.PENDING)) {
+        if (marginInviteRepository.existsPendingInvite(margin.getId(), targetUserId, MarginInvite.InviteStatus.PENDING)) {
             throw new IllegalStateException("User already has a pending invite to this margin");
         }
 
         MarginInvite marginInvite = new MarginInvite();
         marginInvite.setMargin(margin);
-        marginInvite.setInvitedBy(invitedBy);
-        marginInvite.setInvitedUser(targetUser);
+        marginInvite.setInvitedByUserId(invitedById);
+        marginInvite.setInvitedUserId(targetUserId);
         marginInvite.setCreatedAt(Instant.now());
         marginInvite.setExpiresAt(Instant.now().plus(Duration.ofDays(7)));
         marginInvite.setMaxUses(1);
@@ -72,7 +71,8 @@ public class MarginInviteService {
         MarginInvite saved = marginInviteRepository.save(marginInvite);
 
         eventPublisher.publishEvent(
-                new UserInvitedToMarginEvent(targetUser, invitedBy, saved.getId(), saved.getInviteCode(), margin.getId()));
+                new UserInvitedToMarginEvent(
+                targetUserId, invitedById, saved.getId(), saved.getInviteCode(), margin.getId()));
 
         return saved;
     }
@@ -82,16 +82,16 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public Margin acceptLinkInvite(MarginInvite invite, User user) {
+    public Margin acceptLinkInvite(MarginInvite invite, Long userId) {
         marginService.addUserToMargin(
                 invite.getMargin().getId(),
-                user.getId(),
+                userId,
                 MarginRole.MEMBER,
-                invite.getInvitedBy(),
+                invite.getInvitedByUserId(),
                 false
         );
 
-        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user);
+        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), userId);
 
         invite.setCurrentUses(invite.getCurrentUses() + 1);
         marginInviteRepository.save(invite);
@@ -100,16 +100,16 @@ public class MarginInviteService {
     }
 
     @Transactional
-    public Margin acceptDirectInvite(MarginInvite invite, User user) {
+    public Margin acceptDirectInvite(MarginInvite invite, Long userId) {
         marginService.addUserToMargin(
                 invite.getMargin().getId(),
-                user.getId(),
+                userId,
                 MarginRole.MEMBER,
-                invite.getInvitedBy(),
+                invite.getInvitedByUserId(),
                 false
         );
 
-        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), user);
+        spacesService.addUsersToDefaultSpacesForMargin(invite.getMargin().getId(), userId);
 
         invite.setStatus(MarginInvite.InviteStatus.ACCEPTED);
         marginInviteRepository.save(invite);
@@ -122,9 +122,9 @@ public class MarginInviteService {
         marginInviteRepository.save(invite);
     }
 
-    public List<MarginInvite> getPendingInvites(User user) {
+    public List<MarginInvite> getPendingInvites(Long userId) {
         return marginInviteRepository.findInvitesForUserByStatus(
-                user.getId(),
+                userId,
                 MarginInvite.InviteStatus.PENDING,
                 Instant.now()
         );

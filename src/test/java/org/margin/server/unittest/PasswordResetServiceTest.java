@@ -6,11 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.authentication.services.PasswordResetService;
+import org.margin.server.authentication.services.UserSecurityService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserSecurity;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserCacheService;
+import org.margin.server.users.api.UserAccountCommands;
+import org.margin.server.users.api.UserLookup;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,11 +32,12 @@ import static org.margin.server.unittest.utils.UserTestUtils.createEncryption;
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
 
-    @Mock private UserRepository userRepository;
+    @Mock private UserLookup userLookup;
+    @Mock private UserAccountCommands userAccountCommands;
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
-    @Mock private UserCacheService userCacheService;
+    @Mock private UserSecurityService userSecurityService;
 
     @InjectMocks
     private PasswordResetService passwordResetService;
@@ -44,25 +45,25 @@ class PasswordResetServiceTest {
     @Test
     void requestReset_knownEmail_deletesOldTokenAndSavesNew() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(any(), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         passwordResetService.requestPasswordReset("alice@margin.chat");
 
-        verify(tokenRepository).deleteByUser(user);
+        verify(tokenRepository).deleteByUserId(user.getId());
         ArgumentCaptor<PasswordResetToken> captor = ArgumentCaptor.forClass(PasswordResetToken.class);
         verify(tokenRepository).save(captor.capture());
         PasswordResetToken saved = captor.getValue();
         assertNotNull(saved.getToken());
-        assertEquals(user, saved.getUser());
+        assertEquals(user.getId(), saved.getUserId());
         assertTrue(saved.getExpiresAt().isAfter(Instant.now()));
     }
 
     @Test
     void requestReset_knownEmail_sendsEmail() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(eq("Alice"), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
@@ -73,7 +74,7 @@ class PasswordResetServiceTest {
 
     @Test
     void requestReset_unknownEmail_doesNothing() {
-        when(userRepository.findByEmail("nobody@margin.chat")).thenReturn(Optional.empty());
+        when(userLookup.findByEmail("nobody@margin.chat")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> passwordResetService.requestPasswordReset("nobody@margin.chat"));
 
@@ -83,7 +84,7 @@ class PasswordResetServiceTest {
     @Test
     void requestReset_emailFailure_doesNotThrow() throws MessagingException {
         User user = makeUser();
-        when(userRepository.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
+        when(userLookup.findByEmail("alice@margin.chat")).thenReturn(Optional.of(user));
         when(emailService.buildPasswordResetMail(any(), any())).thenReturn("<html/>");
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         doThrow(new MessagingException("SMTP down")).when(emailService).sendEmail(any(), any(), any());
@@ -100,14 +101,8 @@ class PasswordResetServiceTest {
 
         passwordResetService.resetPassword("valid-token", "new-pass");
 
-        assertEquals("hashed", user.getPassword());
-        assertNull(user.getEncryption().getPublicKey());
-        assertNull(user.getEncryption().getEncryptedPrivateKey());
-        assertNull(user.getEncryption().getSalt());
-        assertNull(user.getEncryption().getIv());
-        verify(userRepository).save(user);
-        assertEquals(1, user.getSecurity().getTokenVersion(), "reset must bump token version to revoke existing JWTs");
-        verify(userCacheService).evictUserCache(1L);
+        verify(userAccountCommands).resetCredentials(1L, "hashed");
+        verify(userSecurityService).bumpTokenVersion(1L);
         assertNotNull(token.getUsedAt());
         verify(tokenRepository).save(token);
     }
@@ -122,7 +117,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("expired"));
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(userAccountCommands);
     }
 
     @Test
@@ -135,7 +130,7 @@ class PasswordResetServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().toLowerCase().contains("already been used"));
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(userAccountCommands);
     }
 
     @Test
@@ -151,13 +146,12 @@ class PasswordResetServiceTest {
     private static User makeUser() {
         User user = createUser(1L, "Alice", "alice@margin.chat");
         user.setEncryption(createEncryption("old-public", "old-encrypted-private", "old-salt", "old-iv"));
-        user.setSecurity(new UserSecurity());
         return user;
     }
 
     private static PasswordResetToken makeToken(User user, boolean expired, boolean used) {
         PasswordResetToken token = new PasswordResetToken();
-        token.setUser(user);
+        token.setUserId(user.getId());
         token.setToken("valid-token");
         token.setExpiresAt(expired ? Instant.now().minusSeconds(60) : Instant.now().plusSeconds(3600));
         if (used) token.setUsedAt(Instant.now().minusSeconds(30));

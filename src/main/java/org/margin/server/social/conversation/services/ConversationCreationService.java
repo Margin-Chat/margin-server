@@ -6,10 +6,9 @@ import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationMemberId;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,24 +75,24 @@ public class ConversationCreationService {
     }
 
     @Transactional
-    public void createConversationMember(Conversation conversation, User user) {
-        createConversationMemberWithStatus(conversation, user, ConversationInviteStatus.ACCEPTED);
+    public void createConversationMember(Conversation conversation, Long userId) {
+        createConversationMemberWithStatus(conversation, userId, ConversationInviteStatus.ACCEPTED);
     }
 
     @Transactional
-    public void createConversationMemberWithStatus(Conversation conversation, User user,
+    public void createConversationMemberWithStatus(Conversation conversation, Long userId,
                                                    ConversationInviteStatus status) {
         ConversationMember member = new ConversationMember();
-        member.setId(new ConversationMemberId(conversation.getId(), user.getId()));
+        member.setId(new ConversationMemberId(conversation.getId(), userId));
         member.setConversation(conversation);
-        member.setUser(user);
+        member.setUserId(userId);
         member.setJoinedAt(Instant.now());
         member.setInviteStatus(status);
         if (status == ConversationInviteStatus.PENDING) {
             member.setInvitedAt(Instant.now());
         }
         log.info("Creation Conversation Member: {}, status: {}, for Conversation {}",
-                member.getUser().getId(), status, conversation.getId());
+                member.getUserId(), status, conversation.getId());
         conversationMemberRepository.save(member);
     }
 }

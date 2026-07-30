@@ -28,18 +28,18 @@ public class WebSocketMessageBuilder {
         );
     }
 
-    public String notification(Notification notification) {
+    public String notification(Notification notification, UserDTO sender) {
         var payload = new NotificationPayload(
                 notification.getNotificationId(),
                 notification.getType(),
                 notification.getReferenceId(),
                 notification.getMarginId(),
                 notification.getConversationId(),
-                notification.getSender() != null ? new UserDTO(notification.getSender(), false) : null,
+                sender,
                 notification.getCreatedAt(),
                 notification.isSeen()
         );
-        return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipient().getId(), payload);
+        return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipientId(), payload);
     }
 
     public <T> String buildMessage(WebSocketMessageType type, Long recipientId, T payload) {

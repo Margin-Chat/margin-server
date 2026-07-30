@@ -9,7 +9,7 @@ import org.margin.server.storage.services.StorageService;
 import org.margin.server.storage.services.StoredFileService;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -34,7 +34,7 @@ class StoredFileServiceTest {
     @Mock
     private StoredFileRepository storedFileRepository;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
     @Mock
     private StorageService storageService;
     @Mock

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.*;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.MessageReaction;
@@ -59,7 +59,7 @@ class ReactMessageTest extends MarginTestRunner {
         List<MessageReaction> reactions = MessageReactionTestUtils.getReactionsForMessage(message.getId());
         assertEquals(1, reactions.size());
         assertEquals("👍", reactions.getFirst().getEmoji());
-        assertEquals(reactor.getId(), reactions.getFirst().getUser().getId());
+        assertEquals(reactor.getId(), reactions.getFirst().getUserId());
     }
 
     @Test
@@ -118,7 +118,7 @@ class ReactMessageTest extends MarginTestRunner {
 
         List<MessageReaction> reactions = MessageReactionTestUtils.getReactionsForMessage(message.getId());
         assertEquals(1, reactions.size());
-        assertEquals(reactor.getId(), reactions.getFirst().getUser().getId());
+        assertEquals(reactor.getId(), reactions.getFirst().getUserId());
 
         List<Notification> authorNotifications = NotificationTestUtils.getForUser(author).stream()
                 .filter(n -> n.getType() == NotificationType.MESSAGE_REACTION)

@@ -9,13 +9,15 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.users.models.User;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +31,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
     private final Map<WebSocketMessageType, WebSocketMessageProcessor<Object>> dispatch;
 
     @SuppressWarnings("unchecked")
@@ -36,11 +39,13 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
                             JwtService jwtService,
                             ConnectionManager connectionManager,
                             PresenceService presenceService,
+                            UserLookup userLookup,
                             List<WebSocketMessageProcessor<?>> processors) {
         this.dbExecutor = dbExecutor;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
         this.dispatch = processors.stream()
                 .collect(Collectors.toMap(
                         WebSocketMessageProcessor::getType,
@@ -64,7 +69,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        Optional<User> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
+        Optional<AuthenticatedUser> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
         if (optionalUser.isEmpty()) {
             var response = new io.netty.handler.codec.http.DefaultFullHttpResponse(
                     io.netty.handler.codec.http.HttpVersion.HTTP_1_1,
@@ -74,7 +79,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        User user = optionalUser.get();
+        AuthenticatedUser user = optionalUser.get();
         ctx.channel().attr(WebSocketAttributes.USER).set(user);
 
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
@@ -91,10 +96,10 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         }
     }
 
-    private void onConnectionEstablished(ChannelHandlerContext ctx, User user) {
+    private void onConnectionEstablished(ChannelHandlerContext ctx, AuthenticatedUser user) {
         ClientConnection connection = new WebSocketClientConnection(ctx.channel(), user);
         connectionManager.addConnection(user, connection);
-        presenceService.userConnected(user);
+        presenceService.userConnected(user.id());
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
@@ -116,7 +121,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+        AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user == null) {
             ctx.close();
             return;
@@ -131,7 +136,7 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         try {
             processor.process(user, (WebSocketMessageIn<Object>) message);
         } catch (Exception t) {
-            log.error("Processor {} failed for user {}", message.getType(), user.getId(), t);
+            log.error("Processor {} failed for user {}", message.getType(), user.id(), t);
         }
     }
 
@@ -141,9 +146,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             if (idleEvent.state() == IdleState.WRITER_IDLE) {
                 ctx.writeAndFlush(new PingWebSocketFrame());
             } else if (idleEvent.state() == IdleState.READER_IDLE) {
-                User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+                AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
                 log.info("Closing idle websocket connection for user {}",
-                        user != null ? user.getId() : "<unauthenticated>");
+                        user != null ? user.id() : "<unauthenticated>");
                 ctx.close();
             }
         }
@@ -151,12 +156,12 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        User user = ctx.channel().attr(WebSocketAttributes.USER).get();
+        AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user != null) {
             boolean lastSession = connectionManager.removeConnection(user, ctx.channel());
             if (lastSession) {
-                presenceService.userDisconnected(user);
-                dbExecutor.execute(() -> presenceService.stampLastSeen(user.getId()));
+                presenceService.userDisconnected(user.id());
+                dbExecutor.execute(() -> stampLastSeen(user.id()));
             }
         }
     }
@@ -170,5 +175,13 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private String buildWsUrl(FullHttpRequest req) {
         String host = req.headers().get("Host", "localhost:8081");
         return "ws://" + host + req.uri();
+    }
+
+    private void stampLastSeen(Long userId) {
+        try {
+            userLookup.markLastSeen(userId, Instant.now());
+        } catch (Exception e) {
+            log.warn("Failed to stamp lastSeenAt for user {}", userId, e);
+        }
     }
 }

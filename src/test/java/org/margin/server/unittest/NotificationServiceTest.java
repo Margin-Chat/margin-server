@@ -3,7 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
@@ -45,7 +45,7 @@ class NotificationServiceTest {
         User member2 = createUser(3L);
 
         notificationService.createForUsers(
-                List.of(sender, member1, member2), sender,
+                List.of(sender.getId(), member1.getId(), member2.getId()), sender.getId(),
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
 
@@ -55,7 +55,7 @@ class NotificationServiceTest {
         List<Notification> saved = captor.getValue();
         assertThat(saved)
                 .hasSize(2)
-                .noneMatch(n -> n.getRecipient().getId().equals(sender.getId()));
+                .noneMatch(n -> n.getRecipientId().equals(sender.getId()));
     }
 
     @Test
@@ -64,7 +64,7 @@ class NotificationServiceTest {
         User member = createUser(2L);
 
         notificationService.createForUsers(
-                List.of(member), sender,
+                List.of(member.getId()), sender.getId(),
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
 
@@ -72,8 +72,8 @@ class NotificationServiceTest {
         verify(notificationRepository).saveAll(captor.capture());
 
         Notification saved = captor.getValue().get(0);
-        assertThat(saved.getRecipient()).isEqualTo(member);
-        assertThat(saved.getSender()).isEqualTo(sender);
+        assertThat(saved.getRecipientId()).isEqualTo(member.getId());
+        assertThat(saved.getSenderId()).isEqualTo(sender.getId());
         assertThat(saved.getType()).isEqualTo(NotificationType.ANNOUNCEMENT);
         assertThat(saved.getReferenceId()).isEqualTo(100L);
         assertThat(saved.getMarginId()).isEqualTo(10L);
@@ -100,7 +100,7 @@ class NotificationServiceTest {
         Notification n2 = unseenNotification(recipient, 10L);
         Notification n3 = unseenNotification(recipient, 20L);
 
-        when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
+        when(notificationRepository.findByRecipientIdAndSeenFalse(recipient.getId()))
                 .thenReturn(List.of(n1, n2, n3));
 
         Map<Long, Long> counts = notificationService.getUnseenCountsPerMargin(recipient.getId());
@@ -114,13 +114,13 @@ class NotificationServiceTest {
     void getNotificationsForUser_delegatesToRepository() {
         User recipient = createUser(1L);
         List<Notification> expected = List.of(unseenNotification(recipient, 10L));
-        when(notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipient.getId()))
+        when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipient.getId()))
                 .thenReturn(expected);
 
         List<Notification> result = notificationService.getNotificationsForUser(recipient.getId());
 
         assertThat(result).isEqualTo(expected);
-        verify(notificationRepository).findByRecipient_IdOrderByCreatedAtDesc(recipient.getId());
+        verify(notificationRepository).findByRecipientIdOrderByCreatedAtDesc(recipient.getId());
     }
 
     @Test
@@ -128,18 +128,18 @@ class NotificationServiceTest {
         User sender = createUser(1L);
         User author = createUser(2L);
         User replier = createUser(3L);
-        when(notificationRepository.findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+        when(notificationRepository.findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
                 anyLong(), eq(NotificationType.THREAD_REPLY), eq(50L)))
                 .thenReturn(Optional.empty());
         when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
 
         notificationService.createOrCollapseThreadReply(
-                List.of(sender, author, replier), sender, 200L, 10L, 50L);
+                List.of(sender.getId(), author.getId(), replier.getId()), sender.getId(), 200L, 10L, 50L);
 
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(2)).save(captor.capture());
         assertThat(captor.getAllValues())
-                .noneMatch(n -> n.getRecipient().getId().equals(sender.getId()))
+                .noneMatch(n -> n.getRecipientId().equals(sender.getId()))
                 .allMatch(n -> n.getType() == NotificationType.THREAD_REPLY)
                 .allMatch(n -> n.getConversationId().equals(50L))
                 .allMatch(n -> n.getReferenceId().equals(200L));
@@ -153,23 +153,24 @@ class NotificationServiceTest {
         existing.setType(NotificationType.THREAD_REPLY);
         existing.setConversationId(50L);
         existing.setReferenceId(150L);
-        when(notificationRepository.findFirstByRecipient_IdAndTypeAndConversationIdAndSeenFalse(
+        when(notificationRepository.findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
                 author.getId(), NotificationType.THREAD_REPLY, 50L))
                 .thenReturn(Optional.of(existing));
         when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        notificationService.createOrCollapseThreadReply(List.of(author), sender, 200L, 10L, 50L);
+        notificationService.createOrCollapseThreadReply(
+                List.of(author.getId()), sender.getId(), 200L, 10L, 50L);
 
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue()).isSameAs(existing);
         assertThat(captor.getValue().getReferenceId()).isEqualTo(200L);
-        assertThat(captor.getValue().getSender()).isEqualTo(sender);
+        assertThat(captor.getValue().getSenderId()).isEqualTo(sender.getId());
     }
 
     private Notification unseenNotification(User recipient, Long marginId) {
         Notification n = new Notification();
-        n.setRecipient(recipient);
+        n.setRecipientId(recipient.getId());
         n.setMarginId(marginId);
         n.setSeen(false);
         n.setCreatedAt(Instant.now());

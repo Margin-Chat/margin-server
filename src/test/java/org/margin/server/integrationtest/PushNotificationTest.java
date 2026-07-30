@@ -56,33 +56,33 @@ class PushNotificationTest extends MarginTestRunner {
 
     @Test
     void registeringSameTokenForAnotherUser_movesItToThatUser() {
-        pushTokenService.register(alice, PushPlatform.ANDROID, "device-token-1");
-        pushTokenService.register(bob, PushPlatform.ANDROID, "device-token-1");
+        pushTokenService.register(alice.getId(), PushPlatform.ANDROID, "device-token-1");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "device-token-1");
 
         var tokens = pushTokenRepository.findByToken("device-token-1");
         assertTrue(tokens.isPresent());
-        assertEquals(bob.getId(), tokens.get().getUser().getId());
+        assertEquals(bob.getId(), tokens.get().getUserId());
         assertEquals(1, pushTokenRepository.count());
     }
 
     @Test
     void unregister_ignoresTokensOwnedByOtherUsers() {
-        pushTokenService.register(alice, PushPlatform.ANDROID, "device-token-2");
+        pushTokenService.register(alice.getId(), PushPlatform.ANDROID, "device-token-2");
 
-        pushTokenService.unregister(bob, "device-token-2");
+        pushTokenService.unregister(bob.getId(), "device-token-2");
         assertTrue(pushTokenRepository.findByToken("device-token-2").isPresent());
 
-        pushTokenService.unregister(alice, "device-token-2");
+        pushTokenService.unregister(alice.getId(), "device-token-2");
         assertFalse(pushTokenRepository.findByToken("device-token-2").isPresent());
     }
 
     @Test
     void offlineRecipient_receivesPush_senderDoesNot() {
-        pushTokenService.register(alice, PushPlatform.ANDROID, "alice-device");
-        pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
+        pushTokenService.register(alice.getId(), PushPlatform.ANDROID, "alice-device");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "bob-device");
         Conversation conv = ConversationTestUtils.createDirectConversation(alice, bob);
 
-        messageService.sendMessage(alice, "hello bob", conv, List.of());
+        messageService.sendMessage(alice.getId(), "hello bob", conv.getId(), List.of());
 
         CapturedPush push = awaitSinglePush();
         assertEquals("bob-device", push.token());
@@ -94,12 +94,12 @@ class PushNotificationTest extends MarginTestRunner {
 
     @Test
     void encryptedLookingContent_getsGenericBody() {
-        pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "bob-device");
         Conversation conv = ConversationTestUtils.createDirectConversation(alice, bob);
 
         String ciphertext = Base64.getEncoder().encodeToString(
                 "{\"iv\":\"abc\",\"message\":\"zzz\",\"recipientKey\":\"k\",\"senderKey\":\"k\"}".getBytes());
-        messageService.sendMessage(alice, ciphertext, conv, List.of());
+        messageService.sendMessage(alice.getId(), ciphertext, conv.getId(), List.of());
 
         CapturedPush push = awaitSinglePush();
         assertEquals("New message", push.message().body());
@@ -107,11 +107,11 @@ class PushNotificationTest extends MarginTestRunner {
 
     @Test
     void invalidToken_isDeletedFromRegistry() {
-        pushTokenService.register(bob, PushPlatform.ANDROID, "bob-dead-device");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "bob-dead-device");
         Conversation conv = ConversationTestUtils.createDirectConversation(alice, bob);
         CapturingPushSenderConfig.failNextSendAsInvalidToken = true;
 
-        messageService.sendMessage(alice, "are you there?", conv, List.of());
+        messageService.sendMessage(alice.getId(), "are you there?", conv.getId(), List.of());
 
         awaitCondition(() -> pushTokenRepository.findByToken("bob-dead-device").isEmpty());
         assertEquals(0, CapturingPushSenderConfig.captured.size());
@@ -119,7 +119,7 @@ class PushNotificationTest extends MarginTestRunner {
 
     @Test
     void conversationInvite_pushesRecipient() {
-        pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "bob-device");
 
         ConversationTestUtils.sendInvite(alice, bob.getEmail());
 
@@ -133,12 +133,12 @@ class PushNotificationTest extends MarginTestRunner {
     void announcement_pushesMembersButNotAuthor() {
         Margin margin = MarginTestUtils.createMargin("PushMargin", alice);
         MarginTestUtils.addUserToMargin(margin.getId(), alice, bob);
-        pushTokenService.register(alice, PushPlatform.ANDROID, "alice-device");
-        pushTokenService.register(bob, PushPlatform.ANDROID, "bob-device");
+        pushTokenService.register(alice.getId(), PushPlatform.ANDROID, "alice-device");
+        pushTokenService.register(bob.getId(), PushPlatform.ANDROID, "bob-device");
 
         new TransactionTemplate(transactionManager).executeWithoutResult(tx ->
                 announcementService.createAnnouncement(
-                        new CreateAnnouncementRequest(margin.getId(), "Big news", "We shipped push"), alice));
+                        new CreateAnnouncementRequest(margin.getId(), "Big news", "We shipped push"), alice.getId()));
 
         CapturedPush push = awaitSinglePush();
         assertEquals("bob-device", push.token());

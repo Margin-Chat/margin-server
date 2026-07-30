@@ -1,9 +1,12 @@
 package org.margin.server.authentication.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,17 +20,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@NamedInterface("api")
 @Service
 @Slf4j
 public class JwtService {
     private final UserService userService;
+    private final UserSecurityService userSecurityService;
     @Value("${jwt.secret}")
     private String secret;
     @Value("${jwt.expiration}") // 24 hours
     private Long expiration;
 
-    public JwtService(UserService userService) {
+    public JwtService(UserService userService, UserSecurityService userSecurityService) {
         this.userService = userService;
+        this.userSecurityService = userSecurityService;
     }
 
     private SecretKey getSigningKey() {
@@ -67,7 +73,7 @@ public class JwtService {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
 
-    public Optional<User> extractAndValidateJwtTokenFromWebSocket(String uri) {
+    public Optional<AuthenticatedUser> extractAndValidateJwtTokenFromWebSocket(String uri) {
         try {
             URI fullUri = new URI(uri);
             String query = fullUri.getQuery();
@@ -89,12 +95,12 @@ public class JwtService {
                     extractAllClaims(token).get("userId", Long.class)
             );
 
-            if (user.getSecurity().getTokenVersion() != extractTokenVersion(token)) {
+            if (userSecurityService.get(user.getId()).getTokenVersion() != extractTokenVersion(token)) {
                 log.warn("Revoked (token version mismatch) JWT for userId {}", user.getId());
                 return Optional.empty();
             }
 
-            return Optional.of(user);
+            return Optional.of(new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName()));
         } catch (Exception e) {
             log.error("JWT validation failed: {}", e.getMessage());
             return Optional.empty();

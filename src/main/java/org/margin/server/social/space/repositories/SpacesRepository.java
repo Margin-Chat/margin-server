@@ -22,7 +22,7 @@ public interface SpacesRepository extends JpaRepository<Space, Long> {
                     SELECT sp
                     FROM Space sp
                     JOIN SpaceMember spm
-                        ON spm.user.id = :userId
+                        ON spm.userId = :userId
                     WHERE spm MEMBER OF sp.members
                     AND sp.margin.id = :marginId
             """)
@@ -40,7 +40,7 @@ public interface SpacesRepository extends JpaRepository<Space, Long> {
                 sp.visibility = org.margin.server.social.models.Visibility.PUBLIC
                 OR EXISTS (
                     SELECT sm FROM SpaceMember sm
-                    WHERE sm.space = sp AND sm.user.id = :userId
+                    WHERE sm.space = sp AND sm.userId = :userId
                 )
             )
             """)

@@ -1,10 +1,13 @@
 package org.margin.server.users.models.dtos;
 
-import org.margin.server.storage.services.StorageUrls;
+import org.springframework.modulith.NamedInterface;
+
+import org.margin.server.shared.storage.PublicUrls;
 import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
+@NamedInterface("api")
 public record UserDTO(
         Long id,
         String displayName,
@@ -17,7 +20,7 @@ public record UserDTO(
         this(
                 user.getId(),
                 user.getDisplayName(),
-                StorageUrls.publicUrl(user.getProfilePictureUrl()),
+                PublicUrls.publicUrl(user.getProfilePictureUrl()),
                 user.getCreatedAt(),
                 user.getLastSeenAt(),
                 online

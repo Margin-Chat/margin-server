@@ -1,9 +1,9 @@
 package org.margin.server.websocket.listeners;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.messages.events.*;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
@@ -31,7 +31,7 @@ public class MessageWebSocketEventListener {
                 event.getMessage().conversationId(),
                 event.getMessage()
         );
-        sendToUsers(event.getRecipients(), event.getMessage().conversationType(), json);
+        sendToUsers(event.getRecipientIds(), event.getMessage().conversationType(), json);
     }
 
     @EventListener
@@ -41,7 +41,7 @@ public class MessageWebSocketEventListener {
                 event.getMessage().conversationId(),
                 event.getMessage()
         );
-        sendToUsers(event.getRecipients(), event.getConversationType(), json);
+        sendToUsers(event.getRecipientIds(), event.getConversationType(), json);
     }
 
     @EventListener
@@ -51,7 +51,8 @@ public class MessageWebSocketEventListener {
                 event.getMessageResult().message().conversationId(),
                 event.getMessageResult().message()
         );
-        sendToUsers(event.getMessageResult().recipients(), event.getMessageResult().message().conversationType(), json);
+        sendToUsers(event.getMessageResult().recipientIds(),
+                event.getMessageResult().message().conversationType(), json);
     }
 
     @EventListener
@@ -61,7 +62,7 @@ public class MessageWebSocketEventListener {
                 event.getReaction().conversationId(),
                 event.getReaction()
         );
-        sendToUsers(event.getRecipients(), event.getConversationType(), json);
+        sendToUsers(event.getRecipientIds(), event.getConversationType(), json);
     }
 
     @EventListener
@@ -71,15 +72,15 @@ public class MessageWebSocketEventListener {
                 event.getReaction().conversationId(),
                 event.getReaction()
         );
-        sendToUsers(event.getRecipients(), event.getConversationType(), json);
+        sendToUsers(event.getRecipientIds(), event.getConversationType(), json);
     }
 
-    private void sendToUsers(List<User> recipients, ConversationType conversationType, String json) {
-        for (User recipient : recipients) {
-            if (connectionManager.isUserOnline(recipient.getId())) {
-                connectionManager.sendToUser(recipient.getId(), json);
+    private void sendToUsers(List<Long> recipientIds, ConversationType conversationType, String json) {
+        for (Long recipientId : recipientIds) {
+            if (connectionManager.isUserOnline(recipientId)) {
+                connectionManager.sendToUser(recipientId, json);
             } else if (conversationType == ConversationType.DIRECT || conversationType == ConversationType.GROUP) {
-                log.debug("User {} offline, message stored for later", recipient.getId());
+                log.debug("AuthenticatedUser {} offline, message stored for later", recipientId);
             }
         }
     }

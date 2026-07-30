@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest.utils;
 
 import org.margin.server.social.conversation.controllers.ThreadController;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.dtos.CreateThreadPostRequest;
 import org.margin.server.social.conversation.models.dtos.ThreadConversationDTO;
@@ -30,31 +31,31 @@ public class ThreadTestUtils {
     }
 
     public static ThreadConversationDTO createPost(User user, Long channelId, String title, String body) {
-        return threadController.createPost(user, channelId, new CreateThreadPostRequest(title, body));
+        return threadController.createPost(principalOf(user), channelId, new CreateThreadPostRequest(title, body));
     }
 
     public static List<ThreadSummaryDTO> getPostsForChannel(User user, Long channelId) {
-        return threadController.getPostsForChannel(user, channelId);
+        return threadController.getPostsForChannel(principalOf(user), channelId);
     }
 
     public static ThreadConversationDTO getThread(User user, Long threadConversationId) {
-        return threadController.getThread(user, threadConversationId);
+        return threadController.getThread(principalOf(user), threadConversationId);
     }
 
     public static List<ThreadSummaryDTO> getFollowedThreads(User user) {
-        return threadController.getFollowedThreads(user);
+        return threadController.getFollowedThreads(principalOf(user));
     }
 
     public static void follow(User user, Long threadConversationId) {
-        threadController.followThread(user, threadConversationId);
+        threadController.followThread(principalOf(user), threadConversationId);
     }
 
     public static void unfollow(User user, Long threadConversationId) {
-        threadController.unfollowThread(user, threadConversationId);
+        threadController.unfollowThread(principalOf(user), threadConversationId);
     }
 
     public static void sendMessage(User from, Long conversationId, String content) {
         Conversation conversation = conversationService.getById(conversationId);
-        messageService.sendMessage(from, content, conversation, List.of());
+        messageService.sendMessage(from.getId(), content, conversation.getId(), List.of());
     }
 }

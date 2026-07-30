@@ -37,16 +37,16 @@ public class SubscriptionTestUtils {
     }
 
     public static Subscription getForMargin(Margin margin) {
-        return subscriptionValidationService.getSubscriptionForMargin(margin);
+        return subscriptionValidationService.getSubscriptionForMargin(margin.getId());
     }
 
     public static int getMaxCallParticipantsForChannel(Long channelId) {
         Channel channel = channelService.getById(channelId);
-        return subscriptionValidationService.getMaxCallParticipants(channel);
+        return subscriptionValidationService.getMaxCallParticipants(channel.getSpace().getMargin().getId());
     }
 
     public static void overrideLimits(Margin margin, int maxMembers, int maxStorageGb, int maxCallParticipants) {
-        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin.getId());
         SubscriptionLimits limits = subscription.getLimits();
         limits.setMaxMembers(maxMembers);
         limits.setMaxStorageGb(maxStorageGb);
@@ -55,20 +55,20 @@ public class SubscriptionTestUtils {
     }
 
     public static void setMollieCustomerId(Margin margin, String customerId) {
-        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin.getId());
         subscription.setMollieCustomerId(customerId);
         subscriptionRepository.save(subscription);
     }
 
     public static void setPendingPayment(Margin margin, String paymentId, SubscriptionTier tier) {
-        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin.getId());
         subscription.setPendingPaymentId(paymentId);
         subscription.setPendingTier(tier);
         subscriptionRepository.save(subscription);
     }
 
     public static void setStatusAndPeriodEnd(Margin margin, SubscriptionStatus status, Instant currentPeriodEnd) {
-        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin.getId());
         subscription.setStatus(status);
         subscription.setCurrentPeriodEnd(currentPeriodEnd);
         subscriptionRepository.save(subscription);
@@ -90,7 +90,7 @@ public class SubscriptionTestUtils {
     }
 
     public static void setActiveSubscription(Margin margin, String customerId, String subscriptionId, SubscriptionTier tier) {
-        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin);
+        Subscription subscription = subscriptionValidationService.getSubscriptionForMargin(margin.getId());
         subscription.setMollieCustomerId(customerId);
         subscription.setSubscriptionId(subscriptionId);
         subscription.setStatus(SubscriptionStatus.ACTIVE);

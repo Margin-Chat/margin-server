@@ -13,7 +13,7 @@ import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
 import org.margin.server.social.messages.models.dtos.MessageResult;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Propagation;
@@ -158,9 +158,7 @@ class GroupConversationTest extends MarginTestRunner {
         ConversationDTO dto = ConversationTestUtils.createGroupConversation(
                 creator, List.of("memberA@margin.chat"), "My Group", false);
 
-        Set<Long> recipientIds = ConversationTestUtils.getConversationMembers(dto.id()).stream()
-                .map(User::getId)
-                .collect(Collectors.toSet());
+        Set<Long> recipientIds = new java.util.HashSet<>(ConversationTestUtils.getConversationMembers(dto.id()));
 
         assertFalse(recipientIds.contains(memberA.getId()),
                 "PENDING member must not receive messages");
@@ -174,9 +172,7 @@ class GroupConversationTest extends MarginTestRunner {
                 creator, List.of("memberA@margin.chat"), "My Group", false);
         ConversationTestUtils.acceptInvite(dto.id(), memberA);
 
-        Set<Long> recipientIds = ConversationTestUtils.getConversationMembers(dto.id()).stream()
-                .map(User::getId)
-                .collect(Collectors.toSet());
+        Set<Long> recipientIds = new java.util.HashSet<>(ConversationTestUtils.getConversationMembers(dto.id()));
 
         assertTrue(recipientIds.contains(memberA.getId()),
                 "ACCEPTED member must receive messages");
@@ -316,13 +312,13 @@ class GroupConversationTest extends MarginTestRunner {
                 creator, List.of(), "Group", false);
         Conversation conversation = ConversationTestUtils.getConversationById(dto.id());
 
-        MessageResult result = messageService.createMessageForUsers(creator, conversation, "hello", List.of());
+        MessageResult result = messageService.createMessageForUsers(creator.getId(), conversation, "hello", List.of());
         Long messageId = result.message().id();
 
         User outsider = UserTestUtils.createUser("outsider", "outsider@margin.chat");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> messageService.editMessage(outsider, dto.id(), messageId, "tampered"));
+                () -> messageService.editMessage(outsider.getId(), dto.id(), messageId, "tampered"));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }

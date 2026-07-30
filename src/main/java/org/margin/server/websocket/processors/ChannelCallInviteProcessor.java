@@ -1,10 +1,9 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.sfu.services.SfuService;
-import org.margin.server.social.channel.entities.Channel;
-import org.margin.server.social.channel.services.ChannelService;
-import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
+import org.margin.server.social.api.ChannelLookup;
+import org.margin.server.shared.authorization.MarginAccessChecker;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.springframework.stereotype.Component;
@@ -13,15 +12,15 @@ import org.springframework.stereotype.Component;
 public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<String> {
 
     private final SfuService sfuService;
-    private final MarginAuthorizationService marginAuthorizationService;
-    private final ChannelService channelService;
+    private final MarginAccessChecker marginAccessChecker;
+    private final ChannelLookup channelLookup;
 
     public ChannelCallInviteProcessor(SfuService sfuService,
-                                      MarginAuthorizationService marginAuthorizationService,
-                                      ChannelService channelService) {
+                                      MarginAccessChecker marginAccessChecker,
+                                      ChannelLookup channelLookup) {
         this.sfuService = sfuService;
-        this.marginAuthorizationService = marginAuthorizationService;
-        this.channelService = channelService;
+        this.marginAccessChecker = marginAccessChecker;
+        this.channelLookup = channelLookup;
     }
 
     @Override
@@ -30,14 +29,13 @@ public class ChannelCallInviteProcessor implements WebSocketMessageProcessor<Str
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<String> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<String> message) {
         Long channelId = Long.valueOf(message.getPayload());
         Long recipientId = message.getRecipientId();
 
-        marginAuthorizationService.requireChannelMember(user.getId(), channelId);
-        marginAuthorizationService.requireChannelMember(recipientId, channelId);
+        marginAccessChecker.requireChannelMember(user.id(), channelId);
+        marginAccessChecker.requireChannelMember(recipientId, channelId);
 
-        Channel channel = channelService.getById(channelId);
-        sfuService.inviteToChannelCall(user, recipientId, channelId, channel.getName());
+        sfuService.inviteToChannelCall(user.id(), recipientId, channelId, channelLookup.nameOf(channelId));
     }
 }

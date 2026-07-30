@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -20,14 +19,12 @@ public class Call {
     private Long id;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "caller_id", nullable = false)
-    private User caller;
+    @Column(name = "caller_id", nullable = false)
+    private Long callerId;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receiver_id", nullable = false)
-    private User receiver;
+    @Column(name = "receiver_id", nullable = false)
+    private Long receiverId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -49,12 +46,12 @@ public class Call {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
-    public Call(User caller,
-                User receiverId,
+    public Call(Long callerId,
+                Long receiverId,
                 CallStatus status,
                 CallType type) {
-        this.caller = caller;
-        this.receiver = receiverId;
+        this.callerId = callerId;
+        this.receiverId = receiverId;
         this.status = status;
         this.type = type;
     }

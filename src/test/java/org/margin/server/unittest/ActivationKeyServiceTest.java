@@ -36,10 +36,10 @@ class ActivationKeyServiceTest {
         User user = createUser(42L, "alice");
         when(activationKeyRepository.save(any(ActivationKey.class))).thenAnswer(i -> i.getArgument(0));
 
-        ActivationKey key = activationKeyService.generateActivationKey(user);
+        ActivationKey key = activationKeyService.generateActivationKey(user.getId());
 
         assertNotNull(key.getToken());
-        assertEquals(user, key.getUser());
+        assertEquals(user.getId(), key.getUserId());
         assertNull(key.getActivatedAt());
         assertTrue(key.getExpiresAt().isAfter(Instant.now()));
         verify(activationKeyRepository).save(key);
@@ -50,8 +50,8 @@ class ActivationKeyServiceTest {
         User user = createUser(42L, "alice");
         when(activationKeyRepository.save(any(ActivationKey.class))).thenAnswer(i -> i.getArgument(0));
 
-        String first = activationKeyService.generateActivationKey(user).getToken();
-        String second = activationKeyService.generateActivationKey(user).getToken();
+        String first = activationKeyService.generateActivationKey(user.getId()).getToken();
+        String second = activationKeyService.generateActivationKey(user.getId()).getToken();
 
         assertNotEquals(first, second);
     }
@@ -106,24 +106,24 @@ class ActivationKeyServiceTest {
     void isUserActivated_returnsTrueWhenActivated() {
         User user = createUser(42L, "alice");
         ActivationKey key = makeKey(false, true);
-        when(activationKeyRepository.findActivationKeyByUser(user)).thenReturn(Optional.of(key));
+        when(activationKeyRepository.findActivationKeyByUserId(user.getId())).thenReturn(Optional.of(key));
 
-        assertTrue(activationKeyService.isUserActivated(user));
+        assertTrue(activationKeyService.isUserActivated(user.getId()));
     }
 
     @Test
     void isUserActivated_returnsFalseWhenNotActivated() {
         User user = createUser(42L, "alice");
         ActivationKey key = makeKey(false, false);
-        when(activationKeyRepository.findActivationKeyByUser(user)).thenReturn(Optional.of(key));
+        when(activationKeyRepository.findActivationKeyByUserId(user.getId())).thenReturn(Optional.of(key));
 
-        assertFalse(activationKeyService.isUserActivated(user));
+        assertFalse(activationKeyService.isUserActivated(user.getId()));
     }
 
     private static ActivationKey makeKey(boolean expired, boolean activated) {
         ActivationKey key = new ActivationKey();
         key.setToken("t");
-        key.setUser(createUser(42L, "alice"));
+        key.setUserId(42L);
         key.setExpiresAt(expired ? Instant.now().minusSeconds(60) : Instant.now().plusSeconds(3600));
         if (activated) key.setActivatedAt(Instant.now().minusSeconds(30));
         return key;

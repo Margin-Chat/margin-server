@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.models.SubscriptionStatus;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 
@@ -20,9 +19,8 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "margins", nullable = false, unique = true)
-    private Margin margin;
+    @Column(name = "margins", nullable = false, unique = true)
+    private Long marginId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

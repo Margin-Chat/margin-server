@@ -2,7 +2,7 @@ package org.margin.server.websocket.processors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ public class DeleteMessageProcessor implements WebSocketMessageProcessor<String>
 
     @Override
     @Transactional
-    public void process(User user, WebSocketMessageIn<String> message) {
-        messageService.deleteMessage(user, Long.parseLong(message.getPayload()), message.getRecipientId());
+    public void process(AuthenticatedUser user, WebSocketMessageIn<String> message) {
+        messageService.deleteMessage(user.id(), Long.parseLong(message.getPayload()), message.getRecipientId());
     }
 }

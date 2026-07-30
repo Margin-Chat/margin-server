@@ -10,19 +10,12 @@ import java.util.Optional;
 
 public interface StoredFileRepository extends JpaRepository<StoredFile, Long> {
 
-    @Query("""
-            SELECT f FROM StoredFile f
-            LEFT JOIN FETCH f.channel c
-            LEFT JOIN FETCH c.conversation
-            WHERE f.storageUrl LIKE CONCAT('%', :suffix)
-            """)
-    Optional<StoredFile> findFirstByStorageUrlEndsWith(@Param("suffix") String suffix);
+    Optional<StoredFile> findFirstByStorageUrlEndsWith(String suffix);
 
     @Query("""
             SELECT f FROM StoredFile f
-            JOIN FETCH f.uploadedBy
             WHERE f.scope = org.margin.server.storage.models.StoredFileScope.MARGIN
-              AND f.margin.id = :marginId
+              AND f.marginId = :marginId
               AND f.inline = false
             ORDER BY f.uploadedAt DESC
             """)
@@ -30,25 +23,19 @@ public interface StoredFileRepository extends JpaRepository<StoredFile, Long> {
 
     @Query("""
             SELECT f FROM StoredFile f
-            JOIN FETCH f.uploadedBy
             WHERE f.scope = org.margin.server.storage.models.StoredFileScope.CHANNEL
-              AND f.channel.id = :channelId
+              AND f.channelId = :channelId
               AND f.inline = false
             ORDER BY f.uploadedAt DESC
             """)
     List<StoredFile> findChannelFiles(@Param("channelId") Long channelId);
 
-    @Query("""
-            SELECT f FROM StoredFile f
-            JOIN FETCH f.uploadedBy
-            WHERE f.messageId IN :messageIds
-            """)
-    List<StoredFile> findByMessageIds(@Param("messageIds") List<Long> messageIds);
+    List<StoredFile> findByMessageIdIn(List<Long> messageIds);
 
     @Query("""
             SELECT COALESCE(SUM(f.sizeBytes), 0)
             FROM StoredFile f
-            WHERE f.margin.id = :marginId
+            WHERE f.marginId = :marginId
             """)
     long sumSizeBytesByMargin(@Param("marginId") Long marginId);
 }

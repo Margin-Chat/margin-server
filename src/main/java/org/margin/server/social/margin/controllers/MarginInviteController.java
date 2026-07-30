@@ -1,6 +1,9 @@
 package org.margin.server.social.margin.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginInvite;
 import org.margin.server.social.margin.models.dtos.MarginDTO;
@@ -9,8 +12,6 @@ import org.margin.server.social.margin.service.MarginInviteService;
 import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,55 +29,56 @@ public class MarginInviteController {
     private final MarginAuthorizationService marginAuthorizationService;
     private final MarginService marginService;
     private final MarginMapper marginMapper;
-    private final UserService userService;
+    private final UserLookup userLookup;
 
     @PostMapping("/margins/{marginId}/link")
     public ResponseEntity<MarginInviteDTO> createLinkInvite(
             @PathVariable Long marginId,
             @RequestParam(required = false) Integer maxUses,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
-        marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
+        marginAuthorizationService.requireMarginAdmin(user.id(), marginId);
 
         if (maxUses != null && maxUses <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code can't be used more");
         }
 
         Margin margin = marginService.getById(marginId);
-        MarginInvite invite = marginInviteService.createLinkInvite(margin, maxUses, user);
+        MarginInvite invite = marginInviteService.createLinkInvite(margin, maxUses, user.id());
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @PostMapping("/margins/{marginId}/email")
     public ResponseEntity<MarginInviteDTO> createDirectInvite(
             @PathVariable Long marginId,
             @RequestParam String email,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
-        marginAuthorizationService.requireMarginAdmin(user.getId(), marginId);
+        marginAuthorizationService.requireMarginAdmin(user.id(), marginId);
 
         if (email.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is empty");
         }
 
-        User targetUser = userService.getByEmail(email);
+        Long targetUserId = userLookup.idByEmail(email.toLowerCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        if (marginService.isUserMember(marginId, targetUser)) {
+        if (marginService.isUserMember(marginId, targetUserId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");
         }
 
-        if (marginInviteService.hasPendingInviteForMargin(marginId, targetUser.getId())) {
+        if (marginInviteService.hasPendingInviteForMargin(marginId, targetUserId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has a pending invite to this margin");
         }
 
         MarginInvite invite = marginInviteService.createDirectInvite(
                 marginService.getById(marginId),
-                targetUser,
-                user
+                targetUserId,
+                user.id()
         );
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @GetMapping("/join/{code}")
@@ -89,13 +91,13 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        return ResponseEntity.ok(MarginInviteDTO.from(invite));
+        return ResponseEntity.ok(toDTO(invite));
     }
 
     @PostMapping("/join/{code}")
     public ResponseEntity<MarginDTO> acceptLinkInvite(
             @PathVariable String code,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
         MarginInvite invite = marginInviteService.findInviteDetails(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code not found"));
@@ -104,11 +106,11 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        if (marginService.isUserMember(invite.getMargin().getId(), user)) {
+        if (marginService.isUserMember(invite.getMargin().getId(), user.id())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already member of the margin");
         }
 
-        Margin margin = marginInviteService.acceptLinkInvite(invite, user);
+        Margin margin = marginInviteService.acceptLinkInvite(invite, user.id());
 
         return ResponseEntity.ok(marginMapper.marginToDto(margin));
     }
@@ -116,11 +118,11 @@ public class MarginInviteController {
     @PostMapping("/{id}/accept")
     public ResponseEntity<MarginDTO> acceptDirectInvite(
             @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
         MarginInvite invite = marginInviteService.getById(id);
 
-        if (!invite.getInvitedUser().getId().equals(user.getId())) {
+        if (!invite.getInvitedUserId().equals(user.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invite is not for you");
         }
 
@@ -128,7 +130,7 @@ public class MarginInviteController {
             throw new ResponseStatusException(HttpStatus.GONE, "Invite is no longer valid");
         }
 
-        Margin margin = marginInviteService.acceptDirectInvite(invite, user);
+        Margin margin = marginInviteService.acceptDirectInvite(invite, user.id());
 
         return ResponseEntity.ok(marginService.getMarginAsDto(margin.getId()));
     }
@@ -136,11 +138,11 @@ public class MarginInviteController {
     @PostMapping("/{id}/decline")
     public ResponseEntity<Void> declineDirectInvite(
             @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
         MarginInvite invite = marginInviteService.getById(id);
 
-        if (!invite.getInvitedUser().getId().equals(user.getId())) {
+        if (!invite.getInvitedUserId().equals(user.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invite is not for you");
         }
 
@@ -154,11 +156,22 @@ public class MarginInviteController {
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<List<MarginInviteDTO>> getPendingInvites(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<MarginInviteDTO>> getPendingInvites(@AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(
-                marginInviteService.getPendingInvites(user).stream()
-                        .map(MarginInviteDTO::from)
+                marginInviteService.getPendingInvites(user.id()).stream()
+                        .map(this::toDTO)
                         .toList()
         );
+    }
+
+
+    private MarginInviteDTO toDTO(MarginInvite invite) {
+        return MarginInviteDTO.from(invite,
+                nameOf(invite.getInvitedByUserId()),
+                nameOf(invite.getInvitedUserId()));
+    }
+
+    private String nameOf(Long userId) {
+        return userId == null ? null : userLookup.summaryOf(userId).displayName();
     }
 }

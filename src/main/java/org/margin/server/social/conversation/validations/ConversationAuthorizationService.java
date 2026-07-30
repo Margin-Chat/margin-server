@@ -1,13 +1,16 @@
 package org.margin.server.social.conversation.validations;
 
+import org.springframework.modulith.NamedInterface;
+
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+@NamedInterface("api")
 @Service
 public class ConversationAuthorizationService {
     private final ConversationService conversationService;

@@ -1,7 +1,13 @@
 package org.margin.server.users.exceptions;
 
-public class UserNotFoundException extends RuntimeException {
+import org.springframework.modulith.NamedInterface;
+
+import org.margin.server.shared.exceptions.DomainException;
+import org.springframework.http.HttpStatus;
+
+@NamedInterface("api")
+public class UserNotFoundException extends DomainException {
     public UserNotFoundException() {
-        super("User not found");
+        super(HttpStatus.NOT_FOUND, "User not found");
     }
 }

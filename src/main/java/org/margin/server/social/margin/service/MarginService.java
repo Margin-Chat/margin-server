@@ -1,8 +1,10 @@
 package org.margin.server.social.margin.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.notifications.events.UserAddedToMarginEvent;
-import org.margin.server.social.margin.MarginLookup;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.social.api.MarginIconCommands;
+import org.margin.server.social.api.MarginSubscriptionPolicy;
+import org.margin.server.social.margin.events.UserAddedToMarginEvent;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.social.margin.entities.MarginMember;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
@@ -15,13 +17,7 @@ import org.margin.server.social.margin.repositories.MarginRepository;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.services.StorageService;
-import org.margin.server.subscriptions.models.SubscriptionTier;
-import org.margin.server.subscriptions.services.SubscriptionService;
-import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.exceptions.UserNotFoundException;
-import org.margin.server.users.models.User;
-import org.margin.server.users.services.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -38,46 +34,41 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class MarginService implements MarginLookup {
+public class MarginService {
 
     private final MarginRepository marginRepository;
-    private final StorageService storageService;
+    private final MarginIconCommands marginIconCommands;
     private final MarginMemberRepository marginMemberRepository;
-    private final UserService userService;
     private final SpacesService spacesService;
     private final MarginMapper marginMapper;
     private final ApplicationEventPublisher eventPublisher;
-    private final SubscriptionService subscriptionService;
-    private final SubscriptionValidationService subscriptionValidationService;
+    private final MarginSubscriptionPolicy marginSubscriptionPolicy;
+    private final UserLookup userLookup;
 
     public MarginService(MarginRepository marginRepository,
-                         StorageService storageService,
+                         MarginIconCommands marginIconCommands,
                          MarginMemberRepository marginMemberRepository,
-                         UserService userService,
                          SpacesService spacesService,
                          MarginMapper marginMapper,
                          ApplicationEventPublisher eventPublisher,
-                         SubscriptionService subscriptionService,
-                         SubscriptionValidationService subscriptionValidationService) {
+                         MarginSubscriptionPolicy marginSubscriptionPolicy,
+                         UserLookup userLookup) {
         this.marginRepository = marginRepository;
-        this.storageService = storageService;
+        this.marginIconCommands = marginIconCommands;
         this.marginMemberRepository = marginMemberRepository;
-        this.userService = userService;
         this.spacesService = spacesService;
         this.marginMapper = marginMapper;
         this.eventPublisher = eventPublisher;
-        this.subscriptionService = subscriptionService;
-        this.subscriptionValidationService = subscriptionValidationService;
+        this.marginSubscriptionPolicy = marginSubscriptionPolicy;
+        this.userLookup = userLookup;
     }
 
-    @Override
     @Transactional(readOnly = true)
     public Margin getById(Long marginId) {
         return marginRepository.findById(marginId)
                 .orElseThrow(() -> new MarginNotFoundException(marginId));
     }
 
-    @Override
     @Transactional(readOnly = true)
     public Margin findByIconFileName(String fileName) {
         return marginRepository.findFirstByIconUrlEndsWith("/margin-icons/" + fileName)
@@ -94,11 +85,11 @@ public class MarginService implements MarginLookup {
                                   String description,
                                   Visibility visibility,
                                   MultipartFile marginIcon,
-                                  User user) {
+                                  Long userId) {
 
         String iconUrl = null;
         if (marginIcon != null && !marginIcon.isEmpty()) {
-            iconUrl = storageService.saveMarginIcon(marginIcon);
+            iconUrl = marginIconCommands.save(marginIcon);
         }
 
         Margin margin = new Margin();
@@ -108,9 +99,9 @@ public class MarginService implements MarginLookup {
         margin.setIconUrl(iconUrl);
         margin = marginRepository.save(margin);
 
-        subscriptionService.createSubscriptionForMargin(margin, SubscriptionTier.FREE);
+        marginSubscriptionPolicy.onMarginCreated(margin.getId());
 
-        addUserToMargin(margin.getId(), user.getId(), MarginRole.OWNER, user, true);
+        addUserToMargin(margin.getId(), userId, MarginRole.OWNER, userId, true);
 
         spacesService.createNewSpace(
                 new CreateSpaceDTO(
@@ -119,7 +110,7 @@ public class MarginService implements MarginLookup {
                         Visibility.PUBLIC,
                         margin.getId()
                 ),
-                user,
+                userId,
                 margin
         );
 
@@ -127,8 +118,8 @@ public class MarginService implements MarginLookup {
     }
 
     @Transactional
-    public Set<MarginDTO> getMarginsForUser(User user) {
-        List<MarginMember> memberships = marginMemberRepository.findMarginMembersByUser(user.getId());
+    public Set<MarginDTO> getMarginsForUser(Long userId) {
+        List<MarginMember> memberships = marginMemberRepository.findMarginMembersByUser(userId);
         if (memberships.isEmpty()) return Collections.emptySet();
 
         return memberships.stream()
@@ -141,20 +132,19 @@ public class MarginService implements MarginLookup {
     public MarginMember addUserToMargin(Long marginId,
                                         Long userId,
                                         MarginRole role,
-                                        User addingUser,
+                                        Long addingUserId,
                                         boolean isNewlyCreated) {
 
         Margin margin = getById(marginId);
-        User user = userService.getById(userId);
 
-        subscriptionValidationService.validateAddMarginMember(margin);
+        marginSubscriptionPolicy.validateAddMarginMember(marginId);
 
         MarginMember member = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(userId))
+                .filter(m -> m.getUserId().equals(userId))
                 .findFirst()
                 .orElseGet(() -> {
                     MarginMember m = new MarginMember();
-                    m.setUser(user);
+                    m.setUserId(userId);
                     m.setMargin(margin);
                     m.setRole(role);
                     m.setJoinedAt(Instant.now());
@@ -163,10 +153,10 @@ public class MarginService implements MarginLookup {
                 });
 
         if (!isNewlyCreated) {
-            eventPublisher.publishEvent(new UserAddedToMarginEvent(user, addingUser, marginId));
+            eventPublisher.publishEvent(new UserAddedToMarginEvent(userId, addingUserId, marginId));
         }
 
-        subscriptionValidationService.notifyIfApproachingMemberLimit(margin);
+        marginSubscriptionPolicy.notifyIfApproachingMemberLimit(marginId);
 
         return member;
     }
@@ -177,7 +167,7 @@ public class MarginService implements MarginLookup {
         Margin margin = getById(marginId);
 
         MarginMember requester = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(requesterId))
+                .filter(m -> m.getUserId().equals(requesterId))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this margin"));
 
@@ -186,7 +176,7 @@ public class MarginService implements MarginLookup {
         }
 
         MarginMember target = margin.getMembers().stream()
-                .filter(m -> m.getUser().getId().equals(memberDTO.user().id()))
+                .filter(m -> m.getUserId().equals(memberDTO.user().id()))
                 .findFirst()
                 .orElseThrow(UserNotFoundException::new);
 
@@ -209,7 +199,7 @@ public class MarginService implements MarginLookup {
         marginRepository.save(margin);
 
         return new MarginMemberDTO(
-                new org.margin.server.users.models.dtos.UserDTO(target.getUser(), false),
+                userLookup.dtoOf(target.getUserId()),
                 target.getRole(),
                 target.getJoinedAt()
         );
@@ -224,7 +214,7 @@ public class MarginService implements MarginLookup {
         margin.setDescription(updateMarginDTO.description());
 
         if (icon != null && !icon.isEmpty()) {
-            margin.setIconUrl(storageService.saveMarginIcon(icon));
+            margin.setIconUrl(marginIconCommands.save(icon));
         }
 
         Margin saved = marginRepository.save(margin);
@@ -236,19 +226,19 @@ public class MarginService implements MarginLookup {
 
         Margin margin = getById(marginId);
 
-        MarginMember member = marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId)
+        MarginMember member = marginMemberRepository.findByUserIdAndMarginId(userId, marginId)
                 .orElseThrow(UserNotFoundException::new);
 
         validateMemberIsNotTheLastAdmin(member, margin.getMembers());
 
         spacesService.removeUserFromSpaces(userId, margin);
 
-        margin.getMembers().removeIf(m -> m.getUser().getId().equals(userId));
+        margin.getMembers().removeIf(m -> m.getUserId().equals(userId));
         marginRepository.save(margin);
     }
 
     public Optional<MarginMember> findMember(Long userId, Long marginId) {
-        return marginMemberRepository.findByUser_IdAndMargin_Id(userId, marginId);
+        return marginMemberRepository.findByUserIdAndMarginId(userId, marginId);
     }
 
     @Transactional(readOnly = true)
@@ -280,13 +270,13 @@ public class MarginService implements MarginLookup {
         log.info("Soft deleted margin with id {}", marginId);
     }
 
-    public boolean isUserMember(Long margin, User targetUser) {
-        return marginMemberRepository.existsByMarginIdAndUserId(margin, targetUser.getId());
+    public boolean isUserMember(Long margin, Long targetUserId) {
+        return marginMemberRepository.existsByMarginIdAndUserId(margin, targetUserId);
     }
 
     private void validateMemberIsNotTheLastAdmin(MarginMember member, List<MarginMember> members) {
         boolean hasOtherAdmin = members.stream()
-                .anyMatch(m -> !m.getUser().getId().equals(member.getUser().getId())
+                .anyMatch(m -> !m.getUserId().equals(member.getUserId())
                         && (m.getRole() == MarginRole.ADMIN || m.getRole() == MarginRole.OWNER));
 
         if (!hasOtherAdmin) {

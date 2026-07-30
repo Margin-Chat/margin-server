@@ -2,7 +2,7 @@ package org.margin.server.websocket.processors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.social.calls.services.CallService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.IncomingCallEndPayload;
@@ -23,8 +23,8 @@ public class CallEndProcessor implements WebSocketMessageProcessor<IncomingCallE
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<IncomingCallEndPayload> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<IncomingCallEndPayload> message) {
         IncomingCallEndPayload payload = message.getPayload();
-        callService.endCall(user, payload.callId(), payload.callDuration(), message.getRecipientId());
+        callService.endCall(user.id(), payload.callId(), payload.callDuration(), message.getRecipientId());
     }
 }

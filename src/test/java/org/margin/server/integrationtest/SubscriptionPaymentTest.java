@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest;
 
 import com.mollie.mollie.models.components.*;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
@@ -8,7 +9,7 @@ import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.NotificationTestUtils;
 import org.margin.server.integrationtest.utils.SubscriptionTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.social.margin.entities.Margin;
 import org.margin.server.subscriptions.SubscriptionController;
 import org.margin.server.subscriptions.entities.Subscription;
@@ -66,7 +67,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
 
         assertThrows(IllegalStateException.class, () ->
                 subscriptionController.startCheckout(
-                        new CheckoutRequest(margin.getId(), SubscriptionTier.SMALL), owner));
+                        new CheckoutRequest(margin.getId(), SubscriptionTier.SMALL), principalOf(owner)));
     }
 
     @Test
@@ -125,7 +126,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
 
         when(mollieClient.getPayment(PAYMENT_ID)).thenReturn(payment);
 
-        subscriptionWebhookService.cancelPendingPayment(margin);
+        subscriptionWebhookService.cancelPendingPayment(margin.getId());
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getPendingPaymentId()).isNull();
@@ -149,14 +150,14 @@ class SubscriptionPaymentTest extends MarginTestRunner {
         MarginTestUtils.addUserToMargin(margin.getId(), owner, nonOwner);
 
         assertThrows(ResponseStatusException.class, () ->
-                subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), nonOwner));
+                subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), principalOf(nonOwner)));
     }
 
     @Test
     void cancelSubscription_setsStatusToCancelled() {
         SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
 
-        subscriptionController.cancelSubscription(margin.getId(), owner);
+        subscriptionController.cancelSubscription(margin.getId(), principalOf(owner));
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
@@ -166,7 +167,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
     void cancelSubscription_doesNotRevertTierOrLimits() {
         SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
 
-        subscriptionController.cancelSubscription(margin.getId(), owner);
+        subscriptionController.cancelSubscription(margin.getId(), principalOf(owner));
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
@@ -177,7 +178,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
     void cancelSubscription_callsMollieCancelSubscription() {
         SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
 
-        subscriptionController.cancelSubscription(margin.getId(), owner);
+        subscriptionController.cancelSubscription(margin.getId(), principalOf(owner));
 
         verify(mollieClient).cancelSubscription(CUSTOMER_ID, "sub_old");
     }
@@ -188,7 +189,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
         MarginTestUtils.addUserToMargin(margin.getId(), owner, nonOwner);
 
         assertThrows(ResponseStatusException.class, () ->
-                subscriptionController.cancelSubscription(margin.getId(), nonOwner));
+                subscriptionController.cancelSubscription(margin.getId(), principalOf(nonOwner)));
     }
 
     @Test
@@ -196,7 +197,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
         SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, SUBSCRIPTION_ID, SubscriptionTier.SMALL);
 
         assertThrows(ResponseStatusException.class, () ->
-                subscriptionController.changeTier(margin.getId(), Map.of("tier", "MEDIUM"), owner));
+                subscriptionController.changeTier(margin.getId(), Map.of("tier", "MEDIUM"), principalOf(owner)));
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
@@ -212,7 +213,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
         when(mollieClient.createSubscription(eq(CUSTOMER_ID), any(), any(), any(), any(), any(), any()))
                 .thenReturn(mollieSub);
 
-        subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), owner);
+        subscriptionController.changeTier(margin.getId(), Map.of("tier", "SMALL"), principalOf(owner));
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getTier()).isEqualTo(SubscriptionTier.SMALL);
@@ -225,7 +226,7 @@ class SubscriptionPaymentTest extends MarginTestRunner {
     void changeTier_toFree_cancelsInsteadOfCreatingMollieSubscription() {
         SubscriptionTestUtils.setActiveSubscription(margin, CUSTOMER_ID, "sub_old", SubscriptionTier.SMALL);
 
-        subscriptionController.changeTier(margin.getId(), Map.of("tier", "FREE"), owner);
+        subscriptionController.changeTier(margin.getId(), Map.of("tier", "FREE"), principalOf(owner));
 
         Subscription sub = SubscriptionTestUtils.getForMargin(margin);
         assertThat(sub.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);

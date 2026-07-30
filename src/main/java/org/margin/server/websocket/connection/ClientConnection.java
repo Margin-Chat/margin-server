@@ -1,13 +1,13 @@
 package org.margin.server.websocket.connection;
 
 import io.netty.channel.Channel;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 
 public interface ClientConnection {
 
     void sendMessage(String jsonMessage);
 
-    User getUser();
+    AuthenticatedUser getUser();
 
     boolean isActive();
 

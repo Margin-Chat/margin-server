@@ -34,7 +34,7 @@ class EmailActivationTest extends MarginTestRunner {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ActivationKey reloaded = ActivationTestUtils.findByToken(activationKey.getToken());
         assertNotNull(reloaded.getActivatedAt());
-        assertTrue(ActivationTestUtils.isUserActivated(activationKey.getUser()));
+        assertTrue(ActivationTestUtils.isUserActivated(activationKey.getUserId()));
     }
 
     @Test
@@ -73,7 +73,7 @@ class EmailActivationTest extends MarginTestRunner {
     @Test
     void newlyRegisteredUser_isNotActivatedUntilTokenConsumed() {
         ActivationKey activationKey = registerAndFetch("dave", "dave@margin.chat");
-        assertFalse(ActivationTestUtils.isUserActivated(activationKey.getUser()));
+        assertFalse(ActivationTestUtils.isUserActivated(activationKey.getUserId()));
     }
 
     private static ActivationKey registerAndFetch(String displayName, String email) {

@@ -1,9 +1,10 @@
 package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
+import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.controllers.NotificationController;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
@@ -37,7 +38,7 @@ class NotificationControllerTest {
         List<Notification> expected = List.of(testNotification(user, 10L));
         when(notificationService.getNotificationsForUser(user.getId())).thenReturn(expected);
 
-        List<Notification> result = notificationController.getNotifications(user);
+        List<Notification> result = notificationController.getNotifications(principalOf(user));
 
         assertThat(result).isEqualTo(expected);
     }
@@ -48,7 +49,7 @@ class NotificationControllerTest {
         Map<Long, Long> expected = Map.of(10L, 3L, 20L, 1L);
         when(notificationService.getUnseenCountsPerMargin(user.getId())).thenReturn(expected);
 
-        Map<Long, Long> result = notificationController.getUnseenCounts(user);
+        Map<Long, Long> result = notificationController.getUnseenCounts(principalOf(user));
 
         assertThat(result).isEqualTo(expected);
     }
@@ -59,7 +60,7 @@ class NotificationControllerTest {
         Notification notification = testNotification(user, 10L);
         when(notificationService.getNotification(99L)).thenReturn(notification);
 
-        notificationController.markSeen(user, 99L);
+        notificationController.markSeen(principalOf(user), 99L);
 
         verify(notificationService).markNotificationAsSeen(notification);
     }
@@ -71,13 +72,13 @@ class NotificationControllerTest {
         Notification notification = testNotification(owner, 10L);
         when(notificationService.getNotification(99L)).thenReturn(notification);
 
-        assertThatThrownBy(() -> notificationController.markSeen(requester, 99L))
+        assertThatThrownBy(() -> notificationController.markSeen(principalOf(requester), 99L))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     private Notification testNotification(User recipient, Long marginId) {
         Notification n = new Notification();
-        n.setRecipient(recipient);
+        n.setRecipientId(recipient.getId());
         n.setMarginId(marginId);
         n.setType(NotificationType.ANNOUNCEMENT);
         n.setSeen(false);

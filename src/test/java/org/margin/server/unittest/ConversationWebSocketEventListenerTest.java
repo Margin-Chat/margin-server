@@ -3,6 +3,7 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.events.TypingIndicatorEvent;
+import org.margin.server.users.api.UserSummary;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -47,7 +48,7 @@ class ConversationWebSocketEventListenerTest {
         when(connectionManager.isUserOnline(2L)).thenReturn(true);
         when(connectionManager.isUserOnline(3L)).thenReturn(false);
 
-        listener.onTypingIndicator(new TypingIndicatorEvent(10L, sender, true, List.of(online, offline)));
+        listener.onTypingIndicator(new TypingIndicatorEvent(10L, new UserSummary(sender.getId(), sender.getDisplayName()), true, List.of(online.getId(), offline.getId())));
 
         verify(connectionManager).sendToUser(2L, json);
         verify(connectionManager, never()).sendToUser(eq(3L), any());
@@ -62,7 +63,7 @@ class ConversationWebSocketEventListenerTest {
                 .thenReturn("{}");
         when(connectionManager.isUserOnline(2L)).thenReturn(true);
 
-        listener.onTypingIndicator(new TypingIndicatorEvent(10L, sender, false, List.of(online)));
+        listener.onTypingIndicator(new TypingIndicatorEvent(10L, new UserSummary(sender.getId(), sender.getDisplayName()), false, List.of(online.getId())));
 
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
         verify(messageBuilder).buildMessage(eq(WebSocketMessageType.RECEIVE_TYPING_INDICATOR), eq(10L),

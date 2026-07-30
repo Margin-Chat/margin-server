@@ -5,9 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.email.EmailService;
-import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserCacheService;
+import org.margin.server.users.api.UserAccountCommands;
+import org.margin.server.users.api.UserLookup;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,33 +22,36 @@ public class PasswordResetService {
 
     private static final int EXPIRY_SECONDS = 3600;
 
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
+    private final UserAccountCommands userAccountCommands;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final UserCacheService userCacheService;
+    private final UserSecurityService userSecurityService;
 
-    public PasswordResetService(UserRepository userRepository,
+    public PasswordResetService(UserLookup userLookup,
+                                UserAccountCommands userAccountCommands,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
-                                UserCacheService userCacheService) {
-        this.userRepository = userRepository;
+                                UserSecurityService userSecurityService) {
+        this.userLookup = userLookup;
+        this.userAccountCommands = userAccountCommands;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
-        this.userCacheService = userCacheService;
+        this.userSecurityService = userSecurityService;
     }
 
     @Transactional
     public void requestPasswordReset(String email) {
         String normalised = email.toLowerCase();
         log.info("Password reset requested for email {}", normalised);
-        userRepository.findByEmail(normalised).ifPresent(user -> {
-            tokenRepository.deleteByUser(user);
+        userLookup.findByEmail(normalised).ifPresent(user -> {
+            tokenRepository.deleteByUserId(user.getId());
 
             PasswordResetToken resetToken = new PasswordResetToken();
-            resetToken.setUser(user);
+            resetToken.setUserId(user.getId());
             resetToken.setToken(UUID.randomUUID().toString());
             resetToken.setExpiresAt(Instant.now().plusSeconds(EXPIRY_SECONDS));
             tokenRepository.save(resetToken);
@@ -75,30 +77,23 @@ public class PasswordResetService {
         }
 
         if (resetToken.isExpired()) {
-            log.warn("Password reset failed — token expired at {} userId {}", resetToken.getExpiresAt(), resetToken.getUser().getId());
+            log.warn("Password reset failed — token expired at {} userId {}", resetToken.getExpiresAt(), resetToken.getUserId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has expired");
         }
 
         if (resetToken.isUsed()) {
-            log.warn("Password reset failed — token already used at {} userId {}", resetToken.getUsedAt(), resetToken.getUser().getId());
+            log.warn("Password reset failed — token already used at {} userId {}", resetToken.getUsedAt(), resetToken.getUserId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has already been used");
         }
 
-        User user = resetToken.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.getSecurity().setTokenVersion(user.getSecurity().getTokenVersion() + 1);
-        user.getEncryption().setPublicKey(null);
-        user.getEncryption().setEncryptedPrivateKey(null);
-        user.getEncryption().setSalt(null);
-        user.getEncryption().setIv(null);
-        log.info("Encryption keys cleared for userId {} — will be regenerated on next login", user.getId());
-
-        userRepository.save(user);
-        userCacheService.evictUserCache(user.getId());
+        Long userId = resetToken.getUserId();
+        userAccountCommands.resetCredentials(userId, passwordEncoder.encode(newPassword));
+        userSecurityService.bumpTokenVersion(userId);
+        log.info("Encryption keys cleared for userId {} — will be regenerated on next login", userId);
 
         resetToken.setUsedAt(Instant.now());
         tokenRepository.save(resetToken);
 
-        log.info("Password reset successfully for userId {}", user.getId());
+        log.info("Password reset successfully for userId {}", userId);
     }
 }

@@ -12,7 +12,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("""
             SELECT m FROM Message m
             JOIN FETCH m.conversation c
-            JOIN FETCH m.fromUser u
+            
             WHERE m.conversation.id = :conversationId
               AND m.isDeleted = false
             ORDER BY m.createdAt DESC
@@ -22,7 +22,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("""
             SELECT m FROM Message m
             JOIN FETCH m.conversation c
-            JOIN FETCH m.fromUser u
+            
             WHERE m.conversation.id = :conversationId
               AND m.id < :beforeId
               AND m.isDeleted = false

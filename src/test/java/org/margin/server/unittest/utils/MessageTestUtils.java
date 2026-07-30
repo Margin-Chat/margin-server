@@ -12,7 +12,7 @@ public class MessageTestUtils {
         Message message = new Message();
         message.setId(id);
         message.setConversation(conversation);
-        message.setFromUser(fromUser);
+        message.setFromUserId(fromUser.getId());
         message.setMessage(content);
         message.setCreatedAt(Instant.now());
         return message;

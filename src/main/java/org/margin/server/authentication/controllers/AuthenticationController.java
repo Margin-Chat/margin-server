@@ -2,14 +2,14 @@ package org.margin.server.authentication.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.authentication.models.*;
 import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.authentication.services.PasswordResetService;
-import org.margin.server.config.ratelimit.RateLimitConfig;
-import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.TooManyRequestsException;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.ratelimit.RateLimitConfig;
+import org.margin.server.shared.ratelimit.RateLimitService;
+import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,8 +44,8 @@ public class AuthenticationController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal User user) {
-        authenticationService.logoutUser(user);
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal AuthenticatedUser user) {
+        authenticationService.logoutUser(user.id());
         return ResponseEntity.ok().build();
     }
 
@@ -102,8 +102,8 @@ public class AuthenticationController {
 
     @PutMapping("/encryption-keys")
     public ResponseEntity<Void> updateEncryptionKeys(@RequestBody EncryptionKeysRequest request,
-                                                     @AuthenticationPrincipal User user) {
-        authenticationService.updateEncryptionKeys(user, request.publicKey(), request.encryptedPrivateKey(), request.salt(), request.iv());
+                                                     @AuthenticationPrincipal AuthenticatedUser user) {
+        authenticationService.updateEncryptionKeys(user.id(), request.publicKey(), request.encryptedPrivateKey(), request.salt(), request.iv());
         return ResponseEntity.ok().build();
     }
 

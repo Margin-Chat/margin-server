@@ -1,19 +1,20 @@
 package org.margin.server.sfu.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.sfu.models.ChannelCallInvitePayload;
-import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
-import org.margin.server.users.models.User;
-import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserService;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.models.WebSocketMessageType;
-import org.springframework.context.ApplicationEventPublisher;
+import org.margin.server.sfu.models.ChannelCallInvitePayload;
+import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
+import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.users.services.UserService;
+import org.margin.server.sfu.models.VoiceParticipantChange;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -24,14 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@NamedInterface("api")
 @Slf4j
 @Service
 public class SfuService {
 
     private final ApplicationEventPublisher eventPublisher;
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
     private final UserService userService;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
 
     @Getter
     @Value("${sfu.url:http://localhost:3000}")
@@ -44,11 +46,11 @@ public class SfuService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public SfuService(ApplicationEventPublisher eventPublisher, ConnectionManager connectionManager, UserService userService, UserRepository userRepository) {
+    public SfuService(ApplicationEventPublisher eventPublisher, PresenceService presenceService, UserService userService, UserLookup userLookup) {
         this.eventPublisher = eventPublisher;
-        this.connectionManager = connectionManager;
+        this.presenceService = presenceService;
         this.userService = userService;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
     }
 
     private HttpHeaders internalHeaders() {
@@ -71,23 +73,22 @@ public class SfuService {
     }
 
     public void notifyUserJoined(Long channelId, Long userId) {
-        User user = userService.getById(userId);
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
-                channelId, new UserDTO(user, connectionManager.isUserOnline(userId))
+                channelId, userLookup.dtoOf(userId)
         );
-        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload));
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.JOINED, payload));
     }
 
-    public void inviteToChannelCall(User inviter, Long recipientId, Long channelId, String channelName) {
+    public void inviteToChannelCall(Long inviterId, Long recipientId, Long channelId, String channelName) {
         ChannelCallInvitePayload payload = new ChannelCallInvitePayload(
-                channelId, channelName, new UserDTO(inviter, connectionManager.isUserOnline(inviter.getId()))
+                channelId, channelName, userLookup.dtoOf(inviterId)
         );
         eventPublisher.publishEvent(new ChannelCallInviteEvent(recipientId, payload));
     }
 
     public void notifyUserLeft(Long channelId, Long userId) {
-        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, WebSocketMessageType.USER_LEFT_VOICE,
-                new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId)))));
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.LEFT,
+                new ChannelVoiceParticipantPayload(channelId, userLookup.dtoOf(userId))));
     }
 
     public List<UserDTO> getVoiceParticipants(Long channelId) {
@@ -101,11 +102,7 @@ public class SfuService {
                     }
             );
             List<String> peerIds = response.getBody().getOrDefault("peers", List.of());
-            return peerIds.stream()
-                    .map(id -> userRepository.findById(Long.parseLong(id)).orElse(null))
-                    .filter(Objects::nonNull)
-                    .map(u -> new UserDTO(u, connectionManager.isUserOnline(u.getId())))
-                    .toList();
+            return userLookup.dtosOf(peerIds.stream().map(Long::parseLong).toList());
         } catch (Exception e) {
             log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());
             return List.of();

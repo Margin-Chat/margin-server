@@ -20,18 +20,18 @@ public record StoredFileDTO(
         UserDTO uploadedBy,
         Instant uploadedAt
 ) {
-    public static StoredFileDTO from(StoredFile f, boolean uploaderOnline) {
+    public static StoredFileDTO from(StoredFile f, UserDTO uploader) {
         return new StoredFileDTO(
                 f.getId(),
                 f.getScope(),
-                f.getMargin() != null ? f.getMargin().getId() : null,
-                f.getChannel() != null ? f.getChannel().getId() : null,
-                f.getConversation() != null ? f.getConversation().getId() : null,
+                f.getMarginId(),
+                f.getChannelId(),
+                f.getConversationId(),
                 f.getFileName(),
                 f.getContentType(),
                 f.getSizeBytes(),
                 StorageUrls.signedUrl(f.getStorageUrl()),
-                new UserDTO(f.getUploadedBy(), uploaderOnline),
+                uploader,
                 f.getUploadedAt()
         );
     }

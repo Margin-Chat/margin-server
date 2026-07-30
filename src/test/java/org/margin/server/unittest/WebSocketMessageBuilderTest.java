@@ -2,8 +2,9 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -25,8 +26,8 @@ class WebSocketMessageBuilderTest {
 
         Notification notification = new Notification();
         notification.setNotificationId(56L);
-        notification.setRecipient(recipient);
-        notification.setSender(sender);
+        notification.setRecipientId(recipient.getId());
+        notification.setSenderId(sender.getId());
         notification.setType(NotificationType.THREAD_REPLY);
         notification.setReferenceId(258L);
         notification.setMarginId(1L);
@@ -34,7 +35,7 @@ class WebSocketMessageBuilderTest {
         notification.setSeen(false);
         notification.setCreatedAt(Instant.parse("2026-07-12T10:00:00Z"));
 
-        JsonNode frame = mapper.readTree(builder.notification(notification));
+        JsonNode frame = mapper.readTree(builder.notification(notification, new UserDTO(sender, false)));
         JsonNode payload = frame.get("payload");
 
         assertThat(frame.get("type").asString()).isEqualTo("NOTIFICATION");

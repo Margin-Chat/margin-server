@@ -5,13 +5,12 @@ import org.margin.server.social.conversation.events.ConversationInviteDeclinedEv
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
 import org.margin.server.social.conversation.events.ConversationReadEvent;
 import org.margin.server.social.conversation.events.TypingIndicatorEvent;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.ConversationAcceptedPayload;
 import org.margin.server.websocket.models.payloads.ConversationDeclinedPayload;
-import org.margin.server.websocket.models.payloads.ConversationInvitePayload;
+import org.margin.server.social.conversation.models.dtos.ConversationInvitePayload;
 import org.margin.server.websocket.models.payloads.ConversationReadPayload;
 import org.margin.server.websocket.models.payloads.TypingIndicatorEventPayload;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
@@ -43,7 +42,7 @@ public class ConversationWebSocketEventListener {
     @EventListener
     public void onConversationInvite(ConversationInviteEvent event) {
         ConversationInvitePayload payload = new ConversationInvitePayload(
-                event.getConversation(), userService.toDTO(event.getSender()));
+                event.getConversation(), userService.toDTO(userService.getById(event.getSender().id())));
         String json = messageBuilder.buildMessage(WebSocketMessageType.CONVERSATION_INVITE, event.getRecipientId(), payload);
         connectionManager.sendToUser(event.getRecipientId(), json);
     }
@@ -65,12 +64,12 @@ public class ConversationWebSocketEventListener {
     @EventListener
     public void onTypingIndicator(TypingIndicatorEvent event) {
         TypingIndicatorEventPayload payload = new TypingIndicatorEventPayload(
-                event.getUser().getId(), event.getUser().getDisplayName(), event.isTyping());
+                event.getUser().id(), event.getUser().displayName(), event.isTyping());
         String json = messageBuilder.buildMessage(
                 WebSocketMessageType.RECEIVE_TYPING_INDICATOR, event.getConversationId(), payload);
-        for (User recipient : event.getRecipients()) {
-            if (connectionManager.isUserOnline(recipient.getId())) {
-                connectionManager.sendToUser(recipient.getId(), json);
+        for (Long recipientId : event.getRecipientIds()) {
+            if (connectionManager.isUserOnline(recipientId)) {
+                connectionManager.sendToUser(recipientId, json);
             }
         }
     }

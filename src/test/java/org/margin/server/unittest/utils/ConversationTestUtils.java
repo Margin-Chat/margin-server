@@ -1,7 +1,7 @@
 package org.margin.server.unittest.utils;
 
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 
 import java.time.Instant;
 

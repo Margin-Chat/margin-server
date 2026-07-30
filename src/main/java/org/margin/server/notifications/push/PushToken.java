@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -20,9 +19,8 @@ public class PushToken {
     private Long id;
 
     @ToString.Exclude
-    @ManyToOne
-    @JoinColumn(nullable = false, name = "user_id")
-    private User user;
+    @Column(nullable = false, name = "user_id")
+    private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

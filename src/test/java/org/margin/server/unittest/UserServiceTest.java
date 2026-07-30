@@ -10,7 +10,7 @@ import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
 import org.margin.server.users.services.UserCacheService;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,7 +32,7 @@ class UserServiceTest {
     @Mock
     private UserCacheService userCacheService;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
 
     @InjectMocks
     private UserService userService;
@@ -86,7 +86,7 @@ class UserServiceTest {
                         new UserWithSharedMarginProjection(user, "Team Alpha"),
                         new UserWithSharedMarginProjection(user, "Team Beta")
                 ));
-        when(connectionManager.isUserOnline(2L)).thenReturn(true);
+        when(presenceService.isUserOnline(2L)).thenReturn(true);
 
         List<UserSearchResultDTO> result = userService.searchUsersWithSharedMargins(searcherId, "bo");
 

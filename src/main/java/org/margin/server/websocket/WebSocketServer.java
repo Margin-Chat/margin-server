@@ -12,6 +12,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -37,6 +38,7 @@ public class WebSocketServer {
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
     private final List<WebSocketMessageProcessor<?>> processors;
     private final Executor dbExecutor;
     @Value("${websocket.port:8081}")
@@ -54,12 +56,14 @@ public class WebSocketServer {
                            JwtService jwtService,
                            ConnectionManager connectionManager,
                            PresenceService presenceService,
+                           UserLookup userLookup,
                            List<WebSocketMessageProcessor<?>> processors,
                            @Qualifier("wsDbExecutor") Executor dbExecutor) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
         this.processors = processors;
         this.dbExecutor = dbExecutor;
     }
@@ -95,6 +99,7 @@ public class WebSocketServer {
                                             jwtService,
                                             connectionManager,
                                             presenceService,
+                                            userLookup,
                                             processors));
                         }
                     })

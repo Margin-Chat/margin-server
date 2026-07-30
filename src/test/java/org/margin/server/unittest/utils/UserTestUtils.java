@@ -1,5 +1,6 @@
 package org.margin.server.unittest.utils;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserEncryption;
 
@@ -26,6 +27,14 @@ public class UserTestUtils {
         return user;
     }
 
+    public static AuthenticatedUser authUser(Long id) {
+        return new AuthenticatedUser(id, null, null);
+    }
+
+    public static AuthenticatedUser authUser(Long id, String displayName) {
+        return new AuthenticatedUser(id, null, displayName);
+    }
+
     public static UserEncryption createEncryption(String publicKey, String encryptedPrivateKey,
                                                   String salt, String iv) {
         UserEncryption encryption = new UserEncryption();
@@ -34,5 +43,10 @@ public class UserTestUtils {
         encryption.setSalt(salt);
         encryption.setIv(iv);
         return encryption;
+    }
+
+    public static AuthenticatedUser principalOf(User user) {
+        return user == null ? null
+                : new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName());
     }
 }

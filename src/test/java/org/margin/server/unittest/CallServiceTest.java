@@ -44,7 +44,6 @@ class CallServiceTest {
         User fromUser = createUser(1L, "caller");
         User toUser = createUser(2L, "receiver");
 
-        when(userService.getById(toUser.getId())).thenReturn(toUser);
         when(callRepository.save(any(Call.class))).thenAnswer(inv -> {
             Call c = inv.getArgument(0);
             c.setId(100L);
@@ -52,7 +51,7 @@ class CallServiceTest {
         });
 
         Call result = callService.createCall(
-                fromUser,
+                fromUser.getId(),
                 toUser.getId(),
                 CallStatus.RINGING,
                 CallType.VIDEO,
@@ -99,7 +98,7 @@ class CallServiceTest {
 
         when(callRepository.findById(1L)).thenReturn(Optional.of(call));
 
-        callService.endCall(caller, 1L, 120, 2L);
+        callService.endCall(caller.getId(), 1L, 120, 2L);
 
         ArgumentCaptor<Call> captor = ArgumentCaptor.forClass(Call.class);
         verify(callRepository).save(captor.capture());
@@ -116,7 +115,7 @@ class CallServiceTest {
         when(callRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(CallNotFoundException.class,
-                () -> callService.rejectCall(999L, 2L, caller));
+                () -> callService.rejectCall(999L, 2L, caller.getId()));
     }
 
 }

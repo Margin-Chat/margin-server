@@ -3,12 +3,13 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.social.channel.ChannelLookup;
+import org.margin.server.social.channel.services.ChannelService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelType;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.conversation.services.ConversationCreationService;
@@ -19,7 +20,7 @@ import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.services.MessageService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -59,9 +60,11 @@ class ThreadServiceTest {
     @Mock
     private MessageService messageService;
     @Mock
-    private ChannelLookup channelLookup;
+    private ChannelService channelService;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
+    @Mock
+    private UserLookup userLookup;
 
     @InjectMocks
     private ThreadService threadService;
@@ -73,6 +76,8 @@ class ThreadServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(i.getArgument(0), "u", null, null, null, false));
         alice = createUser(1L, "alice");
         bob = createUser(2L, "bob");
         threadChannel = createChannel(5L);
@@ -81,16 +86,16 @@ class ThreadServiceTest {
     }
 
     private void stubThreadChannel() {
-        when(channelLookup.getById(5L)).thenReturn(threadChannel);
+        when(channelService.getById(5L)).thenReturn(threadChannel);
         lenient().when(conversationService.getByChannelId(5L)).thenReturn(channelConversation);
     }
 
     @Test
     void createPost_inChatChannel_throwsBadRequest() {
         threadChannel.setChannelType(ChannelType.Communication);
-        when(channelLookup.getById(5L)).thenReturn(threadChannel);
+        when(channelService.getById(5L)).thenReturn(threadChannel);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "title", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "title", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -101,7 +106,7 @@ class ThreadServiceTest {
         stubThreadChannel();
         when(conversationService.isUserMember(10L, alice.getId())).thenReturn(false);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "title", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "title", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
@@ -112,7 +117,7 @@ class ThreadServiceTest {
         stubThreadChannel();
         when(conversationService.isUserMember(10L, alice.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> threadService.createPost(alice, 5L, "  ", "body"))
+        assertThatThrownBy(() -> threadService.createPost(alice.getId(), 5L, "  ", "body"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -131,19 +136,19 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, alice.getId()))
                 .thenReturn(Optional.empty());
 
-        threadService.createPost(alice, 5L, "title", "the body");
+        threadService.createPost(alice.getId(), 5L, "title", "the body");
 
-        verify(conversationCreationService).createConversationMember(post, alice);
-        verify(messageService).sendMessage(alice, "the body", post, List.of());
+        verify(conversationCreationService).createConversationMember(post, alice.getId());
+        verify(messageService).sendMessage(alice.getId(), "the body", post.getId(), List.of());
         verify(conversationService).toThreadDTO(post, alice.getId());
     }
 
     @Test
     void onMessageSent_nonThreadConversation_isIgnored() {
         Message channelMessage = createSavedMessage(100L, channelConversation, alice, "hi");
-        MessageDTO dto = MessageDTO.from(channelMessage).build();
+        MessageDTO dto = MessageDTO.from(channelMessage).withAuthor(new org.margin.server.users.models.dtos.UserDTO(channelMessage.getFromUserId(), "u", null, null, null, false)).build();
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
         verify(conversationCreationService, never()).createConversationMember(any(), any());
     }
@@ -153,27 +158,27 @@ class ThreadServiceTest {
         Conversation post = createConversation(11L, ConversationType.THREAD);
         post.setParentConversationId(10L);
         Message reply = createSavedMessage(102L, post, bob, "reply");
-        MessageDTO dto = MessageDTO.from(reply).build();
+        MessageDTO dto = MessageDTO.from(reply).withAuthor(new org.margin.server.users.models.dtos.UserDTO(reply.getFromUserId(), "u", null, null, null, false)).build();
 
         when(conversationMemberRepository.findByConversationIdAndUserId(11L, bob.getId()))
                 .thenReturn(Optional.empty(), Optional.empty());
         when(conversationService.getById(11L)).thenReturn(post);
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
-        verify(conversationCreationService).createConversationMember(post, bob);
+        verify(conversationCreationService).createConversationMember(post, bob.getId());
     }
 
     @Test
     void onMessageSent_replyByExistingFollower_doesNotDuplicateFollow() {
         Conversation post = createConversation(11L, ConversationType.THREAD);
         Message reply = createSavedMessage(102L, post, bob, "reply");
-        MessageDTO dto = MessageDTO.from(reply).build();
+        MessageDTO dto = MessageDTO.from(reply).withAuthor(new org.margin.server.users.models.dtos.UserDTO(reply.getFromUserId(), "u", null, null, null, false)).build();
 
         lenient().when(conversationMemberRepository.findByConversationIdAndUserId(eq(11L), eq(bob.getId())))
                 .thenReturn(Optional.of(new ConversationMember()));
 
-        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice, bob)));
+        threadService.onMessageSent(new MessageSentEvent(dto, List.of(alice.getId(), bob.getId())));
 
         verify(conversationCreationService, never()).createConversationMember(any(), any());
     }
@@ -183,7 +188,7 @@ class ThreadServiceTest {
         when(conversationMemberRepository.findThreadMembershipsByUserId(alice.getId()))
                 .thenReturn(List.of());
 
-        assertThat(threadService.getFollowedThreads(alice)).isEmpty();
+        assertThat(threadService.getFollowedThreads(alice.getId())).isEmpty();
         verify(conversationRepository, never()).findThreadSummariesForThreads(anyList(), anyLong());
     }
 }

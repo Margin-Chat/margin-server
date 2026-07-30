@@ -2,7 +2,8 @@ package org.margin.server.websocket.connection;
 
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.users.models.User;
+import org.margin.server.presence.PresenceRegistry;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -12,26 +13,27 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class ConnectionManager {
+public class ConnectionManager implements PresenceRegistry {
 
     private final Map<Long, Set<ClientConnection>> connections = new ConcurrentHashMap<>();
 
-    public void addConnection(User user, ClientConnection connection) {
-        connections.computeIfAbsent(user.getId(), id -> ConcurrentHashMap.newKeySet()).add(connection);
-        log.info("User {} connected (total sessions: {})", user.getId(), connections.get(user.getId()).size());
+    public void addConnection(AuthenticatedUser user, ClientConnection connection) {
+        connections.computeIfAbsent(user.id(), id -> ConcurrentHashMap.newKeySet()).add(connection);
+        log.info("AuthenticatedUser {} connected (total sessions: {})", user.id(), connections.get(user.id()).size());
     }
 
-    public boolean removeConnection(User user, Channel channel) {
-        Set<ClientConnection> sessions = connections.get(user.getId());
+    public boolean removeConnection(AuthenticatedUser user, Channel channel) {
+        Set<ClientConnection> sessions = connections.get(user.id());
         if (sessions == null) return false;
         sessions.removeIf(c -> c.getChannel() == channel);
         if (sessions.isEmpty()) {
-            connections.remove(user.getId());
+            connections.remove(user.id());
             return true;
         }
         return false;
     }
 
+    @Override
     public boolean isUserOnline(Long userId) {
         Set<ClientConnection> sessions = connections.get(userId);
         return sessions != null && sessions.stream().anyMatch(ClientConnection::isActive);
@@ -40,7 +42,7 @@ public class ConnectionManager {
     public void sendToUser(Long userId, String jsonMessage) {
         Set<ClientConnection> sessions = connections.get(userId);
         if (sessions == null) {
-            log.debug("User {} not connected, cannot send message", userId);
+            log.debug("AuthenticatedUser {} not connected, cannot send message", userId);
             return;
         }
         sessions.stream()
@@ -70,6 +72,7 @@ public class ConnectionManager {
         connections.clear();
     }
 
+    @Override
     public Set<Long> getOnlineUserIds() {
         return new HashSet<>(connections.keySet());
     }

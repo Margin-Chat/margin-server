@@ -1,6 +1,6 @@
 package org.margin.server.config;
 
-import org.margin.server.config.filters.JwtAuthenticationFilter;
+import org.margin.server.authentication.filters.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

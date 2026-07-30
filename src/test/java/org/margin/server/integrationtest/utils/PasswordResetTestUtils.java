@@ -33,14 +33,14 @@ public class PasswordResetTestUtils {
 
     public static PasswordResetToken getTokenForUser(User user) {
         return tokenRepository.findAll().stream()
-                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .filter(t -> t.getUserId().equals(user.getId()))
                 .findFirst()
                 .orElseThrow();
     }
 
     public static PasswordResetToken saveExpiredToken(User user) {
         PasswordResetToken token = new PasswordResetToken();
-        token.setUser(user);
+        token.setUserId(user.getId());
         token.setToken(UUID.randomUUID().toString());
         token.setExpiresAt(Instant.now().minusSeconds(60));
         return tokenRepository.save(token);
@@ -48,7 +48,7 @@ public class PasswordResetTestUtils {
 
     public static PasswordResetToken saveUsedToken(User user) {
         PasswordResetToken token = new PasswordResetToken();
-        token.setUser(user);
+        token.setUserId(user.getId());
         token.setToken(UUID.randomUUID().toString());
         token.setExpiresAt(Instant.now().plusSeconds(3600));
         token.setUsedAt(Instant.now().minusSeconds(30));

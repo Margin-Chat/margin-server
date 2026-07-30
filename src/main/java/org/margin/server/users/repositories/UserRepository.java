@@ -14,10 +14,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
             SELECT new org.margin.server.users.repositories.projections.UserWithSharedMarginProjection(u, m.name)
             FROM User u
-            JOIN MarginMember mm ON mm.user = u
+            JOIN MarginMember mm ON mm.userId = u.id
             JOIN MarginMember mm2 ON mm2.margin = mm.margin
             JOIN Margin m ON m.id = mm.margin.id
-            WHERE mm2.user.id = :searcherId
+            WHERE mm2.userId = :searcherId
             AND u.id != :searcherId
             AND LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
             """)
@@ -30,7 +30,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT u
             FROM User u
             JOIN MarginMember mb on mb.margin.id = :marginId
-            AND mb.user.id = u.id
+            AND mb.userId = u.id
             WHERE LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
             """)
     List<User> findUsersByMarginId(Long searcherId, Long marginId, String query);

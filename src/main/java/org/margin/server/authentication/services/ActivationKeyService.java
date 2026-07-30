@@ -3,7 +3,6 @@ package org.margin.server.authentication.services;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.repositories.ActivationKeyRepository;
-import org.margin.server.users.models.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,11 +23,11 @@ public class ActivationKeyService {
     }
 
     @Transactional
-    public ActivationKey generateActivationKey(User user) {
+    public ActivationKey generateActivationKey(Long userId) {
         ActivationKey activationKey = new ActivationKey();
         activationKey.setToken(UUID.randomUUID().toString());
         activationKey.setExpiresAt(Instant.now().plusSeconds(WEEK_IN_SECONDS));
-        activationKey.setUser(user);
+        activationKey.setUserId(userId);
         return activationKeyRepository.save(activationKey);
     }
 
@@ -47,11 +46,11 @@ public class ActivationKeyService {
         activationKey.setActivatedAt(Instant.now());
         activationKeyRepository.save(activationKey);
 
-        log.info("Activation sucessfully consumed for user id {}", activationKey.getUser().getId());
+        log.info("Activation sucessfully consumed for user id {}", activationKey.getUserId());
     }
 
-    public boolean isUserActivated(User user) {
-        ActivationKey activationKey = activationKeyRepository.findActivationKeyByUser(user).orElseThrow();
+    public boolean isUserActivated(Long userId) {
+        ActivationKey activationKey = activationKeyRepository.findActivationKeyByUserId(userId).orElseThrow();
         return activationKey.isActivated();
     }
 }

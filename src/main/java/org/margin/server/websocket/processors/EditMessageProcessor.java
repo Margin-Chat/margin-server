@@ -1,7 +1,7 @@
 package org.margin.server.websocket.processors;
 
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.EditMessagePayload;
@@ -23,7 +23,7 @@ public class EditMessageProcessor implements WebSocketMessageProcessor<EditMessa
 
     @Transactional
     @Override
-    public void process(User user, WebSocketMessageIn<EditMessagePayload> message) {
-        messageService.editMessage(user, message.getRecipientId(), message.getPayload().messageId(), message.getPayload().content());
+    public void process(AuthenticatedUser user, WebSocketMessageIn<EditMessagePayload> message) {
+        messageService.editMessage(user.id(), message.getRecipientId(), message.getPayload().messageId(), message.getPayload().content());
     }
 }

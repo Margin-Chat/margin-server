@@ -8,7 +8,7 @@ import org.margin.server.social.conversation.events.TypingIndicatorEvent;
 import org.margin.server.social.conversation.models.Conversation;
 import org.margin.server.social.conversation.models.ConversationMember;
 import org.margin.server.social.conversation.models.ConversationInviteStatus;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.models.dtos.ConversationDTO;
 import org.margin.server.social.conversation.models.dtos.DirectConversationDTO;
 import org.margin.server.social.conversation.models.dtos.GroupConversationDTO;
@@ -17,9 +17,8 @@ import org.margin.server.social.conversation.repositories.ConversationRepository
 import org.margin.server.social.conversation.services.ConversationCreationService;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.users.models.User;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.presence.PresenceService;
 import org.mockito.Mock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,30 +41,31 @@ class ConversationServiceTest {
     @Mock
     private ConversationMemberRepository conversationMemberRepository;
     @Mock
-    private UserRepository userRepository;
+    private UserLookup userLookup;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private ConversationCreationService conversationCreationService;
-    @Mock
-    private UserService userService;
 
     private ConversationService conversationService;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
+
         // 1. Create the real instance
         ConversationService serviceImpl = new ConversationService(
                 conversationCreationService,
                 conversationRepository,
                 conversationMemberRepository,
-                userRepository,
+                userLookup,
                 null, // self placeholder
-                connectionManager,
-                eventPublisher,
-                userService
+                presenceService,
+                eventPublisher
         );
 
         // 2. Wrap it in a spy so we can mock self-calls
@@ -83,11 +83,11 @@ class ConversationServiceTest {
         Conversation conv = createConversation(10L, ConversationType.DIRECT);
 
         ConversationMember member1 = new ConversationMember();
-        member1.setUser(user1);
+        member1.setUserId(user1.getId());
         member1.setLastReadAt(Instant.now());
 
         ConversationMember member2 = new ConversationMember();
-        member2.setUser(user2);
+        member2.setUserId(user2.getId());
         member2.setLastReadAt(Instant.now());
 
         conv.setMembers(List.of(member1, member2));
@@ -105,8 +105,8 @@ class ConversationServiceTest {
         conv.setName("Devs");
 
         doReturn(conv).when(conversationService).getById(20L);
-        when(conversationMemberRepository.findUsersByConversationId(20L))
-                .thenReturn(List.of(createUser(1L), createUser(2L)));
+        when(conversationMemberRepository.findUserIdsByConversationId(20L))
+                .thenReturn(List.of(1L, 2L));
 
         ConversationDTO result = conversationService.getConversationDTO(conv, 1L);
 
@@ -127,16 +127,16 @@ class ConversationServiceTest {
         conversation.setName("New Group");
 
         when(conversationCreationService.createGroupConversation("New Group", false)).thenReturn(conversation);
-        when(userRepository.findByEmail("invitee@example.com")).thenReturn(Optional.of(invitee));
+        when(userLookup.idByEmail("invitee@example.com")).thenReturn(Optional.of(invitee.getId()));
 
         Conversation result = conversationService.createGroupConversation(
-                creator, List.of("invitee@example.com"), "New Group", false);
+                creator.getId(), List.of("invitee@example.com"), "New Group", false);
 
         assertNotNull(result);
         assertEquals(99L, result.getId());
         verify(conversationCreationService).createGroupConversation("New Group", false);
         // Creator added as ACCEPTED member
-        verify(conversationCreationService).createConversationMember(conversation, creator);
+        verify(conversationCreationService).createConversationMember(conversation, creator.getId());
     }
 
     @Test
@@ -147,11 +147,10 @@ class ConversationServiceTest {
         User invitee = createUser(2L);
 
         doReturn(conv).when(conversationService).getById(1L);
-        when(userRepository.findById(2L)).thenReturn(Optional.of(invitee));
 
-        assertDoesNotThrow(() -> conversationService.addMember(1L, 2L, adder));
+        assertDoesNotThrow(() -> conversationService.addMember(1L, 2L, adder.getId()));
         verify(conversationCreationService).createConversationMemberWithStatus(
-                conv, invitee, ConversationInviteStatus.PENDING);
+                conv, invitee.getId(), ConversationInviteStatus.PENDING);
     }
 
     @Test
@@ -170,10 +169,10 @@ class ConversationServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.GROUP);
 
         doReturn(conversation).when(conversationService).getById(10L);
-        when(conversationMemberRepository.findUsersByConversationId(10L))
-                .thenReturn(List.of(sender, other));
+        when(conversationMemberRepository.findUserIdsByConversationId(10L))
+                .thenReturn(List.of(sender.getId(), other.getId()));
 
-        conversationService.notifyTyping(sender, conversation, true);
+        conversationService.notifyTyping(sender.getId(), conversation.getId(), true);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);
@@ -181,9 +180,9 @@ class ConversationServiceTest {
 
         TypingIndicatorEvent event = captor.getValue();
         assertEquals(10L, event.getConversationId());
-        assertEquals(sender, event.getUser());
+        assertEquals(sender.getId(), event.getUser().id());
         assertTrue(event.isTyping());
-        assertEquals(List.of(other), event.getRecipients());
+        assertEquals(List.of(other.getId()), event.getRecipientIds());
     }
 
     @Test
@@ -194,10 +193,10 @@ class ConversationServiceTest {
         Conversation conversation = createConversation(10L, ConversationType.DIRECT);
 
         doReturn(conversation).when(conversationService).getById(10L);
-        when(conversationMemberRepository.findUsersByConversationId(10L))
-                .thenReturn(List.of(sender, other));
+        when(conversationMemberRepository.findUserIdsByConversationId(10L))
+                .thenReturn(List.of(sender.getId(), other.getId()));
 
-        conversationService.notifyTyping(sender, conversation, false);
+        conversationService.notifyTyping(sender.getId(), conversation.getId(), false);
 
         org.mockito.ArgumentCaptor<TypingIndicatorEvent> captor =
                 org.mockito.ArgumentCaptor.forClass(TypingIndicatorEvent.class);

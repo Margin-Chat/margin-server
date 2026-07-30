@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -23,13 +22,11 @@ public class MarginInvite {
     @JoinColumn(name = "margin_id", nullable = false)
     private Margin margin;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invited_by_user_id", nullable = false)
-    private User invitedBy;
+    @Column(name = "invited_by_user_id", nullable = false)
+    private Long invitedByUserId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invited_user_id")
-    private User invitedUser;
+    @Column(name = "invited_user_id")
+    private Long invitedUserId;
 
     @Column(name = "invite_code", nullable = false, unique = true)
     private String inviteCode = UUID.randomUUID().toString();

@@ -1,26 +1,22 @@
 package org.margin.server.notifications.listeners;
 
-import org.margin.server.notifications.NotificationType;
-import org.margin.server.notifications.events.AnnouncementCreatedEvent;
-import org.margin.server.notifications.events.MemberLimitWarningEvent;
-import org.margin.server.notifications.events.MissedCallEvent;
-import org.margin.server.notifications.events.SubscriptionStatusChangedEvent;
-import org.margin.server.notifications.events.UserAddedToMarginEvent;
-import org.margin.server.notifications.events.UserInvitedToMarginEvent;
+import org.margin.server.shared.notifications.NotificationType;
+import org.margin.server.social.announcements.events.AnnouncementCreatedEvent;
+import org.margin.server.subscriptions.events.MemberLimitWarningEvent;
+import org.margin.server.social.calls.events.MissedCallEvent;
+import org.margin.server.subscriptions.events.SubscriptionStatusChangedEvent;
+import org.margin.server.social.margin.events.UserAddedToMarginEvent;
+import org.margin.server.social.margin.events.UserInvitedToMarginEvent;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.conversation.events.ConversationInviteAcceptedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteDeclinedEvent;
 import org.margin.server.social.conversation.events.ConversationInviteEvent;
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
-import org.margin.server.social.conversation.services.ConversationService;
+import org.margin.server.social.api.ConversationType;
+import org.margin.server.social.api.MessageLookup;
 import org.margin.server.social.messages.events.MessageSentEvent;
 import org.margin.server.social.messages.events.ReactionAddedEvent;
-import org.margin.server.social.messages.models.Message;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
 import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
-import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -33,22 +29,20 @@ public class NotificationEventListener {
 
     private final NotificationService notificationService;
     private final UserService userService;
-    private final MessageService messageService;
-    private final ConversationService conversationService;
+    private final MessageLookup messageLookup;
 
     public NotificationEventListener(NotificationService notificationService, UserService userService,
-                                     MessageService messageService, ConversationService conversationService) {
+                                     MessageLookup messageLookup) {
         this.notificationService = notificationService;
         this.userService = userService;
-        this.messageService = messageService;
-        this.conversationService = conversationService;
+        this.messageLookup = messageLookup;
     }
 
     @EventListener
     public void onMissedCall(MissedCallEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getRecipient()),
-                event.getCaller(),
+                Collections.singletonList(event.getRecipientId()),
+                event.getCallerId(),
                 NotificationType.MISSED_CALL,
                 event.getCallId(),
                 null);
@@ -57,8 +51,8 @@ public class NotificationEventListener {
     @EventListener
     public void onUserAddedToMargin(UserAddedToMarginEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getAddedUser()),
-                event.getAddingUser(),
+                Collections.singletonList(event.getAddedUserId()),
+                event.getAddingUserId(),
                 NotificationType.ADDED_TO_MARGIN,
                 null,
                 event.getMarginId());
@@ -67,8 +61,8 @@ public class NotificationEventListener {
     @EventListener
     public void onUserInvitedToMargin(UserInvitedToMarginEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getInvitedUser()),
-                event.getInvitedBy(),
+                Collections.singletonList(event.getInvitedUserId()),
+                event.getInvitedByUserId(),
                 NotificationType.INVITED_TO_MARGIN,
                 event.getInviteId(),
                 event.getMarginId());
@@ -77,8 +71,8 @@ public class NotificationEventListener {
     @EventListener
     public void onConversationInvite(ConversationInviteEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(userService.getById(event.getRecipientId())),
-                event.getSender(),
+                Collections.singletonList(event.getRecipientId()),
+                event.getSender().id(),
                 NotificationType.CONVERSATION_INVITE,
                 event.getConversation().id(),
                 null);
@@ -97,29 +91,24 @@ public class NotificationEventListener {
     @EventListener
     public void onReactionAdded(ReactionAddedEvent event) {
         MessageReactionDTO reaction = event.getReaction();
-        Message message = messageService.getById(reaction.messageId());
-        User author = message.getFromUser();
+        MessageLookup.MessageContext context = messageLookup.contextOf(reaction.messageId());
 
-        if (author.getId().equals(reaction.userId())) {
+        if (context.authorId().equals(reaction.userId())) {
             return;
         }
 
-        User reactor = event.getRecipients().stream()
-                .filter(u -> u.getId().equals(reaction.userId()))
+        Long reactorId = event.getRecipientIds().stream()
+                .filter(id -> id.equals(reaction.userId()))
                 .findFirst()
                 .orElse(null);
 
-        Conversation conversation = message.getConversation();
-        Long marginId = conversation.getChannel() == null ? null
-                : conversation.getChannel().getSpace().getMargin().getId();
-
         notificationService.createForUsers(
-                Collections.singletonList(author),
-                reactor,
+                Collections.singletonList(context.authorId()),
+                reactorId,
                 NotificationType.MESSAGE_REACTION,
                 reaction.messageId(),
-                marginId,
-                conversation.getId());
+                context.marginId(),
+                context.conversationId());
     }
 
     @EventListener
@@ -129,15 +118,15 @@ public class NotificationEventListener {
             return;
         }
 
-        List<User> followers = conversationService.getThreadFollowers(message.conversationId());
-        User sender = event.getRecipients().stream()
-                .filter(u -> u.getId().equals(message.user().id()))
+        List<Long> followerIds = messageLookup.threadFollowerIds(message.conversationId());
+        Long senderId = event.getRecipientIds().stream()
+                .filter(id -> id.equals(message.user().id()))
                 .findFirst()
                 .orElse(null);
 
         notificationService.createOrCollapseThreadReply(
-                followers,
-                sender,
+                followerIds,
+                senderId,
                 message.id(),
                 message.marginId(),
                 message.conversationId());
@@ -146,8 +135,8 @@ public class NotificationEventListener {
     @EventListener
     public void onAnnouncementCreated(AnnouncementCreatedEvent event) {
         notificationService.createForUsers(
-                event.getMembers(),
-                event.getAuthor(),
+                event.getMemberIds(),
+                event.getAuthor().id(),
                 NotificationType.ANNOUNCEMENT,
                 event.getAnnouncementId(),
                 event.getMarginId());
@@ -156,7 +145,7 @@ public class NotificationEventListener {
     @EventListener
     public void onMemberLimitWarning(MemberLimitWarningEvent event) {
         notificationService.createForUsers(
-                event.getRecipients(),
+                event.getRecipientIds(),
                 null,
                 NotificationType.SUBSCRIPTION_LIMIT_WARNING,
                 null,
@@ -166,7 +155,7 @@ public class NotificationEventListener {
     @EventListener
     public void onSubscriptionStatusChanged(SubscriptionStatusChangedEvent event) {
         notificationService.createForUsers(
-                Collections.singletonList(event.getOwner()),
+                Collections.singletonList(event.getOwnerId()),
                 null,
                 event.getType(),
                 null,
