@@ -8,11 +8,9 @@ import org.margin.server.subscriptions.models.dtos.SubscriptionDTO;
 import org.margin.server.websocket.models.payloads.*;
 
 public enum WebSocketMessageType {
-    // User activity
     USER_LOGIN(null),
     USER_LOGOUT(null),
 
-    // Message
     SEND_MESSAGE(SendMessagePayload.class),
     RECEIVE_MESSAGE(String.class),
     SEND_EDIT_MESSAGE(EditMessagePayload.class),
@@ -29,7 +27,6 @@ public enum WebSocketMessageType {
     SEND_TYPING_INDICATOR(TypingIndicatorPayload.class),
     RECEIVE_TYPING_INDICATOR(String.class),
 
-    // Call
     CALL_OFFER(IncomingCallOfferPayload.class),
     CALL_RESPONSE(IncomingCallResponsePayload.class),
     CALL_CANDIDATE(CallCandidate.class),
@@ -42,17 +39,13 @@ public enum WebSocketMessageType {
     CHANNEL_CALL_INVITE(String.class),
     CALL_MEDIA_STATE(CallMediaState.class),
 
-    // Notification
     NOTIFICATION(NotificationPayload.class),
 
-    // Margin
     MARGIN_INVITE(String.class),
     USER_JOINED_SPACE(String.class),
 
-    // Subscription
     SUBSCRIPTION_UPDATED(SubscriptionDTO.class),
 
-    // Conversation invites
     CONVERSATION_INVITE(ConversationInvitePayload.class),
 
     PING(null),

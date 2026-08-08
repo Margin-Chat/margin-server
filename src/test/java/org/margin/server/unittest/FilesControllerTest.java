@@ -72,7 +72,6 @@ class FilesControllerTest {
         margin.setIconUrl("/api/files/margin-icons/icon.png");
     }
 
-    // --- getProfilePicture ---
 
     @Test
     void getProfilePicture_returnsUnauthorizedWhenNotAuthenticated() {
@@ -117,7 +116,6 @@ class FilesControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
-    // --- getMarginIcon ---
 
     @Test
     void getMarginIcon_returnsUnauthorizedWhenNotAuthenticated() {
@@ -150,7 +148,6 @@ class FilesControllerTest {
         assertTrue(response.getStatusCode().is2xxSuccessful());
     }
 
-    // --- getStoredFileByName ---
 
     @Test
     void getStoredFileByName_returnsUnauthorizedWhenNotAuthenticated() {
@@ -233,7 +230,6 @@ class FilesControllerTest {
                 () -> controller.getStoredFileByName("missing.pdf", principalOf(viewer)));
     }
 
-    // --- getConversationImage ---
 
     @Test
     void getConversationImage_returnsUnauthorizedWhenNotAuthenticated() {
@@ -291,7 +287,6 @@ class FilesControllerTest {
         verify(conversationAuthorizationService).requireConversationMember(99L, 1L);
     }
 
-    // --- helpers ---
 
     private StoredFile channelStoredFile() {
         Conversation conv = new Conversation();

@@ -57,7 +57,6 @@ class ConversationServiceTest {
                 .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
                         i.getArgument(0), "u", null, null, null, false));
 
-        // 1. Create the real instance
         ConversationService serviceImpl = new ConversationService(
                 conversationCreationService,
                 conversationRepository,

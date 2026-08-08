@@ -58,7 +58,6 @@ class FilesControllerTest extends MarginTestRunner {
         }
     }
 
-    // --- channel-scoped files ---
 
     @Test
     void channelMemberCanServeChannelFile() {
@@ -93,7 +92,6 @@ class FilesControllerTest extends MarginTestRunner {
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
-    // --- margin-scoped files ---
 
     @Test
     void marginMemberCanServeMarginFile() {
