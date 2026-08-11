@@ -56,6 +56,7 @@ public class SecurityConfig {
         defaultConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         defaultConfiguration.setAllowedHeaders(List.of("*"));
         defaultConfiguration.setAllowCredentials(true);
+        defaultConfiguration.setMaxAge(3600L);
 
         source.registerCorsConfiguration("/**", defaultConfiguration);
 

@@ -18,6 +18,8 @@ import org.margin.server.social.space.models.dtos.CreateSpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.shared.authorization.ChannelAudience;
+import org.margin.server.shared.voice.VoiceParticipantLookup;
+import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -26,7 +28,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -40,6 +46,7 @@ public class SpacesService implements ChannelAudience {
     private final PresenceService presenceService;
     private final SpacesActions spacesActions;
     private final UserLookup userLookup;
+    private final VoiceParticipantLookup voiceParticipantLookup;
 
     public SpacesService(SpacesRepository spacesRepository,
                          SpaceMemberRepository spaceMemberRepository,
@@ -49,7 +56,8 @@ public class SpacesService implements ChannelAudience {
                          MarginMapper marginMapper,
                          PresenceService presenceService,
                          SpacesActions spacesActions,
-                         UserLookup userLookup) {
+                         UserLookup userLookup,
+                         VoiceParticipantLookup voiceParticipantLookup) {
         this.spacesRepository = spacesRepository;
         this.spaceMemberRepository = spaceMemberRepository;
         this.channelService = channelService;
@@ -59,6 +67,7 @@ public class SpacesService implements ChannelAudience {
         this.presenceService = presenceService;
         this.spacesActions = spacesActions;
         this.userLookup = userLookup;
+        this.voiceParticipantLookup = voiceParticipantLookup;
     }
 
     @Transactional(readOnly = true)
@@ -70,8 +79,39 @@ public class SpacesService implements ChannelAudience {
 
     @Transactional(readOnly = true)
     public List<SpaceDTO> getSpacesForUserInMargin(Long userId, Long marginId) {
-        return spacesRepository.findVisibleSpacesForUser(userId, marginId).stream()
+        List<SpaceDTO> spaces = spacesRepository.findVisibleSpacesForUser(userId, marginId).stream()
                 .map(marginMapper::spaceToDto)
+                .toList();
+
+        return withVoiceParticipants(spaces);
+    }
+
+    private List<SpaceDTO> withVoiceParticipants(List<SpaceDTO> spaces) {
+        List<Long> channelIds = spaces.stream()
+                .flatMap(space -> space.channels().stream())
+                .map(ChannelDTO::id)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Map<Long, List<Long>> participantIds = voiceParticipantLookup.participantIdsByChannel(channelIds);
+        if (participantIds.isEmpty()) {
+            return spaces;
+        }
+
+        Map<Long, UserDTO> participants = userLookup.dtosOf(participantIds.values().stream()
+                        .flatMap(List::stream)
+                        .distinct()
+                        .toList()).stream()
+                .collect(Collectors.toMap(UserDTO::id, Function.identity(), (first, second) -> first));
+
+        return spaces.stream()
+                .map(space -> space.withChannels(space.channels().stream()
+                        .map(channel -> channel.withVoiceParticipants(
+                                participantIds.getOrDefault(channel.id(), List.of()).stream()
+                                        .map(participants::get)
+                                        .filter(Objects::nonNull)
+                                        .toList()))
+                        .toList()))
                 .toList();
     }
 

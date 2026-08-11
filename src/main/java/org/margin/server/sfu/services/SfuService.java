@@ -13,6 +13,7 @@ import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
 import org.margin.server.sfu.models.VoiceParticipantChange;
+import org.margin.server.shared.voice.VoiceParticipantLookup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +31,7 @@ import java.util.Objects;
 @NamedInterface("api")
 @Slf4j
 @Service
-public class SfuService {
+public class SfuService implements VoiceParticipantLookup {
 
     private final ApplicationEventPublisher eventPublisher;
     private final PresenceService presenceService;
@@ -106,6 +109,44 @@ public class SfuService {
         } catch (Exception e) {
             log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());
             return List.of();
+        }
+    }
+
+    @Override
+    public Map<Long, List<Long>> participantIdsByChannel(Collection<Long> channelIds) {
+        if (channelIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<String>> peersByRoom = fetchAllRoomPeers();
+        Map<Long, List<Long>> participants = new HashMap<>();
+
+        for (Long channelId : channelIds) {
+            List<String> peerIds = peersByRoom.get(String.valueOf(channelId));
+            if (peerIds == null || peerIds.isEmpty()) {
+                continue;
+            }
+            participants.put(channelId, peerIds.stream().map(Long::parseLong).toList());
+        }
+
+        return participants;
+    }
+
+    private Map<String, List<String>> fetchAllRoomPeers() {
+        String url = sfuUrl + "/rooms/peers";
+        try {
+            ResponseEntity<Map<String, Map<String, List<String>>>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(internalHeaders()),
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            Map<String, Map<String, List<String>>> body = response.getBody();
+            return body == null ? Map.of() : body.getOrDefault("rooms", Map.of());
+        } catch (Exception e) {
+            log.warn("Could not fetch voice participants: {}", e.getMessage());
+            return Map.of();
         }
     }
 
