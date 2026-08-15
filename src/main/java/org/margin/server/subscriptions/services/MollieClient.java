@@ -157,9 +157,6 @@ public class MollieClient {
         CancelSubscriptionResponse response = mollieClient.subscriptions().cancel()
                 .customerId(customerId)
                 .subscriptionId(subscriptionId)
-                .requestBody(CancelSubscriptionRequestBody.builder()
-                        .testmode(Boolean.parseBoolean(properties.testmode()))
-                        .build())
                 .call();
 
         if (response.subscriptionResponse().isPresent()) {
