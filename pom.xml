@@ -10,9 +10,9 @@
     </parent>
     <groupId>org.margin</groupId>
     <artifactId>server</artifactId>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.3.2-SNAPSHOT</version>
     <name>margin</name>
-    <description>Backend server for margin</description>
+    <description>Backend server for Margin</description>
 
     <properties>
         <java.version>25</java.version>

@@ -48,7 +48,7 @@ public class SfuController {
         int currentParticipants = sfuService.getVoiceParticipants(channelId).size();
         int maxParticipants = subscriptionValidationService.validateChannelVoiceJoin(channelLookup.marginIdOf(channelId), currentParticipants);
         sfuService.createOrJoinRoom(roomId, maxParticipants);
-        String roomToken = sfuTokenService.generateRoomToken(user.id(), roomId);
+        String roomToken = sfuTokenService.generateRoomToken(user.id(), roomId, user.displayName());
         boolean isFree = subscriptionValidationService
                 .tierForMargin(channelLookup.marginIdOf(channelId)) == SubscriptionTier.FREE;
         Integer maxVideoHeight = isFree ? 720 : null;

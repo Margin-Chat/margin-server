@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jdk-noble AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /build
 
 COPY .mvn/ .mvn/

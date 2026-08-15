@@ -23,9 +23,9 @@ public class SfuTokenService {
         return Keys.hmacShaKeyFor(tokenSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateRoomToken(Long userId, String roomId) {
+    public String generateRoomToken(Long userId, String roomId, String displayName) {
         return Jwts.builder()
-                .claims(Map.of("userId", userId, "roomId", roomId))
+                .claims(Map.of("userId", userId, "roomId", roomId, "displayName", displayName))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
                 .signWith(getSigningKey())
