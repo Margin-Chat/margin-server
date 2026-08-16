@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.sfu.services.SfuService;
+import org.margin.server.shared.voice.RoomKey;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
 import org.mockito.InjectMocks;
@@ -94,5 +95,34 @@ class SfuServiceTest {
         sfu.expect(requestTo("http://sfu.test/rooms/peers")).andRespond(withServerError());
 
         assertTrue(sfuService.participantIdsByChannel(List.of(1L)).isEmpty());
+    }
+
+    @Test
+    @DisplayName("peerIdsInRoom should address a channel room by its bare id, as before")
+    void peerIdsInRoom_UsesBareIdForChannelRooms() {
+        sfu.expect(requestTo("http://sfu.test/rooms/42/peers"))
+                .andExpect(header("X-Internal-Api-Key", "secret"))
+                .andRespond(withSuccess("{\"peers\":[\"7\",\"8\"]}", MediaType.APPLICATION_JSON));
+
+        assertEquals(List.of("7", "8"), sfuService.peerIdsInRoom(new RoomKey.ChannelRoom(42L)));
+        sfu.verify();
+    }
+
+    @Test
+    @DisplayName("peerIdsInRoom should address a meeting room by its prefixed code")
+    void peerIdsInRoom_UsesPrefixedIdForMeetingRooms() {
+        sfu.expect(requestTo("http://sfu.test/rooms/m_abc/peers"))
+                .andRespond(withSuccess("{\"peers\":[\"7\"]}", MediaType.APPLICATION_JSON));
+
+        assertEquals(List.of("7"), sfuService.peerIdsInRoom(new RoomKey.MeetingRoom("abc")));
+        sfu.verify();
+    }
+
+    @Test
+    @DisplayName("peerIdsInRoom should degrade to empty when the SFU is unreachable")
+    void peerIdsInRoom_ReturnsEmptyOnFailure() {
+        sfu.expect(requestTo("http://sfu.test/rooms/m_abc/peers")).andRespond(withServerError());
+
+        assertTrue(sfuService.peerIdsInRoom(new RoomKey.MeetingRoom("abc")).isEmpty());
     }
 }

@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.sfu.events.ChannelCallInviteEvent;
 import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
+import org.margin.server.sfu.events.MeetingPeerJoinedEvent;
+import org.margin.server.sfu.events.MeetingPeerLeftEvent;
+import org.margin.server.shared.voice.RoomKey;
 import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
 import org.margin.server.users.models.dtos.UserDTO;
@@ -94,8 +97,26 @@ public class SfuService implements VoiceParticipantLookup {
                 new ChannelVoiceParticipantPayload(channelId, userLookup.dtoOf(userId))));
     }
 
+    public void notifyMeetingPeerJoined(String meetingCode, String peerId) {
+        eventPublisher.publishEvent(new MeetingPeerJoinedEvent(meetingCode, peerId));
+    }
+
+    public void notifyMeetingPeerLeft(String meetingCode, String peerId) {
+        eventPublisher.publishEvent(new MeetingPeerLeftEvent(meetingCode, peerId));
+    }
+
     public List<UserDTO> getVoiceParticipants(Long channelId) {
-        String url = sfuUrl + "/rooms/" + channelId + "/peers";
+        return userLookup.dtosOf(
+                peerIdsInRoom(new RoomKey.ChannelRoom(channelId)).stream().map(Long::parseLong).toList()
+        );
+    }
+
+    /**
+     * Who the SFU currently has connected to a room. The SFU is the source of truth for presence
+     * in a room; peer_joined/peer_left callbacks are fire-and-forget and can be dropped.
+     */
+    public List<String> peerIdsInRoom(RoomKey room) {
+        String url = sfuUrl + "/rooms/" + room.value() + "/peers";
         try {
             ResponseEntity<Map<String, List<String>>> response = restTemplate.exchange(
                     url,
@@ -104,10 +125,9 @@ public class SfuService implements VoiceParticipantLookup {
                     new ParameterizedTypeReference<>() {
                     }
             );
-            List<String> peerIds = response.getBody().getOrDefault("peers", List.of());
-            return userLookup.dtosOf(peerIds.stream().map(Long::parseLong).toList());
+            return response.getBody().getOrDefault("peers", List.of());
         } catch (Exception e) {
-            log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());
+            log.warn("Could not fetch peers for room {}: {}", room.value(), e.getMessage());
             return List.of();
         }
     }

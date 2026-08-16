@@ -9,12 +9,15 @@ import org.margin.server.sfu.services.SfuService;
 import org.margin.server.sfu.services.SfuTokenService;
 import org.margin.server.social.api.ChannelLookup;
 import org.margin.server.shared.authorization.MarginAccessChecker;
+import org.margin.server.shared.voice.RoomKey;
 import org.margin.server.subscriptions.models.SubscriptionTier;
 import org.margin.server.subscriptions.services.SubscriptionValidationService;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -59,7 +62,12 @@ public class SfuController {
     public ResponseEntity<Void> peerJoined(@RequestBody PeerJoinedRequest request,
                                            @RequestHeader("X-Internal-Api-Key") String apiKey) {
         sfuService.validateInternalApiKey(apiKey);
-        sfuService.notifyUserJoined(Long.parseLong(request.roomId()), Long.parseLong(request.peerId()));
+        switch (parseRoom(request.roomId())) {
+            case RoomKey.ChannelRoom(Long channelId) ->
+                    sfuService.notifyUserJoined(channelId, Long.parseLong(request.peerId()));
+            case RoomKey.MeetingRoom(String code) ->
+                    sfuService.notifyMeetingPeerJoined(code, request.peerId());
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -67,7 +75,12 @@ public class SfuController {
     public ResponseEntity<Void> peerLeft(@RequestBody PeerLeftRequest request,
                                          @RequestHeader("X-Internal-Api-Key") String apiKey) {
         sfuService.validateInternalApiKey(apiKey);
-        sfuService.notifyUserLeft(Long.parseLong(request.roomId()), Long.parseLong(request.peerId()));
+        switch (parseRoom(request.roomId())) {
+            case RoomKey.ChannelRoom(Long channelId) ->
+                    sfuService.notifyUserLeft(channelId, Long.parseLong(request.peerId()));
+            case RoomKey.MeetingRoom(String code) ->
+                    sfuService.notifyMeetingPeerLeft(code, request.peerId());
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -76,5 +89,14 @@ public class SfuController {
                                                               @AuthenticationPrincipal AuthenticatedUser user) {
         marginAccessChecker.requireChannelMember(user.id(), channelId);
         return ResponseEntity.ok(sfuService.getVoiceParticipants(channelId));
+    }
+
+    private RoomKey parseRoom(String roomId) {
+        try {
+            return RoomKey.parse(roomId);
+        } catch (IllegalArgumentException e) {
+            log.warn("SFU callback carried an unrecognised room id: {}", roomId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 }
