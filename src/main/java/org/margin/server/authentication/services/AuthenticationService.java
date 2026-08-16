@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.entities.UserSecurity;
 import org.margin.server.authentication.events.UserSessionsRevokedEvent;
+import org.margin.server.authentication.exceptions.InvalidRefreshTokenException;
 import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
 import org.margin.server.email.EmailService;
@@ -43,6 +44,7 @@ public class AuthenticationService {
     private final ActivationKeyService activationKeyService;
     private final EmailService emailService;
     private final UserSecurityService userSecurityService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
@@ -54,7 +56,8 @@ public class AuthenticationService {
             ApplicationEventPublisher eventPublisher,
             ActivationKeyService activationKeyService,
             EmailService emailService,
-            UserSecurityService userSecurityService) {
+            UserSecurityService userSecurityService,
+            RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
         this.userLookup = userLookup;
         this.userAccountCommands = userAccountCommands;
@@ -65,6 +68,7 @@ public class AuthenticationService {
         this.activationKeyService = activationKeyService;
         this.emailService = emailService;
         this.userSecurityService = userSecurityService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
@@ -76,8 +80,7 @@ public class AuthenticationService {
 
             if (!activationKeyService.isUserActivated(user.getId())) {
                 log.warn("Login blocked — userId {} not yet activated", user.getId());
-                return new AuthResponse(false, "User is not yet activated",
-                        null, null, null, null, null);
+                return AuthResponse.failure("User is not yet activated");
             }
 
             UserSecurity security = userSecurityService.get(user.getId());
@@ -92,12 +95,14 @@ public class AuthenticationService {
 
             resetFailedAttempts(security);
             String token = jwtService.generateToken(email, user.getId(), security.getTokenVersion());
+            String refreshToken = refreshTokenService.issue(user.getId()).value();
             log.info("Login successful for userId {}", user.getId());
 
             return new AuthResponse(
                     true,
                     "Login successful",
                     token,
+                    refreshToken,
                     user.getEncryption().getPublicKey(),
                     user.getEncryption().getEncryptedPrivateKey(),
                     user.getEncryption().getSalt(),
@@ -106,11 +111,27 @@ public class AuthenticationService {
         } catch (BadCredentialsException e) {
             log.warn("Login failed for email {} reason {}", normalisedEmail, e.getMessage());
             handleFailedLogin(normalisedEmail);
-            return new AuthResponse(
-                    false,
-                    "Invalid credentials",
-                    null, null, null, null, null);
+            return AuthResponse.failure("Invalid credentials");
         }
+    }
+
+    public AuthResponse refresh(String presentedRefreshToken) {
+        RefreshTokenService.RotatedToken rotated = refreshTokenService.rotate(presentedRefreshToken);
+        User user = userLookup.findById(rotated.userId())
+                .orElseThrow(InvalidRefreshTokenException::new);
+
+        String accessToken = jwtService.generateToken(
+                user.getEmail(), user.getId(), userSecurityService.get(user.getId()).getTokenVersion());
+
+        return new AuthResponse(
+                true,
+                "Token refreshed",
+                accessToken,
+                rotated.token().value(),
+                user.getEncryption().getPublicKey(),
+                user.getEncryption().getEncryptedPrivateKey(),
+                user.getEncryption().getSalt(),
+                user.getEncryption().getIv());
     }
 
     @Transactional
@@ -192,8 +213,19 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public void logoutUser(Long userId) {
+    public void logoutUser(Long userId, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            logoutAllDevices(userId);
+            return;
+        }
+        refreshTokenService.revoke(refreshToken);
+        eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
+    }
+
+    @Transactional
+    public void logoutAllDevices(Long userId) {
         userSecurityService.bumpTokenVersion(userId);
+        refreshTokenService.revokeAllForUser(userId);
         userAccountCommands.invalidateCachedUser(userId);
         eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
     }

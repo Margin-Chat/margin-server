@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.entities.PasswordResetToken;
 import org.margin.server.authentication.repositories.PasswordResetTokenRepository;
 import org.margin.server.authentication.services.PasswordResetService;
+import org.margin.server.authentication.services.RefreshTokenService;
 import org.margin.server.authentication.services.UserSecurityService;
 import org.margin.server.email.EmailService;
 import org.margin.server.users.models.User;
@@ -38,6 +39,7 @@ class PasswordResetServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
     @Mock private UserSecurityService userSecurityService;
+    @Mock private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private PasswordResetService passwordResetService;
