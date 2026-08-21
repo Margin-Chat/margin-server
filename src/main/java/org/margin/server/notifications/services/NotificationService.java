@@ -11,17 +11,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.margin.server.users.api.UserLookup;
+
 import java.util.stream.Collectors;
 
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserLookup userLookup;
 
     public NotificationService(NotificationRepository notificationRepository,
-                               ApplicationEventPublisher eventPublisher) {
+                               ApplicationEventPublisher eventPublisher,
+                               UserLookup userLookup) {
         this.notificationRepository = notificationRepository;
         this.eventPublisher = eventPublisher;
+        this.userLookup = userLookup;
     }
 
     @Transactional
@@ -35,6 +40,7 @@ public class NotificationService {
                                Long referenceId, Long marginId, Long conversationId) {
         List<Notification> notifications = recipientIds.stream()
                 .filter(recipientId -> senderId == null || !recipientId.equals(senderId))
+                .filter(recipientId -> !userLookup.isGuest(recipientId))
                 .map(recipientId -> {
                     Notification n = new Notification();
                     n.setRecipientId(recipientId);

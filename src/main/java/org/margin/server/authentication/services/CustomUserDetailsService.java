@@ -25,6 +25,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userLookup.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
+        if (user.isGuest()) {
+            throw new UsernameNotFoundException("User not found: " + email);
+        }
+
         Instant lockedUntil = userSecurityService.get(user.getId()).getAccountLockedUntil();
         if (lockedUntil != null && lockedUntil.isAfter(Instant.now())) {
             throw new UsernameNotFoundException("Account is locked");

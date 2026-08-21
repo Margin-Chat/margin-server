@@ -6,6 +6,7 @@ import org.margin.server.notifications.Notification;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +35,8 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private UserLookup userLookup;
 
     @InjectMocks
     private NotificationService notificationService;

@@ -2,22 +2,35 @@ package org.margin.server.users.services;
 
 import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.UserAccountType;
 import org.margin.server.users.models.UserEncryption;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class UserAccountService implements UserAccountCommands {
 
+    /**
+     * RFC 2606 reserved, so it can never resolve to a real MX and no code path can deliver mail
+     * to a guest. Deliberately not @margin.chat, which has live MX records.
+     */
+    public static final String GUEST_EMAIL_DOMAIN = "@guests.margin.invalid";
+
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserAccountService(UserRepository userRepository, UserCacheService userCacheService) {
+    public UserAccountService(UserRepository userRepository,
+                              UserCacheService userCacheService,
+                              PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -80,6 +93,52 @@ public class UserAccountService implements UserAccountCommands {
 
     @Override
     public void invalidateCachedUser(Long userId) {
+        userCacheService.evictUserCache(userId);
+    }
+
+    @Override
+    @Transactional
+    public Long createGuest(String displayName, Instant expiresAt) {
+        User user = new User();
+        user.setDisplayName(displayName);
+        user.setEmail("guest_" + UUID.randomUUID() + GUEST_EMAIL_DOMAIN);
+        // A real hash of a secret nobody holds, so any accidental matches() call fails closed.
+        // Dashes stripped to stay under BCrypt's 72-byte limit; still 244 bits of entropy.
+        user.setPassword(passwordEncoder.encode(
+                (UUID.randomUUID().toString() + UUID.randomUUID()).replace("-", "")));
+        user.setCreatedAt(Instant.now());
+        user.setAccountType(UserAccountType.GUEST);
+        user.setGuestExpiresAt(expiresAt);
+
+        // Required: several read paths dereference getEncryption() without a null check.
+        UserEncryption encryption = new UserEncryption();
+        encryption.setUser(user);
+        user.setEncryption(encryption);
+
+        return userRepository.save(user).getId();
+    }
+
+    @Override
+    @Transactional
+    public void promoteGuest(Long userId, String email, String encodedPassword, String publicKey,
+                             String encryptedPrivateKey, String salt, String iv) {
+        User user = userRepository.findById(userId).orElseThrow();
+        if (!user.isGuest()) {
+            throw new IllegalStateException("User " + userId + " is not a guest");
+        }
+
+        user.setEmail(email.toLowerCase());
+        user.setPassword(encodedPassword);
+        user.setAccountType(UserAccountType.FULL);
+        user.setGuestExpiresAt(null);
+
+        UserEncryption encryption = user.getEncryption();
+        encryption.setPublicKey(publicKey);
+        encryption.setEncryptedPrivateKey(encryptedPrivateKey);
+        encryption.setSalt(salt);
+        encryption.setIv(iv);
+
+        userRepository.save(user);
         userCacheService.evictUserCache(userId);
     }
 }

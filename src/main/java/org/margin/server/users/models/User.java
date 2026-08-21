@@ -62,6 +62,17 @@ public class User implements UserDetails {
     @Column(name = "last_seen_at")
     private Instant lastSeenAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_type", nullable = false)
+    private UserAccountType accountType = UserAccountType.FULL;
+
+    @Column(name = "guest_expires_at")
+    private Instant guestExpiresAt;
+
+    public boolean isGuest() {
+        return accountType == UserAccountType.GUEST;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();

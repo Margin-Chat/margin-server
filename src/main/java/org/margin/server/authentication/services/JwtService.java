@@ -99,6 +99,11 @@ public class JwtService {
                     extractAllClaims(token).get("userId", Long.class)
             );
 
+            if (user.isGuest()) {
+                log.warn("Rejected WebSocket connection for guest userId {}", user.getId());
+                return Optional.empty();
+            }
+
             if (userSecurityService.get(user.getId()).getTokenVersion() != extractTokenVersion(token)) {
                 log.warn("Revoked (token version mismatch) JWT for userId {}", user.getId());
                 return Optional.empty();

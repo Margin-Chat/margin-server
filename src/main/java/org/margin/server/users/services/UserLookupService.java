@@ -93,4 +93,10 @@ public class UserLookupService implements UserLookup {
             userRepository.save(user);
         });
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isGuest(Long userId) {
+        return userRepository.findById(userId).map(User::isGuest).orElse(false);
+    }
 }

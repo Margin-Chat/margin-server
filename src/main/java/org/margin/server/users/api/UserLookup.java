@@ -32,4 +32,6 @@ public interface UserLookup {
     List<UserDTO> dtosOf(Collection<Long> userIds);
 
     void markLastSeen(Long userId, Instant lastSeenAt);
+
+    boolean isGuest(Long userId);
 }

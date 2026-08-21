@@ -78,6 +78,13 @@ public class AuthenticationService {
             User user = userLookup.findByEmail(normalisedEmail)
                     .orElseThrow(() -> new BadCredentialsException("user not found"));
 
+            // Before the activation check: that throws on a missing key, and a 500 rather than a
+            // 401 would distinguish guest rows from nonexistent ones.
+            if (user.isGuest()) {
+                log.warn("Login blocked — userId {} is a guest account", user.getId());
+                throw new BadCredentialsException("guest account");
+            }
+
             if (!activationKeyService.isUserActivated(user.getId())) {
                 log.warn("Login blocked — userId {} not yet activated", user.getId());
                 return AuthResponse.failure("User is not yet activated");
@@ -119,6 +126,10 @@ public class AuthenticationService {
         RefreshTokenService.RotatedToken rotated = refreshTokenService.rotate(presentedRefreshToken);
         User user = userLookup.findById(rotated.userId())
                 .orElseThrow(InvalidRefreshTokenException::new);
+
+        if (user.isGuest()) {
+            throw new InvalidRefreshTokenException();
+        }
 
         String accessToken = jwtService.generateToken(
                 user.getEmail(), user.getId(), userSecurityService.get(user.getId()).getTokenVersion());

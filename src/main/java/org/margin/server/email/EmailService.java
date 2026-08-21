@@ -33,12 +33,20 @@ public class EmailService {
     @Value("${margin.mail.log-only:false}")
     private boolean logOnly;
 
+    private static final String GUEST_EMAIL_DOMAIN = "@guests.margin.invalid";
+
     public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
     }
 
     public void sendEmail(String to, String subject, String htmlBody) throws MessagingException {
+        // Guests hold synthetic unresolvable addresses and must never be mailed. Duplicated from
+        // UserAccountService.GUEST_EMAIL_DOMAIN because this module allows no dependencies.
+        if (to != null && to.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN)) {
+            log.error("Refused to send mail to a guest address: {}", to);
+            return;
+        }
         if (logOnly) {
             log.info("[EMAIL LOG-ONLY] to={} subject=\"{}\" body={}", to, subject, htmlBody);
             return;

@@ -10,6 +10,7 @@ import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.*;
 import org.margin.server.users.services.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +40,7 @@ public class UserController {
     @GetMapping("/{userId}")
     public UserDTO getUser(@PathVariable Long userId) {
         User user = userService.getById(userId);
+        requireNotGuest(user);
         return userService.toDTO(user);
     }
 
@@ -47,6 +49,7 @@ public class UserController {
         return presenceService.getOnlineUserIds()
                 .stream()
                 .map(userService::getById)
+                .filter(u -> !u.isGuest())
                 .filter(u -> !u.getId().equals(user.id()))
                 .map(u -> new UserDTO(u, true))
                 .toList();
@@ -74,7 +77,14 @@ public class UserController {
     @GetMapping("/{userId}/public-key")
     public PublicKeyResponse getPublicKey(@PathVariable Long userId) {
         User user = userService.getById(userId);
+        requireNotGuest(user);
         return new PublicKeyResponse(user.getId(), user.getEncryption().getPublicKey());
+    }
+
+    private void requireNotGuest(User user) {
+        if (user.isGuest()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
     }
 
     @GetMapping("/me/private-key")
@@ -114,6 +124,7 @@ public class UserController {
             throw new TooManyRequestsException("Too many lookups. Try again later.");
         }
         User user = userService.getByEmail(email);
+        requireNotGuest(user);
         return ResponseEntity.ok(userService.toDTO(user));
     }
 

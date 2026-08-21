@@ -27,6 +27,9 @@ public class PresenceWebSocketListener {
     @EventListener
     public void onUserConnected(UserConnectedEvent event) {
         Long userId = event.getUserId();
+        if (userLookup.isGuest(userId)) {
+            return;
+        }
         String json = messageBuilder.buildMessage(WebSocketMessageType.USER_LOGIN, userId, userLookup.dtoOf(userId));
         connectionManager.broadcast(json, userId);
     }
@@ -34,6 +37,9 @@ public class PresenceWebSocketListener {
     @EventListener
     public void onUserDisconnected(UserDisconnectedEvent event) {
         Long userId = event.getUserId();
+        if (userLookup.isGuest(userId)) {
+            return;
+        }
         String json = messageBuilder.buildMessage(WebSocketMessageType.USER_LOGOUT, userId, userLookup.dtoOf(userId));
         connectionManager.broadcast(json, userId);
     }

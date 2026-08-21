@@ -23,6 +23,8 @@ public interface MarginMemberRepository extends JpaRepository<MarginMember, Long
 
     boolean existsByUserIdAndMarginId(Long userId, Long marginId);
 
+    boolean existsByUserId(Long userId);
+
     @Query("""
             SELECT CASE WHEN COUNT(mm) > 0 THEN true ELSE false END
             FROM MarginMember mm
