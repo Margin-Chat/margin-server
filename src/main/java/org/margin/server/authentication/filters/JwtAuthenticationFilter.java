@@ -2,6 +2,7 @@ package org.margin.server.authentication.filters;
 
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.authentication.services.UserSecurityService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -77,8 +78,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+        } catch (ExpiredJwtException e) {
+            log.debug("Expired JWT for {}", e.getClaims().getSubject());
         } catch (Exception e) {
-            log.error("Cannot set user authentication: {}", e.getMessage());
+            log.warn("Cannot set user authentication: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

@@ -45,7 +45,8 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration: 604800000
+  expiration: ${JWT_EXPIRATION:900000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:5184000000}
 
 storage:
   type: ${STORAGE_TYPE}

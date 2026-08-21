@@ -43,9 +43,15 @@ public class AuthenticationController {
                 request.password());
     }
 
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@RequestBody RefreshRequest request) {
+        return authenticationService.refresh(request.refreshToken());
+    }
+
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal AuthenticatedUser user) {
-        authenticationService.logoutUser(user.id());
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal AuthenticatedUser user,
+                                       @RequestBody(required = false) RefreshRequest request) {
+        authenticationService.logoutUser(user.id(), request == null ? null : request.refreshToken());
         return ResponseEntity.ok().build();
     }
 
@@ -70,11 +76,11 @@ public class AuthenticationController {
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed for email {}: {}", request.email(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthResponse(false, e.getMessage(), null, null, null, null, null));
+                    .body(AuthResponse.failure(e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error during registration for email {}: {}", request.email(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new AuthResponse(false, "Registration failed", null, null, null, null, null));
+                    .body(AuthResponse.failure("Registration failed"));
         }
     }
 

@@ -28,19 +28,22 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final UserSecurityService userSecurityService;
+    private final RefreshTokenService refreshTokenService;
 
     public PasswordResetService(UserLookup userLookup,
                                 UserAccountCommands userAccountCommands,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
-                                UserSecurityService userSecurityService) {
+                                UserSecurityService userSecurityService,
+                                RefreshTokenService refreshTokenService) {
         this.userLookup = userLookup;
         this.userAccountCommands = userAccountCommands;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.userSecurityService = userSecurityService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -88,7 +91,10 @@ public class PasswordResetService {
 
         Long userId = resetToken.getUserId();
         userAccountCommands.resetCredentials(userId, passwordEncoder.encode(newPassword));
+        // Bumping the token version alone would leave refresh tokens usable, so whoever prompted
+        // the reset could mint new access tokens indefinitely. Both have to go.
         userSecurityService.bumpTokenVersion(userId);
+        refreshTokenService.revokeAllForUser(userId);
         log.info("Encryption keys cleared for userId {} — will be regenerated on next login", userId);
 
         resetToken.setUsedAt(Instant.now());

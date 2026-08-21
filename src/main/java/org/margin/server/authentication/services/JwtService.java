@@ -3,6 +3,7 @@ package org.margin.server.authentication.services;
 import org.springframework.modulith.NamedInterface;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,8 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class JwtService {
+    private static final long CLOCK_SKEW_SECONDS = 30;
+
     private final UserService userService;
     private final UserSecurityService userSecurityService;
     @Value("${jwt.secret}")
@@ -55,6 +58,7 @@ public class JwtService {
     public Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
+                .clockSkewSeconds(CLOCK_SKEW_SECONDS)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -101,8 +105,11 @@ public class JwtService {
             }
 
             return Optional.of(new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName()));
+        } catch (ExpiredJwtException e) {
+            log.debug("Expired JWT in WebSocket connection for {}", e.getClaims().getSubject());
+            return Optional.empty();
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.warn("JWT validation failed: {}", e.getMessage());
             return Optional.empty();
         }
     }

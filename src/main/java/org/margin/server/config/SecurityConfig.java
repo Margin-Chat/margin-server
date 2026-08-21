@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(
                                 "/api/auth/login",
+                                "/api/auth/refresh",
                                 "/api/auth/register",
                                 "/api/auth/activate/**",
                                 "/api/auth/activate-test",

@@ -1,8 +1,14 @@
 package org.margin.server.websocket;
 
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -27,6 +33,10 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
+
+    public static final WebSocketCloseStatus UNAUTHORIZED_CLOSE_STATUS =
+            new WebSocketCloseStatus(4001, "unauthorized");
+
     private final Executor dbExecutor;
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
@@ -69,31 +79,58 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
+        if (!isWebSocketUpgrade(req)) {
+            sendStatusAndClose(ctx, HttpResponseStatus.BAD_REQUEST);
+            return;
+        }
+
         Optional<AuthenticatedUser> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
+
+        WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
+                buildWsUrl(req), null, true, 65536);
+        WebSocketServerHandshaker handshaker = factory.newHandshaker(req);
+
+        if (handshaker == null) {
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel())
+                    .addListener(ChannelFutureListener.CLOSE);
+            return;
+        }
+
+        ctx.channel().attr(WebSocketAttributes.HANDSHAKER).set(handshaker);
+
         if (optionalUser.isEmpty()) {
-            var response = new io.netty.handler.codec.http.DefaultFullHttpResponse(
-                    io.netty.handler.codec.http.HttpVersion.HTTP_1_1,
-                    io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED
-            );
-            ctx.writeAndFlush(response).addListener(io.netty.channel.ChannelFutureListener.CLOSE);
+            rejectUnauthenticated(ctx, req, handshaker);
             return;
         }
 
         AuthenticatedUser user = optionalUser.get();
         ctx.channel().attr(WebSocketAttributes.USER).set(user);
 
-        WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
-                buildWsUrl(req), null, true, 65536);
-        WebSocketServerHandshaker handshaker = factory.newHandshaker(req);
+        handshaker.handshake(ctx.channel(), req).addListener(future -> {
+            if (future.isSuccess()) {
+                onConnectionEstablished(ctx, user);
+            }
+        });
+    }
 
-        if (handshaker != null) {
-            ctx.channel().attr(WebSocketAttributes.HANDSHAKER).set(handshaker);
-            handshaker.handshake(ctx.channel(), req).addListener(future -> {
-                if (future.isSuccess()) {
-                    onConnectionEstablished(ctx, user);
-                }
-            });
-        }
+    /**
+     * Completes the handshake and immediately closes with {@link #UNAUTHORIZED_CLOSE_STATUS}
+     * rather than failing the upgrade with a 401. Browser {@code WebSocket} clients cannot read
+     * the status of a response that never upgraded — they only ever see close code 1006, which is
+     * indistinguishable from a network fault, so they retry forever against a dead credential.
+     * A close code they can read lets them stop and send the user to log in.
+     */
+    private void rejectUnauthenticated(ChannelHandlerContext ctx,
+                                       FullHttpRequest req,
+                                       WebSocketServerHandshaker handshaker) {
+        handshaker.handshake(ctx.channel(), req).addListener(future -> {
+            if (future.isSuccess()) {
+                ctx.writeAndFlush(new CloseWebSocketFrame(UNAUTHORIZED_CLOSE_STATUS))
+                        .addListener(ChannelFutureListener.CLOSE);
+            } else {
+                ctx.close();
+            }
+        });
     }
 
     private void onConnectionEstablished(ChannelHandlerContext ctx, AuthenticatedUser user) {
@@ -170,6 +207,17 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("WebSocket error", cause);
         ctx.close();
+    }
+
+    private static boolean isWebSocketUpgrade(FullHttpRequest req) {
+        return req.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)
+                && req.headers().containsValue(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+    }
+
+    private static void sendStatusAndClose(ChannelHandlerContext ctx, HttpResponseStatus status) {
+        DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private String buildWsUrl(FullHttpRequest req) {
