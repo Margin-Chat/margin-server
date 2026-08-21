@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -41,6 +43,25 @@ public class WebSocketTestUtils {
     public static WebSocket connect(User user) throws Exception {
         return connect(user, new WebSocket.Listener() {
         });
+    }
+
+    /**
+     * A plain HTTP GET to the WebSocket port — no {@code Upgrade} header. This is what a health
+     * check, an uptime probe or a browser address bar sends.
+     */
+    public static int plainHttpStatus(String pathAndQuery) throws Exception {
+        int wsPort = webSocketServer.awaitBoundPort(5000);
+        return HttpClient.newHttpClient()
+                .send(HttpRequest.newBuilder(
+                                URI.create("http://localhost:" + wsPort + pathAndQuery))
+                        .GET()
+                        .build(), HttpResponse.BodyHandlers.discarding())
+                .statusCode();
+    }
+
+    public static String validTokenFor(User user) {
+        return jwtService.generateToken(
+                user.getEmail(), user.getId(), AuthTestUtils.securityOf(user).getTokenVersion());
     }
 
     public static WebSocket connect(User user, WebSocket.Listener listener) throws Exception {

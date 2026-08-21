@@ -3,7 +3,12 @@ package org.margin.server.websocket;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -71,6 +76,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         if (!req.decoderResult().isSuccess() || !req.uri().startsWith("/ws")) {
             ctx.close();
+            return;
+        }
+
+        if (!isWebSocketUpgrade(req)) {
+            sendStatusAndClose(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
         }
 
@@ -197,6 +207,17 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("WebSocket error", cause);
         ctx.close();
+    }
+
+    private static boolean isWebSocketUpgrade(FullHttpRequest req) {
+        return req.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)
+                && req.headers().containsValue(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+    }
+
+    private static void sendStatusAndClose(ChannelHandlerContext ctx, HttpResponseStatus status) {
+        DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private String buildWsUrl(FullHttpRequest req) {

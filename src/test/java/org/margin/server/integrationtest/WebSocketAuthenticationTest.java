@@ -1,5 +1,9 @@
 package org.margin.server.integrationtest;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -8,7 +12,9 @@ import org.margin.server.integrationtest.config.MarginTestRunner;
 import org.margin.server.integrationtest.utils.UserTestUtils;
 import org.margin.server.integrationtest.utils.WebSocketTestUtils;
 import org.margin.server.users.models.User;
+import org.margin.server.websocket.WebSocketHandler;
 import org.margin.server.websocket.connection.ConnectionManager;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.http.WebSocket;
@@ -30,15 +36,26 @@ class WebSocketAuthenticationTest extends MarginTestRunner {
 
     private User user;
     private WebSocket ws;
+    private ListAppender<ILoggingEvent> logs;
+    private Logger handlerLogger;
 
     @BeforeEach
     void setUp() {
         user = UserTestUtils.createUser("wsuser", "wsuser@margin.chat");
+        logs = new ListAppender<>();
+        logs.start();
+        handlerLogger = (Logger) LoggerFactory.getLogger(WebSocketHandler.class);
+        handlerLogger.addAppender(logs);
     }
 
     @AfterEach
     void tearDown() {
         WebSocketTestUtils.close(ws);
+        handlerLogger.detachAppender(logs);
+    }
+
+    private boolean loggedAtError() {
+        return logs.list.stream().anyMatch(event -> event.getLevel() == Level.ERROR);
     }
 
     @Test
@@ -93,5 +110,24 @@ class WebSocketAuthenticationTest extends MarginTestRunner {
         ws = WebSocketTestUtils.connect(user);
 
         assertTrue(connectionManager.isUserOnline(user.getId()));
+    }
+
+    @Test
+    @DisplayName("a plain HTTP request gets a 400 rather than a failed handshake")
+    void plainHttpRequest_IsRejectedWithoutHandshaking() throws Exception {
+        // Netty assumes draft-00 when there is no version header, so it hands back a handshaker
+        // for a request that is not an upgrade at all and then throws on the missing Upgrade.
+        assertEquals(400, WebSocketTestUtils.plainHttpStatus("/ws"));
+        assertFalse(loggedAtError(), "a non-WebSocket request must not be logged as an error");
+    }
+
+    @Test
+    @DisplayName("a plain HTTP request carrying a valid token is still not a handshake")
+    void plainHttpRequestWithToken_IsRejectedWithoutHandshaking() throws Exception {
+        String token = WebSocketTestUtils.validTokenFor(user);
+
+        assertEquals(400, WebSocketTestUtils.plainHttpStatus("/ws?token=" + token));
+        assertFalse(loggedAtError());
+        assertFalse(connectionManager.isUserOnline(user.getId()));
     }
 }
