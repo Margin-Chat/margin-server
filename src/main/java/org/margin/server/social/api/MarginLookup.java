@@ -10,6 +10,8 @@ public interface MarginLookup {
 
     java.util.List<Long> adminUserIdsOf(Long marginId);
 
+    java.util.List<MarginSummary> marginsForUser(Long userId);
+
     record MarginSummary(Long id, String name, int memberCount) {
     }
 

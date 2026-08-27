@@ -50,4 +50,18 @@ public final class RateLimitConfig {
                 .refillGreedy(20, Duration.ofHours(1))
                 .build();
     }
+
+    public static Bandwidth guestSession() {
+        return Bandwidth.builder()
+                .capacity(10)
+                .refillGreedy(10, Duration.ofHours(1))
+                .build();
+    }
+
+    public static Bandwidth meetingPreview() {
+        return Bandwidth.builder()
+                .capacity(30)
+                .refillGreedy(30, Duration.ofHours(1))
+                .build();
+    }
 }

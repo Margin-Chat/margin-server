@@ -1,4 +1,6 @@
 margin:
+  meetings:
+    guest-token-secret: ${MEETING_GUEST_TOKEN_SECRET}
   app:
     base-url: https://margin.chat
   mail:

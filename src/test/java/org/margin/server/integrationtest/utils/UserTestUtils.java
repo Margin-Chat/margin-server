@@ -9,6 +9,7 @@ import org.margin.server.authentication.repositories.UserSecurityRepository;
 import org.margin.server.users.models.dtos.CurrentUserDTO;
 import org.margin.server.users.models.dtos.KeyUploadRequest;
 import org.margin.server.users.models.dtos.UserDTO;
+import org.margin.server.users.api.UserAccountCommands;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,14 +22,26 @@ public class UserTestUtils {
     private static UserRepository userRepository;
     private static UserController userController;
     private static UserSecurityRepository userSecurityRepository;
+    private static UserAccountCommands userAccountCommands;
 
     @Autowired
     public UserTestUtils(UserRepository userRepository,
                          UserController userController,
-                         UserSecurityRepository userSecurityRepository) {
+                         UserSecurityRepository userSecurityRepository,
+                         UserAccountCommands userAccountCommands) {
         UserTestUtils.userRepository = userRepository;
         UserTestUtils.userController = userController;
         UserTestUtils.userSecurityRepository = userSecurityRepository;
+        UserTestUtils.userAccountCommands = userAccountCommands;
+    }
+
+    public static User createGuest(String displayName, Instant expiresAt) {
+        Long id = userAccountCommands.createGuest(displayName, expiresAt);
+        return userRepository.findById(id).orElseThrow();
+    }
+
+    public static UserAccountCommands accountCommands() {
+        return userAccountCommands;
     }
 
     public static User createUser(String displayName, String email) {

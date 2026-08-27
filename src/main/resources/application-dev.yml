@@ -1,4 +1,6 @@
 margin:
+  meetings:
+    guest-token-secret: ${MEETING_GUEST_TOKEN_SECRET:dev-guest-token-secret-not-for-production-use-only}
   app:
     base-url: http://localhost:5173
   mail:

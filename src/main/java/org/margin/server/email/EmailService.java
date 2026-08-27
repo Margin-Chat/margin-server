@@ -41,8 +41,6 @@ public class EmailService {
     }
 
     public void sendEmail(String to, String subject, String htmlBody) throws MessagingException {
-        // Guests hold synthetic unresolvable addresses and must never be mailed. Duplicated from
-        // UserAccountService.GUEST_EMAIL_DOMAIN because this module allows no dependencies.
         if (to != null && to.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN)) {
             log.error("Refused to send mail to a guest address: {}", to);
             return;

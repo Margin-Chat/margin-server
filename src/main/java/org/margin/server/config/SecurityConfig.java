@@ -1,6 +1,8 @@
 package org.margin.server.config;
 
 import org.margin.server.authentication.filters.JwtAuthenticationFilter;
+import org.margin.server.meetings.filters.MeetingGuestAuthenticationFilter;
+import org.springframework.core.annotation.Order;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,11 +28,14 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final MeetingGuestAuthenticationFilter meetingGuestAuthFilter;
     @Value("${margin.cors.allowed-origins:http://localhost:5173}")
     private String[] allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
+                          MeetingGuestAuthenticationFilter meetingGuestAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.meetingGuestAuthFilter = meetingGuestAuthFilter;
     }
 
     @Bean
@@ -64,6 +69,39 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(1)
+    public SecurityFilterChain meetingGuestFilterChain(HttpSecurity http) {
+        http
+                .securityMatcher("/api/meetings/**")
+                .headers(headers -> headers
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                        .xssProtection(Customizer.withDefaults())
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(31536000)
+                                .includeSubDomains(true))
+                )
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/api/meetings/*/preview",
+                                "/api/meetings/*/guest-session").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(meetingGuestAuthFilter, JwtAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .headers(headers -> headers

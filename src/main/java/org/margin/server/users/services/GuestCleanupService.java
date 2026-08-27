@@ -13,16 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Reaps guest accounts whose expiry has passed.
- *
- * TODO: needs a distributed lock before horizontal scaling — this job deletes rows, so a
- * double run across instances would matter.
- */
+// TODO: needs a distributed lock before horizontal scaling
 @Slf4j
 @Service
 public class GuestCleanupService {
-
     private static final int BATCH_SIZE = 500;
 
     private final UserRepository userRepository;
@@ -51,18 +45,12 @@ public class GuestCleanupService {
         }
     }
 
-    /**
-     * Deletes one batch of expired guests. Each row is deleted independently so one failure
-     * cannot abort the rest.
-     */
     @Transactional
     public int removeExpiredGuests(Instant now) {
         List<User> expired = userRepository.findExpiredGuests(now, PageRequest.of(0, BATCH_SIZE));
         int removed = 0;
 
         for (User guest : expired) {
-            // Should always be false: guests are barred from every membership write path.
-            // If it ever trips, containment has broken somewhere and this is the tripwire.
             if (marginMembershipLookup.hasAnyMembership(guest.getId())) {
                 log.warn("Guest {} holds margin membership and was not removed — guest containment "
                         + "has been breached somewhere", guest.getId());

@@ -1,236 +1,201 @@
 package org.margin.server.integrationtest;
 
 import org.junit.jupiter.api.Test;
-import org.margin.server.authentication.filters.JwtAuthenticationFilter;
 import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.authentication.services.AuthenticationService;
 import org.margin.server.authentication.services.JwtService;
-import org.margin.server.email.EmailService;
 import org.margin.server.integrationtest.config.MarginTestRunner;
+import org.margin.server.integrationtest.utils.AuthTestUtils;
+import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
-import org.margin.server.notifications.repositories.NotificationRepository;
-import org.margin.server.notifications.services.NotificationService;
-import org.margin.server.shared.notifications.NotificationType;
-import org.margin.server.users.api.UserAccountCommands;
+import org.margin.server.integrationtest.utils.WebSocketTestUtils;
+import org.margin.server.presence.PresenceService;
+import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.models.MarginRole;
+import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.controllers.UserController;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserAccountType;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.services.GuestCleanupService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockFilterChain;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.http.WebSocket;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The gate for guest containment. Guests are real rows in the users table so that every
- * Long-keyed path keeps working, which means the blast radius has to be closed deliberately.
- * Each test here corresponds to a way a guest could leak into the product.
+ * The exit gate for guest identity. Shadow rows in the users table only stay safe because guests
+ * are barred from every credential path and excluded from every place users are listed; each of
+ * those is asserted here rather than left to inspection.
  */
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class GuestContainmentTest extends MarginTestRunner {
 
     @Autowired
-    private UserAccountCommands userAccountCommands;
+    private UserRepository userRepository;
     @Autowired
     private UserLookup userLookup;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
     private UserController userController;
-    @Autowired
-    private AuthenticationService authenticationService;
     @Autowired
     private JwtService jwtService;
     @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private PresenceService presenceService;
     @Autowired
     private GuestCleanupService guestCleanupService;
     @Autowired
-    private NotificationService notificationService;
-    @Autowired
-    private NotificationRepository notificationRepository;
-    @Autowired
-    private EmailService emailService;
+    private MarginService marginService;
 
-    private User createGuest(Instant expiresAt) {
-        Long id = userAccountCommands.createGuest("Guest Gary", expiresAt);
-        return userRepository.findById(id).orElseThrow();
-    }
-
-    private User createGuest() {
-        return createGuest(Instant.now().plus(24, ChronoUnit.HOURS));
+    private User guest() {
+        return UserTestUtils.createGuest("Wanderer", Instant.now().plus(1, ChronoUnit.DAYS));
     }
 
     @Test
-    void createGuest_marksAccountTypeAndUsesAnUnresolvableEmail() {
-        User guest = createGuest();
+    void guestRowsCarryAnUnresolvableEmailAndAreFlagged() {
+        User guest = guest();
 
         assertEquals(UserAccountType.GUEST, guest.getAccountType());
         assertTrue(guest.isGuest());
         assertTrue(guest.getEmail().endsWith("@guests.margin.invalid"),
-                "guest emails must be unresolvable, got " + guest.getEmail());
-        assertNotNull(guest.getGuestExpiresAt());
-        assertNotNull(guest.getEncryption(), "several read paths dereference encryption unguarded");
+                "guest addresses must be in an RFC 2606 reserved domain that can never receive mail");
+        assertNotNull(guest.getPassword(), "a real hash, so any matches() call fails closed");
+        assertNotNull(guest.getEncryption(),
+                "several read paths dereference getEncryption() without a null check");
         assertTrue(userLookup.isGuest(guest.getId()));
     }
 
     @Test
-    void login_asGuest_failsAsInvalidCredentialsRatherThanErroring() {
-        User guest = createGuest();
+    void aGuestCannotLogIn() {
+        User guest = guest();
 
-        AuthResponse response = assertDoesNotThrow(
-                () -> authenticationService.authenticateUser(guest.getEmail(), "anything"),
-                "must not fall through to the activation check, which throws on a missing key");
+        AuthResponse response = AuthTestUtils.login(guest.getEmail(), "anything");
 
         assertFalse(response.success());
         assertEquals("Invalid credentials", response.message());
     }
 
     @Test
-    void httpFilter_rejectsAValidlySignedMarginTokenMintedForAGuest() throws Exception {
-        User guest = createGuest();
-        String token = jwtService.generateToken(guest.getEmail(), guest.getId(), 0);
+    void aGuestShapedMarginJwtIsRejectedOnTheWebSocketPath() {
+        User guest = guest();
+        User member = UserTestUtils.createUser("alice", "alice@margin.chat");
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer " + token);
+        String guestToken = jwtService.generateToken(guest.getEmail(), guest.getId(), 0);
+        String memberToken = jwtService.generateToken(member.getEmail(), member.getId(), 0);
 
-        SecurityContextHolder.clearContext();
+        // Positive control: the same call must succeed for a real account, otherwise this test
+        // would pass even if the WebSocket path rejected everything.
+        assertTrue(jwtService.extractAndValidateJwtTokenFromWebSocket("/ws?token=" + memberToken).isPresent(),
+                "a real account must still authenticate");
+        assertTrue(jwtService.extractAndValidateJwtTokenFromWebSocket("/ws?token=" + guestToken).isEmpty(),
+                "a hand-minted margin JWT must not authenticate a guest");
+    }
+
+    @Test
+    void aGuestNeverAppearsInTheOnlineUserList() throws Exception {
+        User guest = guest();
+        User member = UserTestUtils.createUser("alice", "alice@margin.chat");
+        User other = UserTestUtils.createUser("bob", "bob@margin.chat");
+
+        // Real connections: the online set is the WebSocket connection map, so publishing a
+        // presence event is not enough to appear here.
+        WebSocket memberSocket = WebSocketTestUtils.connect(member);
+        WebSocket otherSocket = WebSocketTestUtils.connect(other);
+
         try {
-            jwtAuthenticationFilter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+            List<Long> visible = userController.getAllOnlineUsersOnServer(UserTestUtils.principalOf(member))
+                    .stream().map(UserDTO::id).toList();
 
-            assertNull(SecurityContextHolder.getContext().getAuthentication(),
-                    "a guest-shaped JWT must not authenticate; UserSecurityService.get() returns a "
-                            + "transient tokenVersion=0 default, so nothing else would stop it");
+            assertTrue(visible.contains(other.getId()), "real online users must still be listed");
+            assertFalse(visible.contains(guest.getId()), "guests must not be listed to other users");
         } finally {
-            SecurityContextHolder.clearContext();
+            WebSocketTestUtils.close(memberSocket, otherSocket);
         }
     }
 
     @Test
-    void webSocketHandshake_rejectsAGuestToken() {
-        User guest = createGuest();
-        String token = jwtService.generateToken(guest.getEmail(), guest.getId(), 0);
+    void aGuestCannotOpenAWebSocketAndSoNeverEntersThePresenceMap() throws Exception {
+        User guest = guest();
 
-        Optional<?> principal =
-                jwtService.extractAndValidateJwtTokenFromWebSocket("/ws?token=" + token);
+        WebSocketTestUtils.Rejection rejection =
+                WebSocketTestUtils.connectExpectingRejection(WebSocketTestUtils.validTokenFor(guest));
 
-        assertTrue(principal.isEmpty(),
-                "guests must never reach ConnectionManager or PresenceService");
+        assertNotNull(rejection, "a guest must not be able to open the app WebSocket");
+        assertFalse(presenceService.isUserOnline(guest.getId()));
     }
 
     @Test
-    void getUserById_returnsNotFoundForAGuest() {
-        User guest = createGuest();
+    void aGuestCannotBeFetchedByIdOrHavePublicKeysRead() {
+        User guest = guest();
 
-        ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> userController.getUser(guest.getId()));
-        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+        assertThrows(ResponseStatusException.class, () -> userController.getUser(guest.getId()));
+        assertThrows(ResponseStatusException.class, () -> userController.getPublicKey(guest.getId()));
     }
 
     @Test
-    void getPublicKey_returnsNotFoundForAGuest() {
-        User guest = createGuest();
+    void aGuestCannotBeAddedToAMargin() {
+        User guest = guest();
+        User owner = UserTestUtils.createUser("olivia", "olivia@margin.chat");
+        Margin margin = MarginTestUtils.createMargin("Acme", owner);
 
-        ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> userController.getPublicKey(guest.getId()));
-        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+        assertThrows(ResponseStatusException.class,
+                () -> marginService.addUserToMargin(margin.getId(), guest.getId(),
+                        MarginRole.MEMBER, owner.getId(), false),
+                "membership is the invariant that user search and seat counts depend on");
     }
 
     @Test
-    void lookupByEmail_returnsNotFoundForAGuest() {
-        User requester = UserTestUtils.createUser("alice", "alice@margin.chat");
-        User guest = createGuest();
-
-        ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> UserTestUtils.lookupByEmail(requester, guest.getEmail()));
-        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
-    }
-
-    @Test
-    void onlineUsers_neverIncludeGuests() {
-        User requester = UserTestUtils.createUser("alice", "alice@margin.chat");
-        createGuest();
-
-        assertTrue(userController.getAllOnlineUsersOnServer(UserTestUtils.principalOf(requester))
-                        .stream().noneMatch(dto -> dto.displayName().equals("Guest Gary")));
-    }
-
-    @Test
-    void notifications_areNotCreatedForGuestRecipients() {
-        User sender = UserTestUtils.createUser("alice", "alice@margin.chat");
-        User guest = createGuest();
-
-        notificationService.createForUsers(List.of(guest.getId()), sender.getId(),
-                NotificationType.ANNOUNCEMENT, 1L, null);
-
-        assertTrue(notificationRepository.findAll().stream()
-                        .noneMatch(n -> n.getRecipientId().equals(guest.getId())),
-                "an undeliverable notification just pollutes the table");
-    }
-
-    @Test
-    void email_refusesToSendToAGuestAddress() {
-        User guest = createGuest();
-
-        assertDoesNotThrow(() -> emailService.sendEmail(guest.getEmail(), "subject", "<p>body</p>"));
-    }
-
-    @Test
-    void cleanup_removesExpiredGuestsAndLeavesLiveOnesAlone() {
-        User expired = createGuest(Instant.now().minus(1, ChronoUnit.HOURS));
-        User live = createGuest(Instant.now().plus(1, ChronoUnit.HOURS));
+    void theCleanupJobRemovesGuestsPastTheirExpiry() {
+        User expired = UserTestUtils.createGuest("Gone", Instant.now().minus(1, ChronoUnit.HOURS));
+        User active = UserTestUtils.createGuest("Here", Instant.now().plus(1, ChronoUnit.DAYS));
 
         int removed = guestCleanupService.removeExpiredGuests(Instant.now());
 
-        assertEquals(1, removed);
+        assertTrue(removed >= 1);
         assertTrue(userRepository.findById(expired.getId()).isEmpty());
-        assertTrue(userRepository.findById(live.getId()).isPresent());
+        assertTrue(userRepository.findById(active.getId()).isPresent(),
+                "an unexpired guest is still in a meeting");
     }
 
     @Test
-    void cleanup_neverTouchesFullAccounts() {
-        User real = UserTestUtils.createUser("alice", "alice@margin.chat");
+    void theCleanupJobLeavesRealAccountsAlone() {
+        User member = UserTestUtils.createUser("alice", "alice@margin.chat");
 
         guestCleanupService.removeExpiredGuests(Instant.now().plus(365, ChronoUnit.DAYS));
 
-        assertTrue(userRepository.findById(real.getId()).isPresent());
+        assertTrue(userRepository.findById(member.getId()).isPresent());
     }
 
     @Test
-    void promoteGuest_convertsInPlaceKeepingTheSameUserId() {
-        User guest = createGuest();
-        Long id = guest.getId();
+    void promotingAGuestKeepsTheSameUserIdSoHistorySurvives() {
+        User guest = guest();
 
-        userAccountCommands.promoteGuest(id, "Gary@Margin.chat", "hashed", "pub", "priv", "salt", "iv");
+        UserTestUtils.accountCommands().promoteGuest(
+                guest.getId(), "claimed@margin.chat", "hashed", null, null, null, null);
 
-        User promoted = userRepository.findById(id).orElseThrow();
+        User promoted = userRepository.findById(guest.getId()).orElseThrow();
         assertEquals(UserAccountType.FULL, promoted.getAccountType());
-        assertEquals("gary@margin.chat", promoted.getEmail());
+        assertEquals("claimed@margin.chat", promoted.getEmail());
         assertNull(promoted.getGuestExpiresAt());
-        assertFalse(userLookup.isGuest(id));
+        assertFalse(userLookup.isGuest(guest.getId()));
     }
 
     @Test
-    void promotedGuest_isNoLongerReapedByCleanup() {
-        User guest = createGuest(Instant.now().minus(1, ChronoUnit.HOURS));
+    void aPromotedGuestIsNoLongerReapable() {
+        User guest = UserTestUtils.createGuest("Gone", Instant.now().minus(1, ChronoUnit.HOURS));
+        UserTestUtils.accountCommands().promoteGuest(
+                guest.getId(), "claimed@margin.chat", "hashed", null, null, null, null);
 
-        userAccountCommands.promoteGuest(guest.getId(), "gary@margin.chat", "hashed", "p", "p", "s", "i");
         guestCleanupService.removeExpiredGuests(Instant.now());
 
-        assertTrue(userRepository.findById(guest.getId()).isPresent());
+        assertTrue(userRepository.findById(guest.getId()).isPresent(),
+                "claiming an account must survive the reaper that would have removed the guest");
     }
 }

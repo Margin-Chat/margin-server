@@ -14,11 +14,6 @@ import java.util.UUID;
 
 @Service
 public class UserAccountService implements UserAccountCommands {
-
-    /**
-     * RFC 2606 reserved, so it can never resolve to a real MX and no code path can deliver mail
-     * to a guest. Deliberately not @margin.chat, which has live MX records.
-     */
     public static final String GUEST_EMAIL_DOMAIN = "@guests.margin.invalid";
 
     private final UserRepository userRepository;
@@ -102,15 +97,12 @@ public class UserAccountService implements UserAccountCommands {
         User user = new User();
         user.setDisplayName(displayName);
         user.setEmail("guest_" + UUID.randomUUID() + GUEST_EMAIL_DOMAIN);
-        // A real hash of a secret nobody holds, so any accidental matches() call fails closed.
-        // Dashes stripped to stay under BCrypt's 72-byte limit; still 244 bits of entropy.
         user.setPassword(passwordEncoder.encode(
                 (UUID.randomUUID().toString() + UUID.randomUUID()).replace("-", "")));
         user.setCreatedAt(Instant.now());
         user.setAccountType(UserAccountType.GUEST);
         user.setGuestExpiresAt(expiresAt);
 
-        // Required: several read paths dereference getEncryption() without a null check.
         UserEncryption encryption = new UserEncryption();
         encryption.setUser(user);
         user.setEncryption(encryption);

@@ -1,5 +1,6 @@
 @ApplicationModule(allowedDependencies = {
-        "authentication::filters"
+        "authentication::filters",
+        "meetings::filters"
 })
 package org.margin.server.config;
 

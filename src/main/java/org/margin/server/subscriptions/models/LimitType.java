@@ -3,5 +3,6 @@ package org.margin.server.subscriptions.models;
 public enum LimitType {
     MEMBERS,
     STORAGE,
-    CALL_PARTICIPANTS
+    CALL_PARTICIPANTS,
+    MEETINGS
 }

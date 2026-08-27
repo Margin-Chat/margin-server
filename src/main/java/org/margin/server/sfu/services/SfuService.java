@@ -35,7 +35,6 @@ import java.util.Objects;
 @Slf4j
 @Service
 public class SfuService implements VoiceParticipantLookup {
-
     private final ApplicationEventPublisher eventPublisher;
     private final PresenceService presenceService;
     private final UserService userService;
@@ -97,6 +96,19 @@ public class SfuService implements VoiceParticipantLookup {
                 new ChannelVoiceParticipantPayload(channelId, userLookup.dtoOf(userId))));
     }
 
+    public void closeRoom(String roomId) {
+        try {
+            restTemplate.exchange(
+                    sfuUrl + "/rooms/" + roomId,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(internalHeaders()),
+                    Void.class
+            );
+        } catch (Exception e) {
+            log.warn("Could not close room {}: {}", roomId, e.getMessage());
+        }
+    }
+
     public void notifyMeetingPeerJoined(String meetingCode, String peerId) {
         eventPublisher.publishEvent(new MeetingPeerJoinedEvent(meetingCode, peerId));
     }
@@ -111,10 +123,6 @@ public class SfuService implements VoiceParticipantLookup {
         );
     }
 
-    /**
-     * Who the SFU currently has connected to a room. The SFU is the source of truth for presence
-     * in a room; peer_joined/peer_left callbacks are fire-and-forget and can be dropped.
-     */
     public List<String> peerIdsInRoom(RoomKey room) {
         String url = sfuUrl + "/rooms/" + room.value() + "/peers";
         try {

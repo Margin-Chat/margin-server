@@ -58,4 +58,14 @@ public class MarginLookupService implements MarginLookup {
                 .map(m -> m.getUserId())
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MarginSummary> marginsForUser(Long userId) {
+        return marginMemberRepository.findMarginMembersByUser(userId).stream()
+                .map(MarginMember::getMargin)
+                .filter(java.util.Objects::nonNull)
+                .map(m -> new MarginSummary(m.getId(), m.getName(), m.getMembers().size()))
+                .toList();
+    }
 }

@@ -78,8 +78,6 @@ public class AuthenticationService {
             User user = userLookup.findByEmail(normalisedEmail)
                     .orElseThrow(() -> new BadCredentialsException("user not found"));
 
-            // Before the activation check: that throws on a missing key, and a 500 rather than a
-            // 401 would distinguish guest rows from nonexistent ones.
             if (user.isGuest()) {
                 log.warn("Login blocked — userId {} is a guest account", user.getId());
                 throw new BadCredentialsException("guest account");

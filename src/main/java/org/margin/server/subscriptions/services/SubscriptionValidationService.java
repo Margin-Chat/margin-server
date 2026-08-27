@@ -73,6 +73,18 @@ public class SubscriptionValidationService {
         return getSubscriptionForMargin(marginId).getTier();
     }
 
+    public void validateMeetingCreation(Long marginId) {
+        SubscriptionTier tier = tierForMargin(marginId);
+        if (tier == SubscriptionTier.FREE) {
+            throw new SubscriptionLimitExceededException(
+                    "Meetings are not available on the free plan", tier, LimitType.MEETINGS);
+        }
+    }
+
+    public boolean canCreateMeetings(Long marginId) {
+        return tierForMargin(marginId) != SubscriptionTier.FREE;
+    }
+
     public int getMaxCallParticipants(Long marginId) {
         return getSubscriptionForMargin(marginId).getLimits().getMaxCallParticipants();
     }

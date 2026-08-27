@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MarginService {
-
     private final MarginRepository marginRepository;
     private final MarginIconCommands marginIconCommands;
     private final MarginMemberRepository marginMemberRepository;
@@ -86,7 +85,6 @@ public class MarginService {
                                   Visibility visibility,
                                   MultipartFile marginIcon,
                                   Long userId) {
-
         String iconUrl = null;
         if (marginIcon != null && !marginIcon.isEmpty()) {
             iconUrl = marginIconCommands.save(marginIcon);
@@ -134,8 +132,11 @@ public class MarginService {
                                         MarginRole role,
                                         Long addingUserId,
                                         boolean isNewlyCreated) {
-
         Margin margin = getById(marginId);
+
+        if (userLookup.isGuest(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Guest accounts cannot join a margin");
+        }
 
         marginSubscriptionPolicy.validateAddMarginMember(marginId);
 
@@ -163,7 +164,6 @@ public class MarginService {
 
     @Transactional
     public MarginMemberDTO updateMarginMemberRole(Long marginId, Long requesterId, MarginMemberDTO memberDTO) {
-
         Margin margin = getById(marginId);
 
         MarginMember requester = margin.getMembers().stream()
@@ -207,7 +207,6 @@ public class MarginService {
 
     @Transactional
     public MarginDTO updateMarginAsDto(UpdateMarginDTO updateMarginDTO, MultipartFile icon) {
-
         Margin margin = getById(updateMarginDTO.marginId());
 
         margin.setName(updateMarginDTO.marginName());
@@ -223,7 +222,6 @@ public class MarginService {
 
     @Transactional
     public void removeMarginMember(Long marginId, Long userId) {
-
         Margin margin = getById(marginId);
 
         MarginMember member = marginMemberRepository.findByUserIdAndMarginId(userId, marginId)

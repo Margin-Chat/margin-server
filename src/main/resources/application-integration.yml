@@ -21,6 +21,8 @@ websocket:
   port: 0
 
 margin:
+  meetings:
+    guest-token-secret: integration-guest-token-secret-that-is-long-enough
   mail:
     from: ${MAIL_FROM:localhost@margin.chat}
     log-only: true
