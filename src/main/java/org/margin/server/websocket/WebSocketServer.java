@@ -12,6 +12,9 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.meetings.api.MeetingAdmissionCommands;
+import org.margin.server.meetings.api.MeetingLobbyRegistry;
+import org.margin.server.meetings.api.MeetingGuestTokens;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
@@ -40,6 +43,9 @@ public class WebSocketServer {
     private final PresenceService presenceService;
     private final UserLookup userLookup;
     private final List<WebSocketMessageProcessor<?>> processors;
+    private final MeetingGuestTokens guestTokenService;
+    private final MeetingLobbyRegistry lobbyRegistry;
+    private final MeetingAdmissionCommands admissionCommands;
     private final Executor dbExecutor;
     @Value("${websocket.port:8081}")
     private int port;
@@ -58,6 +64,9 @@ public class WebSocketServer {
                            PresenceService presenceService,
                            UserLookup userLookup,
                            List<WebSocketMessageProcessor<?>> processors,
+                           MeetingGuestTokens guestTokenService,
+                           MeetingLobbyRegistry lobbyRegistry,
+                           MeetingAdmissionCommands admissionCommands,
                            @Qualifier("wsDbExecutor") Executor dbExecutor) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
@@ -65,6 +74,9 @@ public class WebSocketServer {
         this.presenceService = presenceService;
         this.userLookup = userLookup;
         this.processors = processors;
+        this.guestTokenService = guestTokenService;
+        this.lobbyRegistry = lobbyRegistry;
+        this.admissionCommands = admissionCommands;
         this.dbExecutor = dbExecutor;
     }
 
@@ -100,6 +112,9 @@ public class WebSocketServer {
                                             connectionManager,
                                             presenceService,
                                             userLookup,
+                                            guestTokenService,
+                                            lobbyRegistry,
+                                            admissionCommands,
                                             processors));
                         }
                     })

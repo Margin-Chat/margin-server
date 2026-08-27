@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.meetings.api.MeetingGuestTokens;
 import org.margin.server.meetings.security.MeetingGuestPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-public class MeetingGuestTokenService {
+public class MeetingGuestTokenService implements MeetingGuestTokens {
 
     public static final String TOKEN_TYPE = "guest";
     private static final long MAX_LIFETIME_MILLIS = 12 * 60 * 60 * 1000L;
@@ -46,6 +47,7 @@ public class MeetingGuestTokenService {
                 .compact();
     }
 
+    @Override
     public Optional<MeetingGuestPrincipal> parse(String token) {
         try {
             Claims claims = Jwts.parser()

@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.timeout.IdleState;
@@ -16,6 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
 import org.margin.server.users.api.UserLookup;
+import org.margin.server.meetings.api.MeetingAdmissionCommands;
+import org.margin.server.meetings.api.MeetingLobbyRegistry;
+import org.margin.server.meetings.security.MeetingGuestPrincipal;
+import org.margin.server.meetings.api.MeetingGuestTokens;
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -42,6 +47,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
     private final UserLookup userLookup;
+    private final MeetingGuestTokens guestTokenService;
+    private final MeetingLobbyRegistry lobbyRegistry;
+    private final MeetingAdmissionCommands admissionCommands;
     private final Map<WebSocketMessageType, WebSocketMessageProcessor<Object>> dispatch;
 
     @SuppressWarnings("unchecked")
@@ -50,12 +58,18 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
                             ConnectionManager connectionManager,
                             PresenceService presenceService,
                             UserLookup userLookup,
+                            MeetingGuestTokens guestTokenService,
+                            MeetingLobbyRegistry lobbyRegistry,
+                            MeetingAdmissionCommands admissionCommands,
                             List<WebSocketMessageProcessor<?>> processors) {
         this.dbExecutor = dbExecutor;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
         this.userLookup = userLookup;
+        this.guestTokenService = guestTokenService;
+        this.lobbyRegistry = lobbyRegistry;
+        this.admissionCommands = admissionCommands;
         this.dispatch = processors.stream()
                 .collect(Collectors.toMap(
                         WebSocketMessageProcessor::getType,
@@ -85,6 +99,9 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         }
 
         Optional<AuthenticatedUser> optionalUser = jwtService.extractAndValidateJwtTokenFromWebSocket(req.uri());
+        Optional<MeetingGuestPrincipal> optionalGuest = optionalUser.isPresent()
+                ? Optional.empty()
+                : guestTokenService.parse(extractToken(req.uri()));
 
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
                 buildWsUrl(req), null, true, 65536);
@@ -98,8 +115,19 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
         ctx.channel().attr(WebSocketAttributes.HANDSHAKER).set(handshaker);
 
-        if (optionalUser.isEmpty()) {
+        if (optionalUser.isEmpty() && optionalGuest.isEmpty()) {
             rejectUnauthenticated(ctx, req, handshaker);
+            return;
+        }
+
+        if (optionalUser.isEmpty()) {
+            MeetingGuestPrincipal guest = optionalGuest.get();
+            ctx.channel().attr(WebSocketAttributes.MEETING_GUEST).set(guest);
+            handshaker.handshake(ctx.channel(), req).addListener(future -> {
+                if (future.isSuccess()) {
+                    lobbyRegistry.register(guest.meetingId(), guest.userId(), ctx.channel());
+                }
+            });
             return;
         }
 
@@ -158,6 +186,12 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
+        MeetingGuestPrincipal guest = ctx.channel().attr(WebSocketAttributes.MEETING_GUEST).get();
+        if (guest != null) {
+            handleGuestMessage(guest, message);
+            return;
+        }
+
         AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user == null) {
             ctx.close();
@@ -177,6 +211,20 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
         }
     }
 
+    private void handleGuestMessage(MeetingGuestPrincipal guest, WebSocketMessageIn<?> message) {
+        switch (message.getType()) {
+            case MEETING_KNOCK -> admissionCommands.knock(guest.meetingId(), guest.userId());
+            case MEETING_LEAVE_LOBBY -> admissionCommands.leaveLobby(guest.meetingId(), guest.userId());
+            default -> log.warn("Guest {} sent unsupported message type {}", guest.userId(), message.getType());
+        }
+    }
+
+    private String extractToken(String uri) {
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        List<String> values = decoder.parameters().get("token");
+        return values == null || values.isEmpty() ? "" : values.getFirst();
+    }
+
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent idleEvent) {
@@ -193,6 +241,11 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
+        MeetingGuestPrincipal guest = ctx.channel().attr(WebSocketAttributes.MEETING_GUEST).get();
+        if (guest != null) {
+            lobbyRegistry.unregister(guest.meetingId(), guest.userId());
+        }
+
         AuthenticatedUser user = ctx.channel().attr(WebSocketAttributes.USER).get();
         if (user != null) {
             boolean lastSession = connectionManager.removeConnection(user, ctx.channel());

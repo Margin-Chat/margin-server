@@ -41,6 +41,11 @@ public class MeetingGuestController {
         return guestService.createGuestSession(code, body == null ? null : body.displayName());
     }
 
+    @GetMapping("/session")
+    public GuestSessionResponse resume(@AuthenticationPrincipal MeetingGuestPrincipal guest) {
+        return guestService.resume(guest);
+    }
+
     @PostMapping("/claim")
     public void claim(@RequestBody ClaimGuestRequest body,
                       @AuthenticationPrincipal MeetingGuestPrincipal guest) {

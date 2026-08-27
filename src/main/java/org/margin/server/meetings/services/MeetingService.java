@@ -199,6 +199,7 @@ public class MeetingService {
         List<MeetingParticipantDTO> participants = participantRepository.findByMeetingId(meeting.getId())
                 .stream()
                 .map(p -> new MeetingParticipantDTO(
+                        p.getId(),
                         p.getUserId(),
                         p.getDisplayName(),
                         p.isGuest(),

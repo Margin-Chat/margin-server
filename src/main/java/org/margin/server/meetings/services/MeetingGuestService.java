@@ -100,6 +100,26 @@ public class MeetingGuestService {
         return new GuestSessionResponse(token, guestId, displayName, meeting.isRequireAdmission());
     }
 
+    @Transactional(readOnly = true)
+    public GuestSessionResponse resume(MeetingGuestPrincipal guest) {
+        Meeting meeting = meetingRepository.findById(guest.meetingId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meeting not found"));
+
+        MeetingParticipant participant = participantRepository
+                .findByMeetingIdAndUserId(meeting.getId(), guest.userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Not in this meeting"));
+
+        if (participant.getState() == ParticipantState.DENIED
+                || participant.getState() == ParticipantState.REMOVED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "NOT_ADMITTED");
+        }
+
+        boolean admitted = participant.getState() == ParticipantState.ADMITTED
+                || participant.getState() == ParticipantState.JOINED;
+
+        return new GuestSessionResponse(null, guest.userId(), participant.getDisplayName(), !admitted);
+    }
+
     @Transactional
     public void claim(MeetingGuestPrincipal guest, ClaimGuestRequest request) {
         if (request.email() == null || request.email().isBlank()

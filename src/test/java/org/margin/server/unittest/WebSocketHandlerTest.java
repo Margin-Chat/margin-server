@@ -45,8 +45,17 @@ class WebSocketHandlerTest {
     private Channel channel;
     @Mock
     private Attribute<AuthenticatedUser> userAttribute;
+    @Mock
+    private Attribute<org.margin.server.meetings.security.MeetingGuestPrincipal> guestAttribute;
 
     private WebSocketMessageProcessor<Object> testProcessor;
+    @Mock
+    private org.margin.server.meetings.api.MeetingGuestTokens guestTokenService;
+    @Mock
+    private org.margin.server.meetings.api.MeetingLobbyRegistry lobbyRegistry;
+    @Mock
+    private org.margin.server.meetings.api.MeetingAdmissionCommands admissionCommands;
+
     private WebSocketHandler handler;
     private Executor immediateExecutor;
 
@@ -73,6 +82,9 @@ class WebSocketHandlerTest {
                 connectionManager,
                 presenceService,
                 userLookup,
+                guestTokenService,
+                lobbyRegistry,
+                admissionCommands,
                 List.of(testProcessor)
         );
 
@@ -80,6 +92,8 @@ class WebSocketHandlerTest {
 
         when(ctx.channel()).thenReturn(channel);
         when(channel.attr(WebSocketAttributes.USER)).thenReturn(userAttribute);
+        lenient().when(channel.attr(WebSocketAttributes.MEETING_GUEST)).thenReturn(guestAttribute);
+        lenient().when(guestAttribute.get()).thenReturn(null);
     }
 
     @Test

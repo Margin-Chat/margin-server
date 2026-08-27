@@ -4,6 +4,7 @@ import org.margin.server.meetings.models.MeetingRole;
 import org.margin.server.meetings.models.ParticipantState;
 
 public record MeetingParticipantDTO(
+        Long participantId,
         Long userId,
         String displayName,
         boolean guest,
