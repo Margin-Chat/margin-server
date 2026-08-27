@@ -7,6 +7,7 @@
         "presence::events",
         "meetings::api",
         "meetings::events",
+        "meetings::models",
         "meetings::security",
         "sfu::api",
         "sfu::events",

@@ -5,6 +5,7 @@ import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.events.NotificationDeliveryEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.modulith.NamedInterface;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import org.margin.server.users.api.UserLookup;
 
 import java.util.stream.Collectors;
 
+@NamedInterface("api")
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;

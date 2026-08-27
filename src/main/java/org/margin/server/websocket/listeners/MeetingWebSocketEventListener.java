@@ -6,6 +6,7 @@ import org.margin.server.meetings.events.MeetingAdmittedEvent;
 import org.margin.server.meetings.events.MeetingDeniedEvent;
 import org.margin.server.meetings.events.MeetingKnockEvent;
 import org.margin.server.meetings.events.MeetingParticipantRemovedEvent;
+import org.margin.server.meetings.events.MeetingRingEvent;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.utils.WebSocketMessageBuilder;
@@ -44,6 +45,13 @@ public class MeetingWebSocketEventListener {
                             "displayName", event.displayName()));
             connectionManager.sendToUser(hostId, json);
         }
+    }
+
+    @EventListener
+    public void onRing(MeetingRingEvent event) {
+        String json = messageBuilder.buildMessage(
+                WebSocketMessageType.MEETING_INVITE, event.recipientId(), event.payload());
+        connectionManager.sendToUser(event.recipientId(), json);
     }
 
     @EventListener

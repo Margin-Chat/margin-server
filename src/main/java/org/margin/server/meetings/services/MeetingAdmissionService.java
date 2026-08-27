@@ -7,6 +7,13 @@ import org.margin.server.meetings.entities.MeetingParticipant;
 import org.margin.server.meetings.events.MeetingAdmittedEvent;
 import org.margin.server.meetings.events.MeetingDeniedEvent;
 import org.margin.server.meetings.events.MeetingKnockEvent;
+import org.margin.server.meetings.events.MeetingRingEvent;
+import org.margin.server.meetings.models.MeetingInvitePayload;
+import org.margin.server.shared.authorization.MarginAccessChecker;
+import org.margin.server.notifications.services.NotificationService;
+import org.margin.server.shared.notifications.NotificationType;
+import org.margin.server.social.api.MarginLookup;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.meetings.events.MeetingParticipantRemovedEvent;
 import org.margin.server.meetings.models.MeetingRole;
 import org.margin.server.meetings.models.ParticipantState;
@@ -33,13 +40,25 @@ public class MeetingAdmissionService implements MeetingAdmissionCommands {
     private final MeetingRepository meetingRepository;
     private final MeetingParticipantRepository participantRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final MarginAccessChecker marginAccessChecker;
+    private final MarginLookup marginLookup;
+    private final UserLookup userLookup;
+    private final NotificationService notifications;
 
     public MeetingAdmissionService(MeetingRepository meetingRepository,
                                    MeetingParticipantRepository participantRepository,
-                                   ApplicationEventPublisher eventPublisher) {
+                                   ApplicationEventPublisher eventPublisher,
+                                   MarginAccessChecker marginAccessChecker,
+                                   MarginLookup marginLookup,
+                                   UserLookup userLookup,
+                                   NotificationService notifications) {
         this.meetingRepository = meetingRepository;
         this.participantRepository = participantRepository;
         this.eventPublisher = eventPublisher;
+        this.marginAccessChecker = marginAccessChecker;
+        this.marginLookup = marginLookup;
+        this.userLookup = userLookup;
+        this.notifications = notifications;
     }
 
     @Override
@@ -76,6 +95,31 @@ public class MeetingAdmissionService implements MeetingAdmissionCommands {
                 participantRepository.save(p);
             }
         });
+    }
+
+    @Override
+    @Transactional
+    public void ring(String code, Long inviterId, Long recipientId) {
+        Meeting meeting = requireMeeting(code);
+
+        if (!meeting.isJoinable()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+        }
+        marginAccessChecker.requireMarginMember(inviterId, meeting.getMarginId());
+        marginAccessChecker.requireMarginMember(recipientId, meeting.getMarginId());
+        if (userLookup.isGuest(recipientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot ring a guest");
+        }
+
+        MeetingInvitePayload payload = new MeetingInvitePayload(
+                meeting.getCode(),
+                meeting.getTitle(),
+                marginLookup.summaryOf(meeting.getMarginId()).name(),
+                userLookup.dtoOf(inviterId));
+
+        eventPublisher.publishEvent(new MeetingRingEvent(recipientId, payload));
+        notifications.createForUsers(List.of(recipientId), inviterId,
+                NotificationType.MEETING_INVITE, meeting.getId(), meeting.getMarginId());
     }
 
     @Transactional
