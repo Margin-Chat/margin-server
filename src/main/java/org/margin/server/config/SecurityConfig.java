@@ -91,7 +91,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/meetings/*/preview",
-                                "/api/meetings/*/guest-session").permitAll()
+                                "/api/meetings/*/guest-session",
+                                "/api/meetings/rsvp").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

@@ -58,6 +58,42 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendEmailWithCalendar(String to, String subject, String htmlBody,
+                                      String icsFileName, String icsContent) throws MessagingException {
+        if (to != null && to.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN)) {
+            log.error("Refused to send mail to a guest address: {}", to);
+            return;
+        }
+        if (logOnly) {
+            log.info("[EMAIL LOG-ONLY] to={} subject=\"{}\" ics={}", to, subject, icsFileName);
+            return;
+        }
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "utf-8");
+        helper.setFrom(fromAddress);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(htmlBody, true);
+        helper.addAttachment(icsFileName,
+                new org.springframework.core.io.ByteArrayResource(
+                        icsContent.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                "text/calendar");
+        mailSender.send(message);
+    }
+
+    public String buildMeetingInviteMail(String inviterName, String meetingTitle, String marginName,
+                                         String whenLine, String joinUrl, boolean cancelled) {
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("logoUrl", logoUrl.isBlank() ? null : logoUrl);
+        ctx.setVariable("inviterName", inviterName);
+        ctx.setVariable("meetingTitle", meetingTitle);
+        ctx.setVariable("marginName", marginName);
+        ctx.setVariable("whenLine", whenLine);
+        ctx.setVariable("joinUrl", joinUrl);
+        ctx.setVariable("cancelled", cancelled);
+        return templateEngine.process("email/meeting-invite", ctx);
+    }
+
     public String buildInvoiceMail(String ownerName, String marginName, String tier,
                                    String amount, String currency,
                                    String paymentId, Instant nextBillingDate) {

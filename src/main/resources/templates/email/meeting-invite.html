@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Inter',Arial,sans-serif">
+
+  <div style="max-width:520px;margin:40px auto;padding:0 16px">
+
+    <div style="padding:28px 0 20px;text-align:center">
+      <img th:if="${logoUrl != null}" th:src="${logoUrl}" src=""
+           alt="margin" style="height:32px;width:auto"/>
+      <span th:unless="${logoUrl != null}"
+            style="font-size:20px;font-weight:700;color:#2d2d2d;letter-spacing:-0.5px">margin</span>
+    </div>
+
+    <div style="background:#fff;border:1px solid #ebebeb;border-radius:12px;overflow:hidden">
+
+      <div style="height:4px;background:#f47e3a"></div>
+
+      <div style="padding:32px">
+        <h1 th:if="${cancelled}"
+            style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2d2d2d;letter-spacing:-0.3px">
+          Meeting cancelled
+        </h1>
+        <h1 th:unless="${cancelled}"
+            style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2d2d2d;letter-spacing:-0.3px"
+            th:text="${meetingTitle}">Weekly sync</h1>
+
+        <p style="margin:0 0 8px;font-size:0.9rem;color:#666;line-height:1.5"
+           th:text="${inviterName} + ' invited you · ' + ${marginName}">Alice invited you</p>
+
+        <p style="margin:0 0 28px;font-size:0.9rem;color:#2d2d2d;line-height:1.5;font-weight:600"
+           th:text="${whenLine}">Tuesday 2 September, 15:00</p>
+
+        <a th:unless="${cancelled}" th:href="${joinUrl}" href="#"
+           style="display:inline-block;padding:12px 28px;background:#2d2d2d;color:#fff;text-decoration:none;border-radius:8px;font-size:0.875rem;font-weight:600;letter-spacing:0.01em">
+          Join meeting
+        </a>
+
+        <p th:unless="${cancelled}" style="margin:24px 0 0;font-size:0.8rem;color:#999;line-height:1.5">
+          You do not need a margin account to join.
+        </p>
+      </div>
+    </div>
+
+    <p style="margin:20px 0 0;text-align:center;font-size:0.75rem;color:#999">
+      Sent by margin
+    </p>
+  </div>
+</body>
+</html>

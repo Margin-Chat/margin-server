@@ -1,4 +1,5 @@
 @ApplicationModule(allowedDependencies = {
+        "email",
         "notifications::api",
         "presence",
         "shared",

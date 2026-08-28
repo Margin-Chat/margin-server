@@ -42,6 +42,8 @@ class MeetingSchedulingTest extends MarginTestRunner {
     private MeetingRepository meetingRepository;
     @Autowired
     private MarginService marginService;
+    @Autowired
+    private org.margin.server.meetings.repositories.MeetingInviteRepository inviteRepository;
 
     private User host;
     private User colleague;
@@ -246,5 +248,46 @@ class MeetingSchedulingTest extends MarginTestRunner {
                 .anyMatch(m -> m.code().equals(hosted.code())), "the host sees it");
         assertTrue(schedulingService.forUser(colleague.getId()).stream()
                 .anyMatch(m -> m.code().equals(hosted.code())), "an invitee sees it");
+    }
+
+    @Test
+    void anInviteeCanRsvpWithoutAnAccount() {
+        seed();
+        MeetingSummaryDTO meeting = schedulingService.schedule(host.getId(), new ScheduleMeetingRequest(
+                margin.getId(), "Sync", soon(), 30, null, null,
+                List.of(new ScheduleMeetingRequest.InviteeRequest(null, "outsider@example.com"))));
+
+        String token = inviteRepository.findByMeetingId(meeting.id()).getFirst().getInviteToken();
+
+        assertEquals(org.margin.server.meetings.models.MeetingInviteStatus.ACCEPTED,
+                schedulingService.respond(token, true));
+        assertEquals(org.margin.server.meetings.models.MeetingInviteStatus.DECLINED,
+                schedulingService.respond(token, false));
+    }
+
+    @Test
+    void anUnknownInviteTokenIsNotFound() {
+        seed();
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> schedulingService.respond("nope", true));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+    }
+
+    @Test
+    void everyInviteeGetsTheirOwnToken() {
+        seed();
+        MeetingSummaryDTO meeting = schedulingService.schedule(host.getId(), new ScheduleMeetingRequest(
+                margin.getId(), "Sync", soon(), 30, null, null,
+                List.of(new ScheduleMeetingRequest.InviteeRequest(null, "a@example.com"),
+                        new ScheduleMeetingRequest.InviteeRequest(null, "b@example.com"))));
+
+        List<String> tokens = inviteRepository.findByMeetingId(meeting.id()).stream()
+                .map(i -> i.getInviteToken()).toList();
+
+        assertEquals(2, tokens.size());
+        assertNotEquals(tokens.get(0), tokens.get(1),
+                "a shared token would make arrivals impossible to attribute");
     }
 }

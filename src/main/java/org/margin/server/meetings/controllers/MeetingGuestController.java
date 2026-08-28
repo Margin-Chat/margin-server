@@ -6,7 +6,10 @@ import org.margin.server.meetings.models.dtos.GuestSessionRequest;
 import org.margin.server.meetings.models.dtos.GuestSessionResponse;
 import org.margin.server.meetings.models.dtos.MeetingPreviewDTO;
 import org.margin.server.meetings.security.MeetingGuestPrincipal;
+import org.margin.server.meetings.models.MeetingInviteStatus;
+import org.margin.server.meetings.models.dtos.RsvpRequest;
 import org.margin.server.meetings.services.MeetingGuestService;
+import org.margin.server.meetings.services.MeetingSchedulingService;
 import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.shared.ratelimit.RateLimitConfig;
 import org.margin.server.shared.ratelimit.RateLimitService;
@@ -19,10 +22,14 @@ public class MeetingGuestController {
 
     private final MeetingGuestService guestService;
     private final RateLimitService rateLimitService;
+    private final MeetingSchedulingService schedulingService;
 
-    public MeetingGuestController(MeetingGuestService guestService, RateLimitService rateLimitService) {
+    public MeetingGuestController(MeetingGuestService guestService,
+                                  RateLimitService rateLimitService,
+                                  MeetingSchedulingService schedulingService) {
         this.guestService = guestService;
         this.rateLimitService = rateLimitService;
+        this.schedulingService = schedulingService;
     }
 
     @PostMapping("/{code}/preview")
@@ -39,6 +46,13 @@ public class MeetingGuestController {
         rateLimit(request, "guest-session:", RateLimitConfig.guestSession(),
                 "Too many join attempts. Try again later.");
         return guestService.createGuestSession(code, body == null ? null : body.displayName());
+    }
+
+    @PostMapping("/rsvp")
+    public MeetingInviteStatus rsvp(@RequestBody RsvpRequest body, HttpServletRequest request) {
+        rateLimit(request, "meeting-rsvp:", RateLimitConfig.meetingPreview(),
+                "Too many requests. Try again later.");
+        return schedulingService.respond(body.inviteToken(), body.accepted());
     }
 
     @GetMapping("/session")

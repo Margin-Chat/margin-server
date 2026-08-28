@@ -48,6 +48,7 @@ public class MeetingSchedulingService {
     private final SubscriptionValidationService subscriptions;
     private final MarginLookup marginLookup;
     private final UserLookup userLookup;
+    private final MeetingInviteMailer mailer;
 
     public MeetingSchedulingService(MeetingRepository meetingRepository,
                                     MeetingParticipantRepository participantRepository,
@@ -55,7 +56,8 @@ public class MeetingSchedulingService {
                                     MarginAccessChecker marginAccessChecker,
                                     SubscriptionValidationService subscriptions,
                                     MarginLookup marginLookup,
-                                    UserLookup userLookup) {
+                                    UserLookup userLookup,
+                                    MeetingInviteMailer mailer) {
         this.meetingRepository = meetingRepository;
         this.participantRepository = participantRepository;
         this.inviteRepository = inviteRepository;
@@ -63,6 +65,7 @@ public class MeetingSchedulingService {
         this.subscriptions = subscriptions;
         this.marginLookup = marginLookup;
         this.userLookup = userLookup;
+        this.mailer = mailer;
     }
 
     @Transactional
@@ -105,6 +108,7 @@ public class MeetingSchedulingService {
         Meeting saved = meetingRepository.save(meeting);
         addHost(saved.getId(), hostUserId);
         addInvitees(saved, request.invitees());
+        mailer.send(saved, inviteRepository.findByMeetingId(saved.getId()), false);
 
         log.info("Meeting {} scheduled for {} by userId {}", saved.getCode(), saved.getScheduledAt(), hostUserId);
         return toSummary(saved);
@@ -133,7 +137,9 @@ public class MeetingSchedulingService {
         meeting.setIcsSequence(meeting.getIcsSequence() + 1);
         meeting.setReminderSentAt(null);
 
-        return toSummary(meetingRepository.save(meeting));
+        Meeting saved = meetingRepository.save(meeting);
+        mailer.send(saved, inviteRepository.findByMeetingId(saved.getId()), false);
+        return toSummary(saved);
     }
 
     @Transactional
@@ -150,12 +156,26 @@ public class MeetingSchedulingService {
         meeting.setCancelledAt(Instant.now());
         meeting.setIcsSequence(meeting.getIcsSequence() + 1);
 
-        return toSummary(meetingRepository.save(meeting));
+        Meeting saved = meetingRepository.save(meeting);
+        mailer.send(saved, inviteRepository.findByMeetingId(saved.getId()), true);
+        return toSummary(saved);
     }
 
     @Transactional(readOnly = true)
     public List<MeetingSummaryDTO> forUser(Long userId) {
         return meetingRepository.findForUser(userId).stream().map(this::toSummary).toList();
+    }
+
+    @Transactional
+    public MeetingInviteStatus respond(String inviteToken, boolean accepted) {
+        MeetingInvite invite = inviteRepository.findByInviteToken(inviteToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
+
+        invite.setStatus(accepted ? MeetingInviteStatus.ACCEPTED : MeetingInviteStatus.DECLINED);
+        invite.setRespondedAt(Instant.now());
+        inviteRepository.save(invite);
+
+        return invite.getStatus();
     }
 
     @Transactional(readOnly = true)
