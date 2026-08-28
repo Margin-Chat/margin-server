@@ -204,4 +204,51 @@ class MeetingAdmissionTest extends MarginTestRunner {
         assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
         assertNotEquals(first.code(), meeting.code());
     }
+
+    @Test
+    void anAdmittedGuestCanGetARoomToken() {
+        seed();
+        GuestSessionResponse session = guest("Wanderer");
+        admissionService.admit(meeting.code(), host.getId(), participantIdOf(session));
+
+        var join = assertThrows(ResponseStatusException.class,
+                () -> meetingService.joinAsGuest(meeting.code(), session.userId()));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, join.getStatusCode(),
+                "reaches the SFU step, so admission was accepted");
+    }
+
+    @Test
+    void aGuestStillWaitingCannotGetARoomToken() {
+        seed();
+        GuestSessionResponse session = guest("Wanderer");
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> meetingService.joinAsGuest(meeting.code(), session.userId()));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+    }
+
+    @Test
+    void aDeniedGuestCannotGetARoomToken() {
+        seed();
+        GuestSessionResponse session = guest("Wanderer");
+        admissionService.deny(meeting.code(), host.getId(), participantIdOf(session));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> meetingService.joinAsGuest(meeting.code(), session.userId()));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+    }
+
+    @Test
+    void someoneWithNoParticipantRowCannotGetARoomToken() {
+        seed();
+        User stranger = UserTestUtils.createUser("mallory", "mallory@margin.chat");
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> meetingService.joinAsGuest(meeting.code(), stranger.getId()));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+    }
 }

@@ -3,11 +3,13 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.Notification;
+import org.margin.server.notifications.models.dtos.NotificationDTO;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -114,16 +116,42 @@ class NotificationServiceTest {
     }
 
     @Test
-    void getNotificationsForUser_delegatesToRepository() {
+    void getNotificationsForUser_resolvesSender() {
         User recipient = createUser(1L);
-        List<Notification> expected = List.of(unseenNotification(recipient, 10L));
+        User sender = createUser(2L);
+        Notification notification = unseenNotification(recipient, 10L);
+        notification.setType(NotificationType.CONVERSATION_INVITE);
+        notification.setSenderId(sender.getId());
+        notification.setReferenceId(77L);
+        notification.setConversationId(77L);
         when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipient.getId()))
-                .thenReturn(expected);
+                .thenReturn(List.of(notification));
+        when(userLookup.dtosOf(List.of(sender.getId())))
+                .thenReturn(List.of(new UserDTO(sender, false)));
 
-        List<Notification> result = notificationService.getNotificationsForUser(recipient.getId());
+        List<NotificationDTO> result = notificationService.getNotificationsForUser(recipient.getId());
 
-        assertThat(result).isEqualTo(expected);
+        assertThat(result).singleElement().satisfies(dto -> {
+            assertThat(dto.sender()).isNotNull();
+            assertThat(dto.sender().displayName()).isEqualTo(sender.getDisplayName());
+            assertThat(dto.type()).isEqualTo(NotificationType.CONVERSATION_INVITE);
+            assertThat(dto.referenceId()).isEqualTo(77L);
+            assertThat(dto.conversationId()).isEqualTo(77L);
+        });
         verify(notificationRepository).findByRecipientIdOrderByCreatedAtDesc(recipient.getId());
+    }
+
+    @Test
+    void getNotificationsForUser_toleratesMissingSender() {
+        User recipient = createUser(1L);
+        when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipient.getId()))
+                .thenReturn(List.of(unseenNotification(recipient, 10L)));
+        when(userLookup.dtosOf(List.of())).thenReturn(List.of());
+
+        List<NotificationDTO> result = notificationService.getNotificationsForUser(recipient.getId());
+
+        assertThat(result).singleElement()
+                .satisfies(dto -> assertThat(dto.sender()).isNull());
     }
 
     @Test

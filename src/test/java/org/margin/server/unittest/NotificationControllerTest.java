@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.margin.server.unittest.utils.UserTestUtils.principalOf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.Notification;
+import org.margin.server.notifications.models.dtos.NotificationDTO;
 import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.controllers.NotificationController;
 import org.margin.server.notifications.services.NotificationService;
@@ -35,10 +36,11 @@ class NotificationControllerTest {
     @Test
     void getNotifications_returnsUserNotifications() {
         User user = createUser(1L);
-        List<Notification> expected = List.of(testNotification(user, 10L));
+        List<NotificationDTO> expected = List.of(new NotificationDTO(
+                1L, NotificationType.ANNOUNCEMENT, 100L, 10L, null, null, false, Instant.now()));
         when(notificationService.getNotificationsForUser(user.getId())).thenReturn(expected);
 
-        List<Notification> result = notificationController.getNotifications(principalOf(user));
+        List<NotificationDTO> result = notificationController.getNotifications(principalOf(user));
 
         assertThat(result).isEqualTo(expected);
     }

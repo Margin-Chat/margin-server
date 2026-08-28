@@ -113,6 +113,26 @@ public class MeetingService {
         return toDTO(meeting);
     }
 
+    /**
+     * Room token for a guest who has already been let in. Access is the participant's admission
+     * state rather than margin membership, which a guest never has.
+     */
+    @Transactional
+    public MeetingJoinResponse joinAsGuest(String code, Long guestUserId) {
+        Meeting meeting = requireMeeting(code);
+
+        MeetingParticipant participant = participantRepository
+                .findByMeetingIdAndUserId(meeting.getId(), guestUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "NOT_ADMITTED"));
+
+        if (participant.getState() != ParticipantState.ADMITTED
+                && participant.getState() != ParticipantState.JOINED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "NOT_ADMITTED");
+        }
+
+        return openRoomFor(meeting, participant, guestUserId);
+    }
+
     @Transactional
     public MeetingJoinResponse join(String code, Long userId) {
         Meeting meeting = requireMeeting(code);
@@ -128,11 +148,25 @@ public class MeetingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "MEETING_FULL");
         }
 
-        sfuService.createOrJoinRoom(room.value(), meeting.getMaxParticipants());
-
         MeetingParticipant participant = participantRepository
                 .findByMeetingIdAndUserId(meeting.getId(), userId)
                 .orElseGet(() -> addParticipant(meeting.getId(), userId, MeetingRole.PARTICIPANT));
+
+        return openRoomFor(meeting, participant, userId);
+    }
+
+    private MeetingJoinResponse openRoomFor(Meeting meeting, MeetingParticipant participant, Long userId) {
+        if (!meeting.isJoinable()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+        }
+
+        RoomKey room = new RoomKey.MeetingRoom(meeting.getCode());
+        if (sfuService.peerIdsInRoom(room).size() >= meeting.getMaxParticipants()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "MEETING_FULL");
+        }
+
+        sfuService.createOrJoinRoom(room.value(), meeting.getMaxParticipants());
+
         participant.setState(ParticipantState.JOINED);
         participant.setJoinedAt(Instant.now());
         participantRepository.save(participant);
@@ -144,7 +178,7 @@ public class MeetingService {
         }
 
         String token = sfuTokenService.generateRoomToken(
-                userId, room.value(), userLookup.summaryOf(userId).displayName());
+                userId, room.value(), participant.getDisplayName());
 
         return new MeetingJoinResponse(
                 sfuService.getSfuPublicUrl(), room.value(), token, meeting.getMaxVideoHeight());

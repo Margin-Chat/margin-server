@@ -2,6 +2,7 @@ package org.margin.server.notifications.controllers;
 
 import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.notifications.Notification;
+import org.margin.server.notifications.models.dtos.NotificationDTO;
 import org.margin.server.notifications.services.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,7 +23,7 @@ public class NotificationController {
     }
 
     @GetMapping("/all")
-    public List<Notification> getNotifications(@AuthenticationPrincipal AuthenticatedUser user) {
+    public List<NotificationDTO> getNotifications(@AuthenticationPrincipal AuthenticatedUser user) {
         return notificationService.getNotificationsForUser(user.id());
     }
 

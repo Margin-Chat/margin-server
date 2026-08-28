@@ -9,7 +9,9 @@ import org.margin.server.meetings.security.MeetingGuestPrincipal;
 import org.margin.server.meetings.models.MeetingInviteStatus;
 import org.margin.server.meetings.models.dtos.RsvpRequest;
 import org.margin.server.meetings.services.MeetingGuestService;
+import org.margin.server.meetings.models.dtos.MeetingJoinResponse;
 import org.margin.server.meetings.services.MeetingSchedulingService;
+import org.margin.server.meetings.services.MeetingService;
 import org.margin.server.shared.exceptions.TooManyRequestsException;
 import org.margin.server.shared.ratelimit.RateLimitConfig;
 import org.margin.server.shared.ratelimit.RateLimitService;
@@ -23,13 +25,16 @@ public class MeetingGuestController {
     private final MeetingGuestService guestService;
     private final RateLimitService rateLimitService;
     private final MeetingSchedulingService schedulingService;
+    private final MeetingService meetingService;
 
     public MeetingGuestController(MeetingGuestService guestService,
                                   RateLimitService rateLimitService,
-                                  MeetingSchedulingService schedulingService) {
+                                  MeetingSchedulingService schedulingService,
+                                  MeetingService meetingService) {
         this.guestService = guestService;
         this.rateLimitService = rateLimitService;
         this.schedulingService = schedulingService;
+        this.meetingService = meetingService;
     }
 
     @PostMapping("/{code}/preview")
@@ -46,6 +51,12 @@ public class MeetingGuestController {
         rateLimit(request, "guest-session:", RateLimitConfig.guestSession(),
                 "Too many join attempts. Try again later.");
         return guestService.createGuestSession(code, body == null ? null : body.displayName());
+    }
+
+    @PostMapping("/{code}/guest-join")
+    public MeetingJoinResponse guestJoin(@PathVariable String code,
+                                         @AuthenticationPrincipal MeetingGuestPrincipal guest) {
+        return meetingService.joinAsGuest(code, guest.userId());
     }
 
     @PostMapping("/rsvp")
