@@ -68,13 +68,18 @@ public class SfuService implements VoiceParticipantLookup {
         String url = sfuUrl + "/rooms/" + roomId;
         HttpHeaders headers = internalHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                new HttpEntity<>(Map.of("maxParticipants", maxParticipants), headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {
-                }
-        );
+        try {
+            restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    new HttpEntity<>(Map.of("maxParticipants", maxParticipants), headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    }
+            );
+        } catch (Exception e) {
+            log.error("Could not reach the SFU to open room {}: {}", roomId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "SFU_UNAVAILABLE");
+        }
     }
 
     public void notifyUserJoined(Long channelId, Long userId) {

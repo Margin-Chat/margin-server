@@ -10,4 +10,8 @@ import java.util.List;
 public interface MeetingInviteRepository extends JpaRepository<MeetingInvite, Long> {
 
     List<MeetingInvite> findByMeetingId(Long meetingId);
+
+    java.util.Optional<MeetingInvite> findByInviteToken(String inviteToken);
+
+    int countByMeetingId(Long meetingId);
 }
