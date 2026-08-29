@@ -112,6 +112,38 @@ class MeetingServiceTest {
     }
 
     @Test
+    @DisplayName("join hands back the peer identity the room token was minted for")
+    void join_returnsThePeerIdentity() {
+        meeting.setTitle("Standup");
+
+        MeetingJoinResponse response = meetingService.join(CODE, HOST_ID);
+
+        assertThat(response.peerId()).isEqualTo(String.valueOf(HOST_ID));
+        assertThat(response.displayName()).isEqualTo("Alice");
+        assertThat(response.title()).isEqualTo("Standup");
+    }
+
+    @Test
+    @DisplayName("an admitted guest joins on their shadow user, with no margin membership check")
+    void joinAsGuest_returnsTheShadowPeerIdentity() {
+        MeetingParticipant guest = new MeetingParticipant();
+        guest.setMeetingId(1L);
+        guest.setUserId(42L);
+        guest.setDisplayName("Wanderer");
+        guest.setGuest(true);
+        guest.setRole(MeetingRole.PARTICIPANT);
+        guest.setState(ParticipantState.ADMITTED);
+        when(participantRepository.findByMeetingIdAndUserId(1L, 42L)).thenReturn(Optional.of(guest));
+
+        MeetingJoinResponse response = meetingService.joinAsGuest(CODE, 42L);
+
+        assertThat(response.peerId()).isEqualTo("42");
+        assertThat(response.displayName()).isEqualTo("Wanderer");
+        verify(sfuTokenService).generateRoomToken(42L, "m_" + CODE, "Wanderer");
+        verify(marginAccessChecker, never()).requireMarginMember(anyLong(), anyLong());
+    }
+
+    @Test
     @DisplayName("join mints the room token against the joining user, not the host")
     void join_mintsTokenForTheJoiningUser() {
         when(userLookup.summaryOf(9L)).thenReturn(new UserSummary(9L, "Bob"));

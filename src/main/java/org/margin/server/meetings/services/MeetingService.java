@@ -181,7 +181,13 @@ public class MeetingService {
                 userId, room.value(), participant.getDisplayName());
 
         return new MeetingJoinResponse(
-                sfuService.getSfuPublicUrl(), room.value(), token, meeting.getMaxVideoHeight());
+                sfuService.getSfuPublicUrl(),
+                room.value(),
+                token,
+                meeting.getMaxVideoHeight(),
+                String.valueOf(userId),
+                participant.getDisplayName(),
+                meeting.getTitle());
     }
 
     @Transactional
