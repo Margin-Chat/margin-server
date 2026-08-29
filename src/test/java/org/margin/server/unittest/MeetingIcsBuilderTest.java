@@ -26,8 +26,8 @@ class MeetingIcsBuilderTest {
     @Test
     @DisplayName("the uid stays with the meeting so a later update replaces the same entry")
     void uidIsStableForTheMeeting() {
-        String first = builder.build(meeting("Sync", 0), "https://margin.chat/app/#/meet/abc123", false);
-        String second = builder.build(meeting("Sync moved", 1), "https://margin.chat/app/#/meet/abc123", false);
+        String first = builder.build(meeting("Sync", 0), "https://margin.chat/meet/abc123", false);
+        String second = builder.build(meeting("Sync moved", 1), "https://margin.chat/meet/abc123", false);
 
         assertThat(first).contains("UID:abc123@margin.chat");
         assertThat(second).contains("UID:abc123@margin.chat");

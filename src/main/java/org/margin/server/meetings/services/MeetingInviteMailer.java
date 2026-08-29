@@ -86,7 +86,7 @@ public class MeetingInviteMailer {
     }
 
     private String joinUrl(Meeting meeting, MeetingInvite invite) {
-        return baseUrl + "/app/#/meet/" + meeting.getCode() + "?invite=" + invite.getInviteToken();
+        return baseUrl + "/meet/" + meeting.getCode() + "?invite=" + invite.getInviteToken();
     }
 
     private String whenLine(Meeting meeting) {
