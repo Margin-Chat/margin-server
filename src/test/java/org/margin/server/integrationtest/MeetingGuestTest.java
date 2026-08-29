@@ -2,6 +2,8 @@ package org.margin.server.integrationtest;
 
 import org.junit.jupiter.api.Test;
 import org.margin.server.integrationtest.config.MarginTestRunner;
+import org.margin.server.authentication.models.AuthResponse;
+import org.margin.server.integrationtest.utils.AuthTestUtils;
 import org.margin.server.integrationtest.utils.MarginTestUtils;
 import org.margin.server.integrationtest.utils.SubscriptionTestUtils;
 import org.margin.server.integrationtest.utils.UserTestUtils;
@@ -160,6 +162,26 @@ class MeetingGuestTest extends MarginTestRunner {
         assertEquals(session.userId(),
                 participantRepository.findByMeetingIdAndUserId(meeting.id(), session.userId())
                         .orElseThrow().getUserId());
+    }
+
+    @Test
+    void aClaimedAccountCanSignInOnceActivated() {
+        meeting = newMeeting();
+        GuestSessionResponse session = guestService.createGuestSession(meeting.code(), "Wanderer");
+        MeetingGuestPrincipal principal = guestTokenService.parse(session.guestToken()).orElseThrow();
+
+        guestService.claim(principal, new ClaimGuestRequest(
+                "wanderer@example.com", "hunter2", null, null, null, null));
+
+        AuthResponse beforeActivation = AuthTestUtils.login("wanderer@example.com", "hunter2");
+        assertFalse(beforeActivation.success());
+        assertEquals("User is not yet activated", beforeActivation.message());
+
+        AuthTestUtils.activate(session.userId());
+        AuthResponse afterActivation = AuthTestUtils.login("wanderer@example.com", "hunter2");
+
+        assertTrue(afterActivation.success(), afterActivation.message());
+        assertNotNull(afterActivation.token());
     }
 
     @Test

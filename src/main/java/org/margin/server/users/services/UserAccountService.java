@@ -1,9 +1,11 @@
 package org.margin.server.users.services;
 
 import org.margin.server.users.api.UserAccountCommands;
+import org.margin.server.users.events.GuestPromotedEvent;
 import org.margin.server.users.models.User;
 import org.margin.server.users.models.UserAccountType;
 import org.margin.server.users.models.UserEncryption;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.margin.server.users.repositories.UserRepository;
 import org.springframework.stereotype.Service;
@@ -16,13 +18,16 @@ import java.util.UUID;
 public class UserAccountService implements UserAccountCommands {
     public static final String GUEST_EMAIL_DOMAIN = "@guests.margin.invalid";
 
+    private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
     private final UserCacheService userCacheService;
     private final PasswordEncoder passwordEncoder;
 
     public UserAccountService(UserRepository userRepository,
                               UserCacheService userCacheService,
-                              PasswordEncoder passwordEncoder) {
+                              PasswordEncoder passwordEncoder,
+                              ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
         this.userCacheService = userCacheService;
         this.passwordEncoder = passwordEncoder;
@@ -132,5 +137,7 @@ public class UserAccountService implements UserAccountCommands {
 
         userRepository.save(user);
         userCacheService.evictUserCache(userId);
+        eventPublisher.publishEvent(
+                new GuestPromotedEvent(userId, user.getEmail(), user.getDisplayName()));
     }
 }

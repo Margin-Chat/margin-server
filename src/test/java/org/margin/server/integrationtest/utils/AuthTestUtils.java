@@ -4,6 +4,7 @@ import org.margin.server.authentication.entities.ActivationKey;
 import org.margin.server.authentication.entities.BetaKey;
 import org.margin.server.authentication.entities.UserSecurity;
 import org.margin.server.authentication.models.AuthResponse;
+import org.margin.server.authentication.repositories.ActivationKeyRepository;
 import org.margin.server.authentication.repositories.BetaKeyRepository;
 import org.margin.server.authentication.services.ActivationKeyService;
 import org.margin.server.authentication.services.UserSecurityService;
@@ -24,13 +25,16 @@ public class AuthTestUtils {
     private static UserRepository userRepository;
     private static ActivationKeyService activationKeyService;
     private static UserSecurityService userSecurityService;
+    private static ActivationKeyRepository activationKeyRepository;
 
     @Autowired
     public AuthTestUtils(AuthenticationService authenticationService,
                          BetaKeyRepository betaKeyRepository,
                          UserRepository userRepository,
                          ActivationKeyService activationKeyService,
-                         UserSecurityService userSecurityService) {
+                         UserSecurityService userSecurityService,
+                         ActivationKeyRepository activationKeyRepository) {
+        AuthTestUtils.activationKeyRepository = activationKeyRepository;
         AuthTestUtils.authenticationService = authenticationService;
         AuthTestUtils.betaKeyRepository = betaKeyRepository;
         AuthTestUtils.userRepository = userRepository;
@@ -54,6 +58,11 @@ public class AuthTestUtils {
     public static void registerAndActivate(String displayName, String email, String password, String betaKey) {
         ActivationKey activationKey = register(displayName, email, password, betaKey);
         activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
+    }
+
+    public static void activate(Long userId) {
+        ActivationKey key = activationKeyRepository.findActivationKeyByUserId(userId).orElseThrow();
+        activationKeyService.findAndConsumeActivationKey(key.getToken());
     }
 
     public static AuthResponse login(String email, String password) {
