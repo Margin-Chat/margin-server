@@ -277,6 +277,7 @@ public class MeetingSchedulingService {
                 meeting.getOrganizerTimezone(),
                 meeting.getStartedAt(),
                 meeting.getEndedAt(),
+                meeting.getExpiresAt(),
                 inviteRepository.countByMeetingId(meeting.getId()));
     }
 

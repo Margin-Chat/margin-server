@@ -85,6 +85,13 @@ public class Meeting {
     }
 
     public boolean isJoinable() {
-        return status == MeetingStatus.SCHEDULED || status == MeetingStatus.LIVE;
+        return isJoinable(Instant.now());
+    }
+
+    public boolean isJoinable(Instant now) {
+        if (status != MeetingStatus.SCHEDULED && status != MeetingStatus.LIVE) {
+            return false;
+        }
+        return expiresAt != null && now.isBefore(expiresAt);
     }
 }

@@ -17,6 +17,7 @@ public record MeetingSummaryDTO(
         String organizerTimezone,
         Instant startedAt,
         Instant endedAt,
+        Instant expiresAt,
         int inviteeCount
 ) {
 }

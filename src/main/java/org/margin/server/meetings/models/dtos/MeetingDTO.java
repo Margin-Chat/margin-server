@@ -19,6 +19,7 @@ public record MeetingDTO(
         Integer durationMinutes,
         Instant startedAt,
         Instant endedAt,
+        Instant expiresAt,
         List<MeetingParticipantDTO> participants
 ) {
 }

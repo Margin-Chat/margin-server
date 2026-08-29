@@ -72,7 +72,7 @@ public class MeetingGuestService {
     public GuestSessionResponse createGuestSession(String code, String requestedName) {
         Meeting meeting = requireMeeting(code);
         if (!meeting.isJoinable()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting is no longer available");
         }
 
         String displayName = sanitiseName(requestedName);

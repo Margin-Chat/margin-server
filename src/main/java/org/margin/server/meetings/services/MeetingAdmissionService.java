@@ -103,7 +103,7 @@ public class MeetingAdmissionService implements MeetingAdmissionCommands {
         Meeting meeting = requireMeeting(code);
 
         if (!meeting.isJoinable()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting is no longer available");
         }
         marginAccessChecker.requireMarginMember(inviterId, meeting.getMarginId());
         marginAccessChecker.requireMarginMember(recipientId, meeting.getMarginId());

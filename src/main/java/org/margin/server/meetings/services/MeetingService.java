@@ -139,7 +139,7 @@ public class MeetingService {
         requireCanAccess(meeting, userId);
 
         if (!meeting.isJoinable()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting is no longer available");
         }
 
         RoomKey room = new RoomKey.MeetingRoom(meeting.getCode());
@@ -157,7 +157,7 @@ public class MeetingService {
 
     private MeetingJoinResponse openRoomFor(Meeting meeting, MeetingParticipant participant, Long userId) {
         if (!meeting.isJoinable()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Meeting has ended");
+            throw new ResponseStatusException(HttpStatus.GONE, "Meeting is no longer available");
         }
 
         RoomKey room = new RoomKey.MeetingRoom(meeting.getCode());
@@ -262,6 +262,7 @@ public class MeetingService {
                 meeting.getDurationMinutes(),
                 meeting.getStartedAt(),
                 meeting.getEndedAt(),
+                meeting.getExpiresAt(),
                 participants);
     }
 

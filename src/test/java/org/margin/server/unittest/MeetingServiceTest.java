@@ -29,6 +29,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -86,6 +87,7 @@ class MeetingServiceTest {
         meeting.setMarginId(MARGIN_ID);
         meeting.setStatus(MeetingStatus.LIVE);
         meeting.setMaxParticipants(10);
+        meeting.setExpiresAt(Instant.now().plus(Duration.ofHours(12)));
         meeting.setMaxVideoHeight(720);
 
         when(meetingRepository.findByCode(CODE)).thenReturn(Optional.of(meeting));
@@ -187,6 +189,50 @@ class MeetingServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.GONE);
+    }
+
+    @Test
+    @DisplayName("a scheduled meeting whose window has passed can no longer be started")
+    void join_rejectsAMeetingPastItsWindow() {
+        meeting.setStatus(MeetingStatus.SCHEDULED);
+        meeting.setScheduledAt(Instant.now().minus(Duration.ofDays(3)));
+        meeting.setExpiresAt(Instant.now().minus(Duration.ofDays(2)));
+
+        assertThatThrownBy(() -> meetingService.join(CODE, HOST_ID))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.GONE);
+
+        verify(sfuService, never()).createOrJoinRoom(anyString(), anyInt());
+    }
+
+    @Test
+    @DisplayName("a guest cannot join a meeting past its window either")
+    void joinAsGuest_rejectsAMeetingPastItsWindow() {
+        MeetingParticipant guest = new MeetingParticipant();
+        guest.setMeetingId(1L);
+        guest.setUserId(42L);
+        guest.setDisplayName("Wanderer");
+        guest.setGuest(true);
+        guest.setRole(MeetingRole.PARTICIPANT);
+        guest.setState(ParticipantState.ADMITTED);
+        when(participantRepository.findByMeetingIdAndUserId(1L, 42L)).thenReturn(Optional.of(guest));
+        meeting.setExpiresAt(Instant.now().minus(Duration.ofMinutes(1)));
+
+        assertThatThrownBy(() -> meetingService.joinAsGuest(CODE, 42L))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.GONE);
+    }
+
+    @Test
+    @DisplayName("a live meeting stays joinable right up to its expiry")
+    void join_allowsALiveMeetingInsideItsWindow() {
+        meeting.setExpiresAt(Instant.now().plus(Duration.ofMinutes(1)));
+
+        MeetingJoinResponse response = meetingService.join(CODE, HOST_ID);
+
+        assertThat(response.roomId()).isEqualTo("m_" + CODE);
     }
 
     @Test
