@@ -14,4 +14,7 @@ public record SpaceDTO(
         List<ChannelDTO> channels,
         List<SpaceMemberDTO> members
 ) {
+    public SpaceDTO withChannels(List<ChannelDTO> newChannels) {
+        return new SpaceDTO(spaceId, spaceName, spaceDescription, marginId, visibility, newChannels, members);
+    }
 }

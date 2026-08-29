@@ -10,10 +10,11 @@ public record DirectConversationDTO(
         Instant createdAt,
         Long otherUserId,
         Instant otherUserReadAt,
-        ConversationInviteStatus inviteStatus
+        ConversationInviteStatus inviteStatus,
+        boolean encrypted
 ) implements ConversationDTO {
     public DirectConversationDTO(Long id, Instant createdAt, Long otherUserId, Instant otherUserReadAt,
-                                 ConversationInviteStatus inviteStatus) {
-        this(id, "DIRECT", createdAt, otherUserId, otherUserReadAt, inviteStatus);
+                                 ConversationInviteStatus inviteStatus, boolean encrypted) {
+        this(id, "DIRECT", createdAt, otherUserId, otherUserReadAt, inviteStatus, encrypted);
     }
 }

@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
-import org.margin.server.users.models.User;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.WebSocketAttributes;
 import org.margin.server.websocket.WebSocketHandler;
 import org.margin.server.websocket.connection.ConnectionManager;
@@ -21,7 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketHandlerTest {
@@ -33,11 +38,13 @@ class WebSocketHandlerTest {
     @Mock
     private PresenceService presenceService;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private ChannelHandlerContext ctx;
     @Mock
     private Channel channel;
     @Mock
-    private Attribute<User> userAttribute;
+    private Attribute<AuthenticatedUser> userAttribute;
 
     private WebSocketMessageProcessor<Object> testProcessor;
     private WebSocketHandler handler;
@@ -54,7 +61,7 @@ class WebSocketHandlerTest {
             }
 
             @Override
-            public void process(User user, WebSocketMessageIn<Object> message) {
+            public void process(AuthenticatedUser user, WebSocketMessageIn<Object> message) {
                 // Empty for SQ
             }
         };
@@ -65,6 +72,7 @@ class WebSocketHandlerTest {
                 jwtService,
                 connectionManager,
                 presenceService,
+                userLookup,
                 List.of(testProcessor)
         );
 
@@ -76,7 +84,7 @@ class WebSocketHandlerTest {
 
     @Test
     void handleWebSocketMessage_dispatchesToCorrectProcessor() {
-        User user = createUser(1L, "sender");
+        AuthenticatedUser user = authUser(1L, "sender");
         when(userAttribute.get()).thenReturn(user);
 
         WebSocketMessageIn<Object> message = new WebSocketMessageIn<>();
@@ -103,7 +111,7 @@ class WebSocketHandlerTest {
 
     @Test
     void handleWebSocketMessage_ignoresUnknownMessageType() {
-        User user = createUser(1L, "sender");
+        AuthenticatedUser user = authUser(1L, "sender");
         when(userAttribute.get()).thenReturn(user);
 
         WebSocketMessageIn<Object> message = new WebSocketMessageIn<>();
@@ -116,19 +124,32 @@ class WebSocketHandlerTest {
 
     @Test
     void channelInactive_removesConnectionAndNotifiesOffline() {
-        User user = createUser(1L, "sender");
+        AuthenticatedUser user = authUser(1L, "sender");
         when(userAttribute.get()).thenReturn(user);
         when(connectionManager.removeConnection(user, channel)).thenReturn(true);
 
         handler.channelInactive(ctx);
 
         verify(connectionManager).removeConnection(user, channel);
-        verify(presenceService).userDisconnected(user);
+        verify(presenceService).userDisconnected(user.id());
+        verify(userLookup).markLastSeen(eq(1L), any());
+    }
+
+    @Test
+    void channelInactive_swallowsLastSeenFailures() {
+        AuthenticatedUser user = authUser(1L, "sender");
+        when(userAttribute.get()).thenReturn(user);
+        when(connectionManager.removeConnection(user, channel)).thenReturn(true);
+        doThrow(new RuntimeException("db down")).when(userLookup).markLastSeen(eq(1L), any());
+
+        assertDoesNotThrow(() -> handler.channelInactive(ctx));
+
+        verify(presenceService).userDisconnected(user.id());
     }
 
     @Test
     void channelInactive_doesNotNotifyWhenChannelMismatch() {
-        User user = createUser(1L, "sender");
+        AuthenticatedUser user = authUser(1L, "sender");
         when(userAttribute.get()).thenReturn(user);
         when(connectionManager.removeConnection(user, channel)).thenReturn(false);
 
@@ -148,10 +169,4 @@ class WebSocketHandlerTest {
         verifyNoInteractions(presenceService);
     }
 
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
 }

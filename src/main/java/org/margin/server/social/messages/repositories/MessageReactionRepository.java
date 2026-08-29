@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MessageReactionRepository extends JpaRepository<MessageReaction, Long> {
-    @Query("SELECT r FROM MessageReaction r JOIN FETCH r.user WHERE r.message.id IN :messageIds")
+    @Query("SELECT r FROM MessageReaction r  WHERE r.message.id IN :messageIds")
     List<MessageReaction> findByMessageIdIn(@Param("messageIds") List<Long> messageIds);
 
     Optional<MessageReaction> findByMessageIdAndUserIdAndEmoji(Long messageId, Long userId, String emoji);

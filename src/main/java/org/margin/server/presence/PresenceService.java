@@ -1,27 +1,41 @@
 package org.margin.server.presence;
 
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
-import org.margin.server.users.models.User;
+import org.margin.server.presence.events.UserConnectedEvent;
+import org.margin.server.presence.events.UserDisconnectedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Slf4j
 @Service
 public class PresenceService {
 
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PresenceRegistry presenceRegistry;
 
-    public PresenceService(WebSocketDeliveryService webSocketDeliveryService) {
-        this.webSocketDeliveryService = webSocketDeliveryService;
+    public PresenceService(ApplicationEventPublisher eventPublisher,
+                           PresenceRegistry presenceRegistry) {
+        this.eventPublisher = eventPublisher;
+        this.presenceRegistry = presenceRegistry;
     }
 
-    public void userConnected(User user) {
-        webSocketDeliveryService.notifyUserOnline(user);
-        log.info("User {} came online", user.getId());
+    public boolean isUserOnline(Long userId) {
+        return presenceRegistry.isUserOnline(userId);
     }
 
-    public void userDisconnected(User user) {
-        webSocketDeliveryService.notifyUserOffline(user);
-        log.info("User {} went offline", user.getId());
+    public Set<Long> getOnlineUserIds() {
+        return presenceRegistry.getOnlineUserIds();
+    }
+
+    public void userConnected(Long userId) {
+        eventPublisher.publishEvent(new UserConnectedEvent(userId));
+        log.debug("User {} came online", userId);
+    }
+
+    public void userDisconnected(Long userId) {
+        eventPublisher.publishEvent(new UserDisconnectedEvent(userId));
+        log.debug("User {} went offline", userId);
     }
 }

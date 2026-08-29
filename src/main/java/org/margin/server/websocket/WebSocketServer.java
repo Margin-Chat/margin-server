@@ -1,6 +1,5 @@
 package org.margin.server.websocket;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioIoHandler;
@@ -8,10 +7,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.timeout.IdleStateHandler;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.authentication.services.JwtService;
 import org.margin.server.presence.PresenceService;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.websocket.connection.ConnectionManager;
 import org.margin.server.websocket.processors.WebSocketMessageProcessor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,17 +20,25 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
+import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
 public class WebSocketServer {
+    private static final int READER_IDLE_SECONDS = 60;
+    private static final int WRITER_IDLE_SECONDS = 30;
+
     private final ObjectMapper objectMapper;
     private final JwtService jwtService;
     private final ConnectionManager connectionManager;
     private final PresenceService presenceService;
+    private final UserLookup userLookup;
     private final List<WebSocketMessageProcessor<?>> processors;
     private final Executor dbExecutor;
     @Value("${websocket.port:8081}")
@@ -37,17 +46,24 @@ public class WebSocketServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
+    private final CompletableFuture<Integer> boundPort = new CompletableFuture<>();
+
+    public int awaitBoundPort(long timeoutMs) throws Exception {
+        return boundPort.get(timeoutMs, TimeUnit.MILLISECONDS);
+    }
 
     public WebSocketServer(ObjectMapper objectMapper,
                            JwtService jwtService,
                            ConnectionManager connectionManager,
                            PresenceService presenceService,
+                           UserLookup userLookup,
                            List<WebSocketMessageProcessor<?>> processors,
                            @Qualifier("wsDbExecutor") Executor dbExecutor) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
         this.connectionManager = connectionManager;
         this.presenceService = presenceService;
+        this.userLookup = userLookup;
         this.processors = processors;
         this.dbExecutor = dbExecutor;
     }
@@ -70,6 +86,11 @@ public class WebSocketServer {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ch.pipeline()
+                                    .addLast(new IdleStateHandler(
+                                            READER_IDLE_SECONDS,
+                                            WRITER_IDLE_SECONDS,
+                                            0,
+                                            TimeUnit.SECONDS))
                                     .addLast(new HttpServerCodec())
                                     .addLast(new HttpObjectAggregator(65536))
                                     .addLast(new WebSocketMessageDecoder(objectMapper))
@@ -78,6 +99,7 @@ public class WebSocketServer {
                                             jwtService,
                                             connectionManager,
                                             presenceService,
+                                            userLookup,
                                             processors));
                         }
                     })
@@ -85,7 +107,9 @@ public class WebSocketServer {
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             serverChannel = bootstrap.bind(port).sync().channel();
-            log.info("WebSocket server started on port {}", port);
+            int actualPort = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+            boundPort.complete(actualPort);
+            log.info("WebSocket server started on port {}", actualPort);
 
             serverChannel.closeFuture().sync();
 

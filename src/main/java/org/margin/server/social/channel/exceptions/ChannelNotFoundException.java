@@ -1,7 +1,10 @@
 package org.margin.server.social.channel.exceptions;
 
-public class ChannelNotFoundException extends RuntimeException {
+import org.margin.server.shared.exceptions.DomainException;
+import org.springframework.http.HttpStatus;
+
+public class ChannelNotFoundException extends DomainException {
     public ChannelNotFoundException(Long channelId) {
-        super("Channel not found: " + channelId);
+        super(HttpStatus.NOT_FOUND, "Channel not found: " + channelId);
     }
 }

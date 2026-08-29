@@ -1,5 +1,7 @@
 package org.margin.server.social.margin.service;
 
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.presence.PresenceService;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.margin.entities.Margin;
@@ -8,24 +10,27 @@ import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
 import org.margin.server.social.space.models.Space;
 import org.margin.server.social.space.models.dtos.SpaceDTO;
 import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
+import org.margin.server.shared.storage.PublicUrls;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.websocket.connection.ConnectionManager;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class MarginMapper {
-    private final ConnectionManager connectionManager;
+    private final PresenceService presenceService;
+    private final UserLookup userLookup;
 
-    public MarginMapper(ConnectionManager connectionManager) {
-        this.connectionManager = connectionManager;
+    public MarginMapper(PresenceService presenceService,
+                              UserLookup userLookup) {
+        this.presenceService = presenceService;
+        this.userLookup = userLookup;
     }
 
     public MarginDTO marginToDto(Margin margin) {
         List<MarginMemberDTO> members = margin.getMembers().stream()
                 .map(m -> new MarginMemberDTO(
-                        new UserDTO(m.getUser(), connectionManager.isUserOnline(m.getUser().getId())),
+                        userLookup.dtoOf(m.getUserId()),
                         m.getRole(),
                         m.getJoinedAt()
                 ))
@@ -36,16 +41,14 @@ public class MarginMapper {
                 .toList();
 
         return new MarginDTO(margin.getId(), margin.getName(), margin.getDescription(),
-                margin.getVisibility(), margin.getIconUrl(), members, spaces);
+                margin.getVisibility(), PublicUrls.publicUrl(margin.getIconUrl()), members, spaces);
     }
 
     public SpaceDTO spaceToDto(Space space) {
         List<SpaceMemberDTO> members = space.getMembers() != null
                 ? space.getMembers().stream()
                 .map(m -> new SpaceMemberDTO(
-                        new UserDTO(
-                                m.getUser(),
-                                connectionManager.isUserOnline(m.getUser().getId())),
+                        userLookup.dtoOf(m.getUserId()),
                         m.getSpace().getId(),
                         m.getRole(),
                         m.getJoinedAt()

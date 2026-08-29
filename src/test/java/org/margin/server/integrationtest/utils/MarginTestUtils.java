@@ -1,6 +1,7 @@
 package org.margin.server.integrationtest.utils;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
+import static org.margin.server.integrationtest.utils.UserTestUtils.principalOf;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.controllers.MarginInviteController;
 import org.margin.server.social.margin.entities.Margin;
@@ -40,23 +41,24 @@ public class MarginTestUtils {
 
     public static Margin createMargin(String marginName, User user) {
         var request = new CreateNewMarginRequest(marginName, "test", "PUBLIC");
-        MarginDTO dto = marginController.createNewMargin(request, null, user).getBody();
-        Assert.assertNotNull("Margin was successfully created", dto);
+        MarginDTO dto = marginController.createNewMargin(request, null, principalOf(user)).getBody();
+        Assertions.assertNotNull(dto, "Margin was successfully created");
         return marginService.getById(dto.marginId());
     }
 
     public static void addUserToMargin(Long marginId, User addingUser, User userToAdd) {
         MarginInviteDTO invite =
-                marginInviteController.createDirectInvite(marginId, userToAdd.getHandle(), addingUser).getBody();
-        Assert.assertNotNull("Invite was successfully created", invite);
-        marginInviteController.acceptDirectInvite(invite.id(), userToAdd);
+                marginInviteController.createDirectInvite(marginId, userToAdd.getEmail(), principalOf(addingUser)).getBody();
+        Assertions.assertNotNull(invite, "Invite was successfully created");
+        marginInviteController.acceptDirectInvite(invite.id(), principalOf(userToAdd));
 
-        Set<MarginDTO> margins = marginController.getMargins(userToAdd);
-        Assert.assertNotNull("Margin member was successfully added",
+        Set<MarginDTO> margins = marginController.getMargins(principalOf(userToAdd));
+        Assertions.assertNotNull(
                 margins.stream()
                         .map(MarginDTO::marginId)
                         .filter(id -> id.equals(marginId))
-                        .collect(Collectors.toSet()));
+                        .collect(Collectors.toSet()),
+                "Margin member was successfully added");
     }
 
     public static List<MarginMember> getMembersFromMargin(Long marginId) {
@@ -65,23 +67,23 @@ public class MarginTestUtils {
 
     public static void removeUserFromMargin(Long marginId, User removingUser, User userToRemove) {
         Optional<MarginMember> marginMember =
-                marginMemberRepository.findByUser_IdAndMargin_Id(userToRemove.getId(), marginId);
-        Assert.assertTrue(marginMember.isPresent());
-        var request = new RemoveMarginMemberRequest(marginId, marginMember.get().getUser().getId());
-        marginController.removeMarginMember(request, removingUser);
+                marginMemberRepository.findByUserIdAndMarginId(userToRemove.getId(), marginId);
+        Assertions.assertTrue(marginMember.isPresent());
+        var request = new RemoveMarginMemberRequest(marginId, marginMember.get().getUserId());
+        marginController.removeMarginMember(request, principalOf(removingUser));
     }
 
     public static Margin getMargin(Long marginId, User user) {
-        return marginService.getById(marginController.getMargin(marginId, user).marginId());
+        return marginService.getById(marginController.getMargin(marginId, principalOf(user)).marginId());
     }
 
     public static void updateMargin(Long marginId, String name, String description, User user) {
         var request = new UpdateMarginDTO(marginId, name, description);
-        marginController.updateMargin(request, null, user);
+        marginController.updateMargin(request, null, principalOf(user));
     }
 
     public static void deleteMargin(Long marginId, User user) {
-        marginController.deleteMargin(marginId, user);
+        marginController.deleteMargin(marginId, principalOf(user));
     }
 
     public static void updateMemberRole(Long marginId, User targetUser, MarginRole newRole, User actingUser) {
@@ -91,10 +93,10 @@ public class MarginTestUtils {
                 Instant.now()
         );
         var request = new UpdateMemberRoleRequest(marginId, memberDto);
-        marginController.updateMarginMemberRole(request, actingUser);
+        marginController.updateMarginMemberRole(request, principalOf(actingUser));
     }
 
     public static MarginDTO getMarginDto(Long marginId, User user) {
-        return marginController.getMargin(marginId, user);
+        return marginController.getMargin(marginId, principalOf(user));
     }
 }

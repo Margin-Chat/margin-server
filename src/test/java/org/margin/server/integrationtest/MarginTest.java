@@ -163,7 +163,7 @@ class MarginTest extends MarginTestRunner {
         MarginTestUtils.updateMemberRole(marginId, member, MarginRole.ADMIN, admin);
 
         MarginMember updated = MarginTestUtils.getMembersFromMargin(marginId).stream()
-                .filter(m -> m.getUser().getId().equals(member.getId()))
+                .filter(m -> m.getUserId().equals(member.getId()))
                 .findFirst()
                 .orElseThrow();
         assertEquals(MarginRole.ADMIN, updated.getRole());
@@ -186,12 +186,12 @@ class MarginTest extends MarginTestRunner {
     }
 
     @Test
-    void creatingMarginAutoAddsCreatorAsAdmin() {
+    void creatingMarginAutoAddsCreatorAsOwner() {
         List<MarginMember> members = MarginTestUtils.getMembersFromMargin(marginId);
 
         assertEquals(1, members.size());
-        assertEquals(admin.getId(), members.getFirst().getUser().getId());
-        assertEquals(MarginRole.ADMIN, members.getFirst().getRole());
+        assertEquals(admin.getId(), members.getFirst().getUserId());
+        assertEquals(MarginRole.OWNER, members.getFirst().getRole());
     }
 
     @Test

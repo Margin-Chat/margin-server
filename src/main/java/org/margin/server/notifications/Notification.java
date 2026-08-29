@@ -1,11 +1,12 @@
 package org.margin.server.notifications;
 
+import org.margin.server.shared.notifications.NotificationType;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -19,15 +20,11 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long notificationId;
 
-    @ToString.Exclude
-    @ManyToOne
-    @JoinColumn(nullable = false, name = "recipient_id")
-    private User recipient;
+    @Column(nullable = false, name = "recipient_id")
+    private Long recipientId;
 
-    @ToString.Exclude
-    @ManyToOne
-    @JoinColumn(nullable = true, name = "sender_id")
-    private User sender;
+    @Column(name = "sender_id")
+    private Long senderId;
 
     @Column(nullable = true, name = "margin_id")
     private Long marginId;
@@ -38,6 +35,9 @@ public class Notification {
 
     @Column(name = "reference_id")
     private Long referenceId;
+
+    @Column(name = "conversation_id")
+    private Long conversationId;
 
     @Column(nullable = false, name = "seen")
     private boolean seen = false;

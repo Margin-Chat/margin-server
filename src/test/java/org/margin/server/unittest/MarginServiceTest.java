@@ -2,8 +2,12 @@ package org.margin.server.unittest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.social.margin.entities.Margin;
+import org.margin.server.social.margin.entities.MarginMember;
+import org.margin.server.social.margin.models.MarginRole;
+import org.margin.server.social.margin.models.dtos.MarginMemberDTO;
 import org.margin.server.social.margin.models.dtos.UpdateMarginDTO;
 import org.margin.server.social.margin.repositories.MarginMemberRepository;
 import org.margin.server.social.margin.repositories.MarginRepository;
@@ -11,21 +15,25 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.models.Visibility;
 import org.margin.server.social.space.services.SpacesService;
-import org.margin.server.storage.StorageService;
+import org.margin.server.social.api.MarginIconCommands;
+import org.margin.server.social.api.MarginSubscriptionPolicy;
 import org.margin.server.users.models.User;
+import org.margin.server.users.models.dtos.UserDTO;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,9 +45,11 @@ class MarginServiceTest {
     @Mock
     private MarginRepository marginRepository;
     @Mock
+    private UserLookup userLookup;
+    @Mock
     private MarginMemberRepository marginMemberRepository;
     @Mock
-    private StorageService storageService;
+    private MarginIconCommands marginIconCommands;
     @Mock
     private SpacesService spacesService;
     @Mock
@@ -47,18 +57,18 @@ class MarginServiceTest {
     @Mock
     private MarginMapper marginMapper;
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
-    @Mock
     private NotificationService notificationService;
+    @Mock
+    private MarginSubscriptionPolicy marginSubscriptionPolicy;
 
     @InjectMocks
     private MarginService marginService;
 
-    private User testUser() {
-        User user = new User();
-        user.setId(1L);
-        user.setHandle("testuser");
-        return user;
+    @org.junit.jupiter.api.BeforeEach
+    void stubUserLookup() {
+        org.mockito.Mockito.lenient().when(userLookup.dtoOf(org.mockito.ArgumentMatchers.anyLong()))
+                .thenAnswer(i -> new org.margin.server.users.models.dtos.UserDTO(
+                        i.getArgument(0), "u", null, null, null, false));
     }
 
     private void stubMarginSave() {
@@ -74,14 +84,13 @@ class MarginServiceTest {
             m.setMembers(new ArrayList<>());
             return Optional.of(m);
         });
-        when(userService.getById(1L)).thenReturn(testUser());
     }
 
     @Test
     void shouldCreateMargin() {
         stubMarginSave();
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, null, createUser(1L, "testuser").getId());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -91,7 +100,7 @@ class MarginServiceTest {
         assertThat(capturedMargin.getDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(capturedMargin.getVisibility()).isEqualTo(VISIBILITY);
 
-        verify(storageService, never()).saveMarginIcon(any());
+        verify(marginIconCommands, never()).save(any());
     }
 
     @Test
@@ -127,11 +136,11 @@ class MarginServiceTest {
         );
 
         String expectedUrl = "https://storage.example.com/margins/test-image.jpg";
-        when(storageService.saveMarginIcon(profilePicture)).thenReturn(expectedUrl);
+        when(marginIconCommands.save(profilePicture)).thenReturn(expectedUrl);
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser").getId());
 
-        verify(storageService, times(1)).saveMarginIcon(profilePicture);
+        verify(marginIconCommands, times(1)).save(profilePicture);
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -154,9 +163,9 @@ class MarginServiceTest {
                 new byte[0]
         );
 
-        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, testUser());
+        marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, emptyFile, createUser(1L, "testuser").getId());
 
-        verify(storageService, never()).saveMarginIcon(any());
+        verify(marginIconCommands, never()).save(any());
 
         ArgumentCaptor<Margin> marginCaptor = ArgumentCaptor.forClass(Margin.class);
         verify(marginRepository, times(1)).save(marginCaptor.capture());
@@ -174,13 +183,44 @@ class MarginServiceTest {
                 "test image content".getBytes()
         );
 
-        when(storageService.saveMarginIcon(profilePicture))
+        when(marginIconCommands.save(profilePicture))
                 .thenThrow(new RuntimeException("Storage failed"));
 
         assertThrows(RuntimeException.class, () ->
-                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, testUser())
+                marginService.createMargin(TEST_MARGIN, TEST_DESCRIPTION, VISIBILITY, profilePicture, createUser(1L, "testuser").getId())
         );
 
         verify(marginRepository, never()).save(any());
+    }
+
+    @Test
+    void promotingMemberToOwner_demotesPreviousOwnerToAdmin() {
+        Margin margin = new Margin();
+        margin.setId(1L);
+
+        User ownerUser = createUser(1L, "owner");
+        User targetUser = createUser(2L, "target");
+
+        MarginMember owner = new MarginMember();
+        owner.setUserId(ownerUser.getId());
+        owner.setMargin(margin);
+        owner.setRole(MarginRole.OWNER);
+
+        MarginMember target = new MarginMember();
+        target.setUserId(targetUser.getId());
+        target.setMargin(margin);
+        target.setRole(MarginRole.MEMBER);
+
+        margin.setMembers(new ArrayList<>(List.of(owner, target)));
+
+        when(marginRepository.findById(1L)).thenReturn(Optional.of(margin));
+        when(marginRepository.save(any(Margin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MarginMemberDTO dto = new MarginMemberDTO(new UserDTO(targetUser, false), MarginRole.OWNER, Instant.now());
+
+        marginService.updateMarginMemberRole(1L, 1L, dto);
+
+        assertThat(target.getRole()).isEqualTo(MarginRole.OWNER);
+        assertThat(owner.getRole()).isEqualTo(MarginRole.ADMIN);
     }
 }

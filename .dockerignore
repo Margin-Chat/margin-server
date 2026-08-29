@@ -1,7 +1,9 @@
-build/
-.gradle/
-.mvn/
-*.log
-.git/
-.idea/
+target/
 *.iml
+.idea/
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+LICENSE

@@ -1,10 +1,11 @@
 package org.margin.server.config;
 
-import org.margin.server.config.filters.JwtAuthenticationFilter;
+import org.margin.server.authentication.filters.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,8 +13,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -34,25 +35,36 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
+            AuthenticationConfiguration authConfig) {
         return authConfig.getAuthenticationManager();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+
+        CorsConfiguration activationConfig = new CorsConfiguration();
+        activationConfig.setAllowedOrigins(List.of("*"));
+        activationConfig.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
+        activationConfig.setAllowedHeaders(List.of("*"));
+        activationConfig.setAllowCredentials(false);
+
+        source.registerCorsConfiguration("/api/auth/activate/**", activationConfig);
+
+        CorsConfiguration defaultConfiguration = new CorsConfiguration();
+        defaultConfiguration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
+        defaultConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        defaultConfiguration.setAllowedHeaders(List.of("*"));
+        defaultConfiguration.setAllowCredentials(true);
+        defaultConfiguration.setMaxAge(3600L);
+
+        source.registerCorsConfiguration("/**", defaultConfiguration);
+
         return source;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .headers(headers -> headers
                         .contentTypeOptions(Customizer.withDefaults())
@@ -67,10 +79,22 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**", "/api/auth/login", "/api/auth/register").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/register",
+                                "/api/auth/activate/**",
+                                "/api/auth/activate-test",
+                                "/api/auth/register-and-activate-test",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/sfu/peer_joined", "/api/sfu/peer_left").permitAll()
+                        .requestMatchers("/api/subscriptions/mollie/webhook").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

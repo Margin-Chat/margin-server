@@ -13,8 +13,8 @@ import org.margin.server.social.space.models.dtos.SpaceMemberDTO;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
 import org.margin.server.users.exceptions.UserNotFoundException;
-import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.social.space.events.UserJoinedSpaceEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ public class SpacesActions {
     private final MarginMemberRepository marginMemberRepository;
     private final SpacesCreationService spacesCreationService;
     private final ConversationService conversationService;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final SpacesRepository spacesRepository;
     private final ChannelService channelService;
 
@@ -37,35 +37,35 @@ public class SpacesActions {
                          MarginMemberRepository marginMemberRepository,
                          SpacesCreationService spacesCreationService,
                          ConversationService conversationService,
-                         WebSocketDeliveryService webSocketDeliveryService,
+                         ApplicationEventPublisher eventPublisher,
                          SpacesRepository spacesRepository,
                          ChannelService channelService) {
         this.spaceMemberRepository = spaceMemberRepository;
         this.marginMemberRepository = marginMemberRepository;
         this.spacesCreationService = spacesCreationService;
         this.conversationService = conversationService;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
         this.spacesRepository = spacesRepository;
         this.channelService = channelService;
     }
 
     @Transactional
-    public SpaceMember addUserToSpace(User user, Space space, SpaceRole role) {
-        if (!marginMemberRepository.existsByUser_IdAndMargin_Id(user.getId(), space.getMargin().getId())) {
-            throw new UserNotInMargin(user.getId());
+    public SpaceMember addUserToSpace(Long userId, Space space, SpaceRole role) {
+        if (!marginMemberRepository.existsByUserIdAndMarginId(userId, space.getMargin().getId())) {
+            throw new UserNotInMargin(userId);
         }
 
-        if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(user.getId(), space.getId())) {
+        if (spaceMemberRepository.existsSpaceMemberByUserAndSpace(userId, space.getId())) {
             throw new DuplicateKeyException("Can't add duplicate space member");
         }
 
-        SpaceMember spaceMember = spacesCreationService.createMember(user, space, role);
-        space.getChannels().forEach(c -> conversationService.createNewConversationMember(c.getConversation(), user));
+        SpaceMember spaceMember = spacesCreationService.createMember(userId, space, role);
+        space.getChannels().forEach(c -> conversationService.createNewConversationMember(c.getConversation(), userId));
 
-        webSocketDeliveryService.notifyUserJoinedSpace(
-                space.getMembers().stream().map(SpaceMember::getUser).toList(),
-                user,
-                space.getId());
+        eventPublisher.publishEvent(new UserJoinedSpaceEvent(
+                space.getMembers().stream().map(m -> m.getUserId()).toList(),
+                userId,
+                space.getId()));
 
         return spaceMember;
     }
@@ -107,7 +107,7 @@ public class SpacesActions {
 
     public SpaceMember prepareRoleUpdate(Space space, SpaceMemberDTO dto) {
         SpaceMember spaceMember = spaceMemberRepository
-                .findByUser_IdAndSpace_Id(dto.user().id(), space.getId())
+                .findByUserIdAndSpaceId(dto.user().id(), space.getId())
                 .orElseThrow(UserNotFoundException::new);
 
         spaceMember.setRole(dto.role());
@@ -119,7 +119,7 @@ public class SpacesActions {
         for (Space space : spaces) {
             channelService.removeUserFromChannels(userId, space.getChannels());
             List<SpaceMember> members = space.getMembers();
-            members.removeIf(m -> m.getUser().getId().equals(userId));
+            members.removeIf(m -> m.getUserId().equals(userId));
             spaceMemberRepository.saveAll(members);
         }
     }

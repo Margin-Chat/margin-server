@@ -1,32 +1,29 @@
 package org.margin.server.integrationtest.config;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.margin.server.subscriptions.services.MollieClient;
+import org.margin.server.websocket.WebSocketServer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
+@Import({TestcontainersConfig.class, CapturingPushSenderConfig.class})
 @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public abstract class MarginTestRunner {
 
-    protected static final int WS_PORT = 8081;
+    @Autowired
+    protected WebSocketServer webSocketServer;
+
+    @MockitoBean
+    protected MollieClient mollieClient;
 
     @BeforeEach
     void waitForServer() throws Exception {
-        waitForPort(WS_PORT, 5000);
-    }
-
-    @SuppressWarnings("BusyWait")
-    private static void waitForPort(int port, long timeoutMs) throws Exception {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            try (var ignored = new java.net.Socket("localhost", port)) {
-                return;
-            } catch (Exception ignored) {
-                Thread.sleep(100);
-            }
-        }
-        throw new IllegalStateException("Port " + port + " not ready after " + timeoutMs + "ms");
+        webSocketServer.awaitBoundPort(5000);
     }
 }

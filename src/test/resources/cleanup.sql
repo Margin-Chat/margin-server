@@ -1,4 +1,5 @@
 TRUNCATE messages, conversation_members, conversations,
-         margin_members, space_members, channels, spaces, margins,
-         calls, users, beta_keys
+         margin_members, space_members, channels, spaces,
+         subscription_limits, subscriptions, margins,
+         calls, users, beta_keys, push_tokens
 CASCADE;

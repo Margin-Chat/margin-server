@@ -3,11 +3,11 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
 import org.margin.server.notifications.services.NotificationService;
 import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -16,8 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,19 +33,19 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
     @Mock
-    private WebSocketDeliveryService webSocketDeliveryService;
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private NotificationService notificationService;
 
     @Test
     void createForUsers_excludesSender() {
-        User sender = testUser(1L);
-        User member1 = testUser(2L);
-        User member2 = testUser(3L);
+        User sender = createUser(1L);
+        User member1 = createUser(2L);
+        User member2 = createUser(3L);
 
         notificationService.createForUsers(
-                List.of(sender, member1, member2), sender,
+                List.of(sender.getId(), member1.getId(), member2.getId()), sender.getId(),
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
 
@@ -49,16 +55,16 @@ class NotificationServiceTest {
         List<Notification> saved = captor.getValue();
         assertThat(saved)
                 .hasSize(2)
-                .noneMatch(n -> n.getRecipient().getId().equals(sender.getId()));
+                .noneMatch(n -> n.getRecipientId().equals(sender.getId()));
     }
 
     @Test
     void createForUsers_setsCorrectFields() {
-        User sender = testUser(1L);
-        User member = testUser(2L);
+        User sender = createUser(1L);
+        User member = createUser(2L);
 
         notificationService.createForUsers(
-                List.of(member), sender,
+                List.of(member.getId()), sender.getId(),
                 NotificationType.ANNOUNCEMENT, 100L, 10L
         );
 
@@ -66,8 +72,8 @@ class NotificationServiceTest {
         verify(notificationRepository).saveAll(captor.capture());
 
         Notification saved = captor.getValue().get(0);
-        assertThat(saved.getRecipient()).isEqualTo(member);
-        assertThat(saved.getSender()).isEqualTo(sender);
+        assertThat(saved.getRecipientId()).isEqualTo(member.getId());
+        assertThat(saved.getSenderId()).isEqualTo(sender.getId());
         assertThat(saved.getType()).isEqualTo(NotificationType.ANNOUNCEMENT);
         assertThat(saved.getReferenceId()).isEqualTo(100L);
         assertThat(saved.getMarginId()).isEqualTo(10L);
@@ -77,7 +83,7 @@ class NotificationServiceTest {
 
     @Test
     void markNotificationAsSeen() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
         Notification n = unseenNotification(recipient, 10L);
 
         notificationService.markNotificationAsSeen(n);
@@ -88,13 +94,13 @@ class NotificationServiceTest {
 
     @Test
     void getUnseenCountsPerMargin_groupsCorrectly() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
 
         Notification n1 = unseenNotification(recipient, 10L);
         Notification n2 = unseenNotification(recipient, 10L);
         Notification n3 = unseenNotification(recipient, 20L);
 
-        when(notificationRepository.findByRecipient_IdAndSeenFalse(recipient.getId()))
+        when(notificationRepository.findByRecipientIdAndSeenFalse(recipient.getId()))
                 .thenReturn(List.of(n1, n2, n3));
 
         Map<Long, Long> counts = notificationService.getUnseenCountsPerMargin(recipient.getId());
@@ -106,26 +112,65 @@ class NotificationServiceTest {
 
     @Test
     void getNotificationsForUser_delegatesToRepository() {
-        User recipient = testUser(1L);
+        User recipient = createUser(1L);
         List<Notification> expected = List.of(unseenNotification(recipient, 10L));
-        when(notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipient.getId()))
+        when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipient.getId()))
                 .thenReturn(expected);
 
         List<Notification> result = notificationService.getNotificationsForUser(recipient.getId());
 
         assertThat(result).isEqualTo(expected);
-        verify(notificationRepository).findByRecipient_IdOrderByCreatedAtDesc(recipient.getId());
+        verify(notificationRepository).findByRecipientIdOrderByCreatedAtDesc(recipient.getId());
     }
 
-    private User testUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
+    @Test
+    void createOrCollapseThreadReply_createsNewNotificationPerRecipient() {
+        User sender = createUser(1L);
+        User author = createUser(2L);
+        User replier = createUser(3L);
+        when(notificationRepository.findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
+                anyLong(), eq(NotificationType.THREAD_REPLY), eq(50L)))
+                .thenReturn(Optional.empty());
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        notificationService.createOrCollapseThreadReply(
+                List.of(sender.getId(), author.getId(), replier.getId()), sender.getId(), 200L, 10L, 50L);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .noneMatch(n -> n.getRecipientId().equals(sender.getId()))
+                .allMatch(n -> n.getType() == NotificationType.THREAD_REPLY)
+                .allMatch(n -> n.getConversationId().equals(50L))
+                .allMatch(n -> n.getReferenceId().equals(200L));
+    }
+
+    @Test
+    void createOrCollapseThreadReply_updatesExistingUnseenNotification() {
+        User sender = createUser(1L);
+        User author = createUser(2L);
+        Notification existing = unseenNotification(author, 10L);
+        existing.setType(NotificationType.THREAD_REPLY);
+        existing.setConversationId(50L);
+        existing.setReferenceId(150L);
+        when(notificationRepository.findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
+                author.getId(), NotificationType.THREAD_REPLY, 50L))
+                .thenReturn(Optional.of(existing));
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        notificationService.createOrCollapseThreadReply(
+                List.of(author.getId()), sender.getId(), 200L, 10L, 50L);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue()).isSameAs(existing);
+        assertThat(captor.getValue().getReferenceId()).isEqualTo(200L);
+        assertThat(captor.getValue().getSenderId()).isEqualTo(sender.getId());
     }
 
     private Notification unseenNotification(User recipient, Long marginId) {
         Notification n = new Notification();
-        n.setRecipient(recipient);
+        n.setRecipientId(recipient.getId());
         n.setMarginId(marginId);
         n.setSeen(false);
         n.setCreatedAt(Instant.now());

@@ -10,7 +10,7 @@ import org.margin.server.users.repositories.UserRepository;
 import org.margin.server.users.repositories.projections.UserWithSharedMarginProjection;
 import org.margin.server.users.services.UserCacheService;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.margin.server.presence.PresenceService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -31,37 +32,35 @@ class UserServiceTest {
     @Mock
     private UserCacheService userCacheService;
     @Mock
-    private ConnectionManager connectionManager;
+    private PresenceService presenceService;
 
     @InjectMocks
     private UserService userService;
 
     @Test
-    @DisplayName("getByHandle should return user when found")
-    void getByHandle_Found() {
-        User user = new User();
-        user.setHandle("alice");
-        when(userRepository.findByHandle("alice")).thenReturn(Optional.of(user));
+    @DisplayName("getByEmail should return user when found")
+    void getByEmail_Found() {
+        User user = createUser(null, "Alice", "alice@margin.org");
+        when(userRepository.findByEmail("alice@margin.org")).thenReturn(Optional.of(user));
 
-        User result = userService.getByHandle("alice");
+        User result = userService.getByEmail("alice@margin.org");
 
-        assertEquals("alice", result.getHandle());
+        assertEquals("alice@margin.org", result.getEmail());
     }
 
     @Test
-    @DisplayName("getByHandle should throw exception when not found")
-    void getByHandle_NotFound() {
-        when(userRepository.findByHandle("unknown")).thenReturn(Optional.empty());
+    @DisplayName("getByEmail should throw exception when not found")
+    void getByEmail_NotFound() {
+        when(userRepository.findByEmail("unknown@margin.org")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> userService.getByHandle("unknown"));
+        assertThrows(RuntimeException.class, () -> userService.getByEmail("unknown@margin.org"));
     }
 
     @Test
     @DisplayName("savePublicPrivateKeysForUser should update encryption details and save")
     void savePublicPrivateKeysForUser_Success() {
         Long userId = 1L;
-        User user = new User();
-        user.setId(userId);
+        User user = createUser(userId);
         UserEncryption encryption = new UserEncryption();
         user.setEncryption(encryption);
 
@@ -77,10 +76,7 @@ class UserServiceTest {
     @Test
     @DisplayName("searchUsers should return grouped results with shared margins")
     void searchUsers_WithSharedMargins_ReturnsGroupedResults() {
-        User user = new User();
-        user.setId(2L);
-        user.setHandle("bob");
-        user.setEmail("bob@margin.org");
+        User user = createUser(2L, "bob", "bob@margin.org");
         user.setCreatedAt(Instant.now());
 
         Long searcherId = 1L;
@@ -90,12 +86,12 @@ class UserServiceTest {
                         new UserWithSharedMarginProjection(user, "Team Alpha"),
                         new UserWithSharedMarginProjection(user, "Team Beta")
                 ));
-        when(connectionManager.isUserOnline(2L)).thenReturn(true);
+        when(presenceService.isUserOnline(2L)).thenReturn(true);
 
         List<UserSearchResultDTO> result = userService.searchUsersWithSharedMargins(searcherId, "bo");
 
         assertEquals(1, result.size());
-        assertEquals("bob", result.getFirst().user().handle());
+        assertEquals("bob", result.getFirst().user().displayName());
         assertTrue(result.getFirst().user().isOnline());
         assertEquals(List.of("Team Alpha", "Team Beta"), result.getFirst().sharedMargins());
     }

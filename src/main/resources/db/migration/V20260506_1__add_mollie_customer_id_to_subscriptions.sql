@@ -1,0 +1,1 @@
+ALTER TABLE subscriptions ADD COLUMN mollie_customer_id VARCHAR(255);

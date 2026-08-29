@@ -1,7 +1,5 @@
 package org.margin.server.websocket.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.margin.server.notifications.Notification;
 import org.margin.server.social.messages.models.dtos.MessageDTO;
@@ -10,6 +8,7 @@ import org.margin.server.websocket.models.WebSocketMessage;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.NotificationPayload;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -29,15 +28,18 @@ public class WebSocketMessageBuilder {
         );
     }
 
-    public String notification(Notification notification) {
+    public String notification(Notification notification, UserDTO sender) {
         var payload = new NotificationPayload(
                 notification.getNotificationId(),
                 notification.getType(),
                 notification.getReferenceId(),
                 notification.getMarginId(),
-                notification.getSender() != null ? new UserDTO(notification.getSender(), false) : null
+                notification.getConversationId(),
+                sender,
+                notification.getCreatedAt(),
+                notification.isSeen()
         );
-        return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipient().getId(), payload);
+        return buildMessage(WebSocketMessageType.NOTIFICATION, notification.getRecipientId(), payload);
     }
 
     public <T> String buildMessage(WebSocketMessageType type, Long recipientId, T payload) {
@@ -51,11 +53,6 @@ public class WebSocketMessageBuilder {
     }
 
     private String toJson(Object obj) {
-        try {
-            return mapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize WebSocket message", e);
-            throw new RuntimeException("Failed to serialize WebSocket message", e);
-        }
+        return mapper.writeValueAsString(obj);
     }
 }

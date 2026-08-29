@@ -1,5 +1,7 @@
 package org.margin.server.users.models;
 
+import org.springframework.modulith.NamedInterface;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -15,22 +17,18 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+@NamedInterface("identity")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@ToString(exclude = {"encryption", "security"})
+@ToString(exclude = "encryption")
 @Table(name = "users")
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank
-    @Size(max = 50)
-    @Column(unique = true, nullable = false)
-    private String handle;
 
     @NotBlank
     @Size(max = 50)
@@ -59,11 +57,10 @@ public class User implements UserDetails {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserEncryption encryption;
 
-    @JsonIgnore
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private UserSecurity security;
-
     private Instant deletedAt;
+
+    @Column(name = "last_seen_at")
+    private Instant lastSeenAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

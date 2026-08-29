@@ -9,7 +9,6 @@ import org.margin.server.social.space.models.SpaceMember;
 import org.margin.server.social.space.models.SpaceRole;
 import org.margin.server.social.space.repositories.SpaceMemberRepository;
 import org.margin.server.social.space.repositories.SpacesRepository;
-import org.margin.server.users.models.User;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,10 +39,10 @@ public class SpacesCreationService {
     }
 
     @Transactional
-    public SpaceMember createMember(User user, Space space, SpaceRole role) {
+    public SpaceMember createMember(Long userId, Space space, SpaceRole role) {
         SpaceMember newSpaceMember = new SpaceMember();
         newSpaceMember.setSpace(space); // This sets the FK
-        newSpaceMember.setUser(user);
+        newSpaceMember.setUserId(userId);
         newSpaceMember.setRole(role);
         newSpaceMember.setJoinedAt(Instant.now());
         SpaceMember spaceMember = spaceMemberRepository.save(newSpaceMember);

@@ -1,7 +1,6 @@
 package org.margin.server.social.messages.models;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -9,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.users.models.User;
 
 import java.time.Instant;
 
@@ -30,12 +28,10 @@ public class Message {
     private Conversation conversation;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "from_user_id", nullable = false)
-    private User fromUser;
+    @Column(name = "from_user_id", nullable = false)
+    private Long fromUserId;
 
-    @NotBlank
-    @Size(min = 1, max = 5000)
+    @Size(max = 5000)
     @Column(nullable = false)
     private String message;
 
@@ -53,9 +49,9 @@ public class Message {
     @Column(name = "edited_at")
     private Instant editedAt;
 
-    public Message(Conversation conversation, User fromUser, String message) {
+    public Message(Conversation conversation, Long fromUserId, String message) {
         this.conversation = conversation;
-        this.fromUser = fromUser;
+        this.fromUserId = fromUserId;
         this.message = message;
         this.isEdited = false;
     }

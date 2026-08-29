@@ -3,16 +3,16 @@ package org.margin.server.websocket;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.connection.ClientConnection;
 
 @Slf4j
 public class WebSocketClientConnection implements ClientConnection {
 
     private final Channel channel;
-    private final User user;
+    private final AuthenticatedUser user;
 
-    public WebSocketClientConnection(Channel channel, User user) {
+    public WebSocketClientConnection(Channel channel, AuthenticatedUser user) {
         this.channel = channel;
         this.user = user;
     }
@@ -22,12 +22,12 @@ public class WebSocketClientConnection implements ClientConnection {
         if (channel.isActive()) {
             channel.writeAndFlush(new TextWebSocketFrame(jsonMessage));
         } else {
-            log.warn("Cannot send message, channel inactive for user {}", user.getId());
+            log.warn("Cannot send message, channel inactive for user {}", user.id());
         }
     }
 
     @Override
-    public User getUser() {
+    public AuthenticatedUser getUser() {
         return user;
     }
 

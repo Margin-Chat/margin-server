@@ -1,5 +1,6 @@
 package org.margin.server.social.conversation.models;
 
+import org.margin.server.social.api.ConversationType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -45,6 +46,12 @@ public class Conversation {
 
     @OneToMany(mappedBy = "conversation", fetch = FetchType.LAZY)
     private List<ConversationMember> members = new ArrayList<>();
+
+    @Column(name = "is_encrypted", nullable = false)
+    private boolean isEncrypted = false;
+
+    @Column(name = "parent_conversation_id", updatable = false)
+    private Long parentConversationId;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

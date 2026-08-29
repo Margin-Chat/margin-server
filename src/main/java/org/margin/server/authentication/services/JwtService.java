@@ -1,9 +1,13 @@
 package org.margin.server.authentication.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.users.models.User;
 import org.margin.server.users.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,32 +21,44 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@NamedInterface("api")
 @Service
 @Slf4j
 public class JwtService {
+    private static final long CLOCK_SKEW_SECONDS = 30;
+
     private final UserService userService;
+    private final UserSecurityService userSecurityService;
     @Value("${jwt.secret}")
     private String secret;
     @Value("${jwt.expiration}") // 24 hours
     private Long expiration;
 
-    public JwtService(UserService userService) {
+    public JwtService(UserService userService, UserSecurityService userSecurityService) {
         this.userService = userService;
+        this.userSecurityService = userSecurityService;
     }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String email, Long userId) {
+    public String generateToken(String email, Long userId, int tokenVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("tv", tokenVersion);
         return createToken(claims, email);
+    }
+
+    public int extractTokenVersion(String token) {
+        Integer tv = extractAllClaims(token).get("tv", Integer.class);
+        return tv == null ? 0 : tv;
     }
 
     public Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
+                .clockSkewSeconds(CLOCK_SKEW_SECONDS)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -61,7 +77,7 @@ public class JwtService {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
 
-    public Optional<User> extractAndValidateJwtTokenFromWebSocket(String uri) {
+    public Optional<AuthenticatedUser> extractAndValidateJwtTokenFromWebSocket(String uri) {
         try {
             URI fullUri = new URI(uri);
             String query = fullUri.getQuery();
@@ -82,9 +98,18 @@ public class JwtService {
             User user = userService.getById(
                     extractAllClaims(token).get("userId", Long.class)
             );
-            return Optional.of(user);
+
+            if (userSecurityService.get(user.getId()).getTokenVersion() != extractTokenVersion(token)) {
+                log.warn("Revoked (token version mismatch) JWT for userId {}", user.getId());
+                return Optional.empty();
+            }
+
+            return Optional.of(new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName()));
+        } catch (ExpiredJwtException e) {
+            log.debug("Expired JWT in WebSocket connection for {}", e.getClaims().getSubject());
+            return Optional.empty();
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.warn("JWT validation failed: {}", e.getMessage());
             return Optional.empty();
         }
     }

@@ -1,34 +1,42 @@
 package org.margin.server.sfu.services;
 
+import org.springframework.modulith.NamedInterface;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.margin.server.presence.PresenceService;
+import org.margin.server.sfu.events.ChannelCallInviteEvent;
+import org.margin.server.sfu.events.ChannelVoiceParticipantEvent;
+import org.margin.server.sfu.models.ChannelCallInvitePayload;
 import org.margin.server.sfu.models.ChannelVoiceParticipantPayload;
-import org.margin.server.users.models.User;
 import org.margin.server.users.models.dtos.UserDTO;
-import org.margin.server.users.repositories.UserRepository;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.services.UserService;
-import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.websocket.models.WebSocketMessageType;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.sfu.models.VoiceParticipantChange;
+import org.margin.server.shared.voice.VoiceParticipantLookup;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@NamedInterface("api")
 @Slf4j
 @Service
-public class SfuService {
+public class SfuService implements VoiceParticipantLookup {
 
-    private final WebSocketDeliveryService webSocketDeliveryService;
-    private final ConnectionManager connectionManager;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PresenceService presenceService;
     private final UserService userService;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
 
     @Getter
     @Value("${sfu.url:http://localhost:3000}")
@@ -41,11 +49,11 @@ public class SfuService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public SfuService(WebSocketDeliveryService webSocketDeliveryService, ConnectionManager connectionManager, UserService userService, UserRepository userRepository) {
-        this.webSocketDeliveryService = webSocketDeliveryService;
-        this.connectionManager = connectionManager;
+    public SfuService(ApplicationEventPublisher eventPublisher, PresenceService presenceService, UserService userService, UserLookup userLookup) {
+        this.eventPublisher = eventPublisher;
+        this.presenceService = presenceService;
         this.userService = userService;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
     }
 
     private HttpHeaders internalHeaders() {
@@ -54,28 +62,36 @@ public class SfuService {
         return headers;
     }
 
-    public void createOrJoinRoom(String roomId) {
+    public void createOrJoinRoom(String roomId, int maxParticipants) {
         String url = sfuUrl + "/rooms/" + roomId;
+        HttpHeaders headers = internalHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
         restTemplate.exchange(
                 url,
                 HttpMethod.POST,
-                new HttpEntity<>(internalHeaders()),
+                new HttpEntity<>(Map.of("maxParticipants", maxParticipants), headers),
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 }
         );
     }
 
     public void notifyUserJoined(Long channelId, Long userId) {
-        User user = userService.getById(userId);
         ChannelVoiceParticipantPayload payload = new ChannelVoiceParticipantPayload(
-                channelId, new UserDTO(user, connectionManager.isUserOnline(userId))
+                channelId, userLookup.dtoOf(userId)
         );
-        webSocketDeliveryService.notifySpaceMembersByChannelId(channelId, WebSocketMessageType.USER_JOINED_VOICE, payload);
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.JOINED, payload));
+    }
+
+    public void inviteToChannelCall(Long inviterId, Long recipientId, Long channelId, String channelName) {
+        ChannelCallInvitePayload payload = new ChannelCallInvitePayload(
+                channelId, channelName, userLookup.dtoOf(inviterId)
+        );
+        eventPublisher.publishEvent(new ChannelCallInviteEvent(recipientId, payload));
     }
 
     public void notifyUserLeft(Long channelId, Long userId) {
-        webSocketDeliveryService.notifySpaceMembersByChannelId(channelId, WebSocketMessageType.USER_LEFT_VOICE,
-                new ChannelVoiceParticipantPayload(channelId, userService.toDTO(userService.getById(userId))));
+        eventPublisher.publishEvent(new ChannelVoiceParticipantEvent(channelId, VoiceParticipantChange.LEFT,
+                new ChannelVoiceParticipantPayload(channelId, userLookup.dtoOf(userId))));
     }
 
     public List<UserDTO> getVoiceParticipants(Long channelId) {
@@ -89,14 +105,48 @@ public class SfuService {
                     }
             );
             List<String> peerIds = response.getBody().getOrDefault("peers", List.of());
-            return peerIds.stream()
-                    .map(id -> userRepository.findById(Long.parseLong(id)).orElse(null))
-                    .filter(Objects::nonNull)
-                    .map(u -> new UserDTO(u, connectionManager.isUserOnline(u.getId())))
-                    .toList();
+            return userLookup.dtosOf(peerIds.stream().map(Long::parseLong).toList());
         } catch (Exception e) {
             log.warn("Could not fetch voice participants for channel {}: {}", channelId, e.getMessage());
             return List.of();
+        }
+    }
+
+    @Override
+    public Map<Long, List<Long>> participantIdsByChannel(Collection<Long> channelIds) {
+        if (channelIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<String>> peersByRoom = fetchAllRoomPeers();
+        Map<Long, List<Long>> participants = new HashMap<>();
+
+        for (Long channelId : channelIds) {
+            List<String> peerIds = peersByRoom.get(String.valueOf(channelId));
+            if (peerIds == null || peerIds.isEmpty()) {
+                continue;
+            }
+            participants.put(channelId, peerIds.stream().map(Long::parseLong).toList());
+        }
+
+        return participants;
+    }
+
+    private Map<String, List<String>> fetchAllRoomPeers() {
+        String url = sfuUrl + "/rooms/peers";
+        try {
+            ResponseEntity<Map<String, Map<String, List<String>>>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(internalHeaders()),
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            Map<String, Map<String, List<String>>> body = response.getBody();
+            return body == null ? Map.of() : body.getOrDefault("rooms", Map.of());
+        } catch (Exception e) {
+            log.warn("Could not fetch voice participants: {}", e.getMessage());
+            return Map.of();
         }
     }
 

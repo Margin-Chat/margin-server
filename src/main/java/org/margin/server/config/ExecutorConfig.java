@@ -12,4 +12,14 @@ public class ExecutorConfig {
     public Executor wsDbExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
+
+    @Bean(name = "webhookExecutor")
+    public Executor webhookExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    @Bean(name = "pushExecutor")
+    public Executor pushExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
 }

@@ -3,8 +3,8 @@ package org.margin.server.unittest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.margin.server.config.ratelimit.RateLimitService;
-import org.margin.server.exceptions.GlobalExceptionHandler;
+import org.margin.server.users.api.UserLookup;
+import org.margin.server.shared.ratelimit.RateLimitService;
 import org.margin.server.social.margin.controllers.MarginController;
 import org.margin.server.social.margin.exceptions.MarginNotFoundException;
 import org.margin.server.social.margin.models.dtos.CreateNewMarginRequest;
@@ -13,13 +13,11 @@ import org.margin.server.social.margin.service.MarginMapper;
 import org.margin.server.social.margin.service.MarginService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
 import org.margin.server.social.models.Visibility;
-import org.margin.server.users.models.User;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
@@ -30,9 +28,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.margin.server.unittest.utils.ControllerTestSupport.standaloneMockMvc;
 
 @ExtendWith(MockitoExtension.class)
 class MarginControllerTest {
+
+    @org.junit.jupiter.api.BeforeEach
+    void authenticate() {
+        org.margin.server.unittest.utils.ControllerTestSupport.authenticateAs(
+                new org.margin.server.shared.security.AuthenticatedUser(1L, "a@b.c", "alice"));
+        org.mockito.Mockito.lenient()
+                .when(userLookup.findById(1L))
+                .thenReturn(java.util.Optional.of(org.margin.server.unittest.utils.UserTestUtils.createUser(1L, "alice")));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearAuth() {
+        org.margin.server.unittest.utils.ControllerTestSupport.clearAuthentication();
+    }
 
     public static final String API_MARGINS = "/api/margins/";
 
@@ -44,15 +57,15 @@ class MarginControllerTest {
     private MarginMapper marginMapper;
     @Mock
     private RateLimitService rateLimitService;
+    @Mock
+    private UserLookup userLookup;
     @InjectMocks
     private MarginController marginController;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc() {
-        return MockMvcBuilders.standaloneSetup(marginController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+        return standaloneMockMvc(marginController);
     }
 
     @Test
@@ -73,7 +86,7 @@ class MarginControllerTest {
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
                 eq(null),
-                any(User.class));
+                any(Long.class));
     }
 
     @Test
@@ -99,7 +112,7 @@ class MarginControllerTest {
                 eq("Test Description"),
                 eq(Visibility.PUBLIC),
                 any(),
-                any(User.class));
+                any(Long.class));
     }
 
     @Test

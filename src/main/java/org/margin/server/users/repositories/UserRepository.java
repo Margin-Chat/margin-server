@@ -12,21 +12,14 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
-            SELECT u
-            FROM User u
-            WHERE LOWER(u.handle) = :handle
-            """)
-    Optional<User> findByHandle(String handle);
-
-    @Query("""
             SELECT new org.margin.server.users.repositories.projections.UserWithSharedMarginProjection(u, m.name)
             FROM User u
-            JOIN MarginMember mm ON mm.user = u
+            JOIN MarginMember mm ON mm.userId = u.id
             JOIN MarginMember mm2 ON mm2.margin = mm.margin
             JOIN Margin m ON m.id = mm.margin.id
-            WHERE mm2.user.id = :searcherId
+            WHERE mm2.userId = :searcherId
             AND u.id != :searcherId
-            AND LOWER(u.handle) LIKE LOWER(CONCAT('%', :query, '%'))
+            AND LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
             """)
     List<UserWithSharedMarginProjection> findUsersWithSharedMargins(
             Long searcherId,
@@ -37,8 +30,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT u
             FROM User u
             JOIN MarginMember mb on mb.margin.id = :marginId
-            AND mb.user.id = u.id
-            WHERE LOWER(u.handle) LIKE LOWER(CONCAT('%', :query, '%'))
+            AND mb.userId = u.id
+            WHERE LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
             """)
     List<User> findUsersByMarginId(Long searcherId, Long marginId, String query);
 

@@ -1,34 +1,18 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.services.ConversationService;
-import org.margin.server.social.conversation.services.ConversationValidationService;
-import org.margin.server.social.messages.models.dtos.MessageReactionDTO;
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 import org.margin.server.websocket.models.payloads.MessageReactionPayload;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class RemoveReactionProcessor implements WebSocketMessageProcessor<MessageReactionPayload> {
-    private final ConversationService conversationService;
-    private final ConversationValidationService conversationValidationService;
     private final MessageService messageService;
-    private final WebSocketDeliveryService webSocketDeliveryService;
 
-    public RemoveReactionProcessor(ConversationService conversationService,
-                                   ConversationValidationService conversationValidationService,
-                                   MessageService messageService,
-                                   WebSocketDeliveryService webSocketDeliveryService) {
-        this.conversationService = conversationService;
-        this.conversationValidationService = conversationValidationService;
+    public RemoveReactionProcessor(MessageService messageService) {
         this.messageService = messageService;
-        this.webSocketDeliveryService = webSocketDeliveryService;
     }
 
     @Override
@@ -37,18 +21,12 @@ public class RemoveReactionProcessor implements WebSocketMessageProcessor<Messag
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<MessageReactionPayload> message) {
-        Conversation conversation = conversationService.getById(message.getRecipientId());
-        conversationValidationService.validateUserIsInConversation(user, conversation);
-
-        MessageReactionDTO reaction = messageService.removeReaction(
-                user,
+    public void process(AuthenticatedUser user, WebSocketMessageIn<MessageReactionPayload> message) {
+        messageService.removeReaction(
+                user.id(),
                 message.getPayload().messageId(),
                 message.getPayload().emoji(),
-                conversation
+                message.getRecipientId()
         );
-
-        List<User> recipients = conversationService.getConversationMembers(conversation.getId());
-        webSocketDeliveryService.notifyReactionRemoved(reaction, recipients, conversation.getType());
     }
 }

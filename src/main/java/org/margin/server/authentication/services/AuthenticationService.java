@@ -1,20 +1,26 @@
 package org.margin.server.authentication.services;
 
+import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
-import org.margin.server.authentication.entities.BetaKey;
+import org.margin.server.authentication.entities.ActivationKey;
+import org.margin.server.authentication.entities.UserSecurity;
+import org.margin.server.authentication.events.UserSessionsRevokedEvent;
+import org.margin.server.authentication.exceptions.InvalidRefreshTokenException;
+import org.margin.server.authentication.exceptions.RegistrationException;
 import org.margin.server.authentication.models.AuthResponse;
-import org.margin.server.authentication.repositories.BetaKeyRepository;
-import org.margin.server.storage.StorageService;
+import org.margin.server.email.EmailService;
+import org.margin.server.users.api.ProfilePictureCommands;
+import org.margin.server.users.api.UserAccountCommands;
+import org.margin.server.users.api.UserLookup;
 import org.margin.server.users.models.User;
-import org.margin.server.users.models.UserEncryption;
-import org.margin.server.users.models.UserSecurity;
-import org.margin.server.users.repositories.UserRepository;
-import org.margin.server.websocket.connection.ConnectionManager;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -25,158 +31,207 @@ public class AuthenticationService {
     private static final int MAX_FAILED_ATTEMPTS = 3;
     private static final int LOCK_DURATION_SECONDS = 30;
 
+    @Value("${margin.mail.require-email-activation:true}")
+    private boolean requireEmailActivation;
+
     private final AuthenticationManager authenticationManager;
-    private final UserRepository userRepository;
+    private final UserLookup userLookup;
+    private final UserAccountCommands userAccountCommands;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final StorageService storageService;
-    private final ConnectionManager connectionManager;
-    private final BetaKeyRepository betaKeyRepository;
+    private final ProfilePictureCommands profilePictureCommands;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ActivationKeyService activationKeyService;
+    private final EmailService emailService;
+    private final UserSecurityService userSecurityService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
-            UserRepository userRepository,
+            UserLookup userLookup,
+            UserAccountCommands userAccountCommands,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            StorageService storageService,
-            ConnectionManager connectionManager, BetaKeyRepository betaKeyRepository) {
+            ProfilePictureCommands profilePictureCommands,
+            ApplicationEventPublisher eventPublisher,
+            ActivationKeyService activationKeyService,
+            EmailService emailService,
+            UserSecurityService userSecurityService,
+            RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
+        this.userAccountCommands = userAccountCommands;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.storageService = storageService;
-        this.connectionManager = connectionManager;
-        this.betaKeyRepository = betaKeyRepository;
+        this.profilePictureCommands = profilePictureCommands;
+        this.eventPublisher = eventPublisher;
+        this.activationKeyService = activationKeyService;
+        this.emailService = emailService;
+        this.userSecurityService = userSecurityService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     public AuthResponse authenticateUser(String email, String password) {
+        String normalisedEmail = email.toLowerCase();
+        log.info("Login attempt for email {}", normalisedEmail);
         try {
-            User user = userRepository.findByEmail(email.toLowerCase())
-                    .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+            User user = userLookup.findByEmail(normalisedEmail)
+                    .orElseThrow(() -> new BadCredentialsException("user not found"));
 
-            if (isAccountLocked(user)) {
-                throw new BadCredentialsException("Account is locked until " + user.getSecurity().getAccountLockedUntil());
+            if (!activationKeyService.isUserActivated(user.getId())) {
+                log.warn("Login blocked — userId {} not yet activated", user.getId());
+                return AuthResponse.failure("User is not yet activated");
+            }
+
+            UserSecurity security = userSecurityService.get(user.getId());
+            if (isAccountLocked(security)) {
+                log.warn("Login blocked — userId {} locked until {}", user.getId(), security.getAccountLockedUntil());
+                throw new BadCredentialsException("account locked");
             }
 
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email.toLowerCase(), password)
+                    new UsernamePasswordAuthenticationToken(normalisedEmail, password)
             );
 
-            resetFailedAttempts(user);
-
-            String token = jwtService.generateToken(email, user.getId());
-
-            log.info("User {} authenticated successfully", user.getDisplayName());
+            resetFailedAttempts(security);
+            String token = jwtService.generateToken(email, user.getId(), security.getTokenVersion());
+            String refreshToken = refreshTokenService.issue(user.getId()).value();
+            log.info("Login successful for userId {}", user.getId());
 
             return new AuthResponse(
                     true,
                     "Login successful",
                     token,
+                    refreshToken,
                     user.getEncryption().getPublicKey(),
                     user.getEncryption().getEncryptedPrivateKey(),
                     user.getEncryption().getSalt(),
                     user.getEncryption().getIv());
 
-        } catch (BadCredentialsException _) {
-            handleFailedLogin(email);
-            log.info("Authentication failed for email: {}", email);
-            return new AuthResponse(
-                    false,
-                    "Invalid credentials",
-                    null, null, null, null, null);
+        } catch (BadCredentialsException e) {
+            log.warn("Login failed for email {} reason {}", normalisedEmail, e.getMessage());
+            handleFailedLogin(normalisedEmail);
+            return AuthResponse.failure("Invalid credentials");
         }
     }
 
-    public void registerUser(String handle,
-                             String displayName,
-                             String email,
-                             String password,
-                             String privateKey,
-                             String publicKey,
-                             String salt,
-                             String iv,
-                             String betaKey,
-                             MultipartFile profilePicture) {
-        BetaKey key = betaKeyRepository.findByKey(betaKey)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid beta key"));
+    public AuthResponse refresh(String presentedRefreshToken) {
+        RefreshTokenService.RotatedToken rotated = refreshTokenService.rotate(presentedRefreshToken);
+        User user = userLookup.findById(rotated.userId())
+                .orElseThrow(InvalidRefreshTokenException::new);
 
-        if (key.isUsed()) {
-            throw new IllegalArgumentException("This beta key has already been used");
-        }
+        String accessToken = jwtService.generateToken(
+                user.getEmail(), user.getId(), userSecurityService.get(user.getId()).getTokenVersion());
 
-        if (userRepository.findByEmail(email.toLowerCase()).isPresent()) {
+        return new AuthResponse(
+                true,
+                "Token refreshed",
+                accessToken,
+                rotated.token().value(),
+                user.getEncryption().getPublicKey(),
+                user.getEncryption().getEncryptedPrivateKey(),
+                user.getEncryption().getSalt(),
+                user.getEncryption().getIv());
+    }
+
+    @Transactional
+    public ActivationKey registerUser(String displayName,
+                                      String email,
+                                      String password,
+                                      String privateKey,
+                                      String publicKey,
+                                      String salt,
+                                      String iv,
+                                      MultipartFile profilePicture) {
+        if (userAccountCommands.emailIsTaken(email)) {
             throw new IllegalArgumentException("Email already in use");
-        }
-
-        if (userRepository.findByHandle(handle.toLowerCase()).isPresent()) {
-            throw new IllegalArgumentException("Handle already exists");
         }
 
         String profilePictureUrl = null;
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            profilePictureUrl = storageService.saveProfilePicture(profilePicture);
+            profilePictureUrl = profilePictureCommands.save(profilePicture);
         }
 
-        User user = new User();
-        user.setHandle(handle.toLowerCase());
-        user.setDisplayName(displayName);
-        user.setEmail(email.toLowerCase());
-        user.setPassword(passwordEncoder.encode(password));
-        user.setProfilePictureUrl(profilePictureUrl);
-        user.setCreatedAt(Instant.now());
+        Long userId = userAccountCommands.register(new UserAccountCommands.NewUser(
+                displayName, email, passwordEncoder.encode(password), profilePictureUrl,
+                publicKey, privateKey, salt, iv));
 
-        UserEncryption encryption = new UserEncryption();
-        encryption.setUser(user);
-        encryption.setSalt(salt);
-        encryption.setIv(iv);
-        encryption.setPublicKey(publicKey);
-        encryption.setEncryptedPrivateKey(privateKey);
-        user.setEncryption(encryption);
-
-        UserSecurity security = new UserSecurity();
-        security.setUser(user);
+        UserSecurity security = new UserSecurity(userId);
         security.setFailedLoginAttempts(0);
-        user.setSecurity(security);
+        userSecurityService.save(security);
 
-        User savedUser = userRepository.save(user);
+        ActivationKey activationKey = activationKeyService.generateActivationKey(userId);
 
-        key.setUsedBy(savedUser);
-        key.setUsedAt(Instant.now());
-        betaKeyRepository.save(key);
+        if (!requireEmailActivation) {
+            activationKeyService.findAndConsumeActivationKey(activationKey.getToken());
+            log.info("Email activation disabled — user {} auto-activated", email);
+            return activationKey;
+        }
+
+        String registrationContent = emailService.buildRegistrationMail(displayName, activationKey.getToken());
+        try {
+            emailService.sendEmail(email, "Email activation for margin", registrationContent);
+        } catch (MessagingException _) {
+            throw new RegistrationException("Failed to send activation email for margin");
+        }
+
+        log.info("Email registration sent for user {}", email);
+
+        return activationKey;
     }
 
-    private boolean isAccountLocked(User user) {
-        if (user.getSecurity().getAccountLockedUntil() == null) {
+    private boolean isAccountLocked(UserSecurity security) {
+        if (security.getAccountLockedUntil() == null) {
             return false;
         }
-        return user.getSecurity().getAccountLockedUntil().isAfter(Instant.now());
+        return security.getAccountLockedUntil().isAfter(Instant.now());
     }
 
     private void handleFailedLogin(String email) {
-        userRepository.findByEmail(email.toLowerCase()).ifPresent(user -> {
-            user.getSecurity().setFailedLoginAttempts(user.getSecurity().getFailedLoginAttempts() + 1);
-            user.getSecurity().setLastFailedLoginAttempt(Instant.now());
+        userLookup.findByEmail(email.toLowerCase()).ifPresent(user -> {
+            UserSecurity security = userSecurityService.get(user.getId());
+            security.setFailedLoginAttempts(security.getFailedLoginAttempts() + 1);
+            security.setLastFailedLoginAttempt(Instant.now());
 
-            if (user.getSecurity().getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
-                user.getSecurity().setAccountLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
+            if (security.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                security.setAccountLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
                 log.warn("Account locked for user {} until {}",
-                        user.getDisplayName(), user.getSecurity().getAccountLockedUntil());
+                        user.getDisplayName(), security.getAccountLockedUntil());
             }
 
-            userRepository.save(user);
+            userSecurityService.save(security);
         });
     }
 
-    private void resetFailedAttempts(User user) {
-        if (user.getSecurity().getFailedLoginAttempts() > 0) {
-            user.getSecurity().setFailedLoginAttempts(0);
-            user.getSecurity().setLastFailedLoginAttempt(null);
-            user.getSecurity().setAccountLockedUntil(null);
-            userRepository.save(user);
+    private void resetFailedAttempts(UserSecurity security) {
+        if (security.getFailedLoginAttempts() > 0) {
+            security.setFailedLoginAttempts(0);
+            security.setLastFailedLoginAttempt(null);
+            security.setAccountLockedUntil(null);
+            userSecurityService.save(security);
         }
     }
 
-    public void logoutUser(User user) {
-        connectionManager.closeAllSessions(user.getId());
+    @Transactional
+    public void logoutUser(Long userId, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            logoutAllDevices(userId);
+            return;
+        }
+        refreshTokenService.revoke(refreshToken);
+        eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
+    }
+
+    @Transactional
+    public void logoutAllDevices(Long userId) {
+        userSecurityService.bumpTokenVersion(userId);
+        refreshTokenService.revokeAllForUser(userId);
+        userAccountCommands.invalidateCachedUser(userId);
+        eventPublisher.publishEvent(new UserSessionsRevokedEvent(userId));
+    }
+
+    @Transactional
+    public void updateEncryptionKeys(Long userId, String publicKey, String encryptedPrivateKey, String salt, String iv) {
+        userAccountCommands.updateEncryptionKeys(userId, publicKey, encryptedPrivateKey, salt, iv);
     }
 }

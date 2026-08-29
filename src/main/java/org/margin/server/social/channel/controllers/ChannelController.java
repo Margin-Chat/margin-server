@@ -1,10 +1,10 @@
 package org.margin.server.social.channel.controllers;
 
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.social.channel.entities.Channel;
 import org.margin.server.social.channel.models.ChannelDTO;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.margin.validations.MarginAuthorizationService;
-import org.margin.server.users.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -25,38 +25,39 @@ public class ChannelController {
 
     @GetMapping("/{channelId}")
     public ResponseEntity<ChannelDTO> getChannel(@PathVariable Long channelId,
-                                                 @AuthenticationPrincipal User user) {
+                                                 @AuthenticationPrincipal AuthenticatedUser user) {
         Channel channel = channelService.getById(channelId);
-        marginAuthorizationService.requireMarginMember(user.getId(), channel.getSpace().getMargin().getId());
+        marginAuthorizationService.requireMarginMember(user.id(), channel.getSpace().getMargin().getId());
         return ResponseEntity.ok(new ChannelDTO(channel));
     }
 
     @GetMapping("/{spaceId}/get_channels_for_space")
-    public List<ChannelDTO> getChannelsForSpace(@AuthenticationPrincipal User user,
+    public List<ChannelDTO> getChannelsForSpace(@AuthenticationPrincipal AuthenticatedUser user,
                                                 @PathVariable Long spaceId) {
-        marginAuthorizationService.requireSpaceMember(user.getId(), spaceId);
+        marginAuthorizationService.requireSpaceMember(user.id(), spaceId);
         return channelService.getChannelsForSpaceAsDto(spaceId);
     }
 
     @PostMapping("/create_channel")
-    public ChannelDTO createChannel(@AuthenticationPrincipal User user,
+    public ChannelDTO createChannel(@AuthenticationPrincipal AuthenticatedUser user,
                                     @RequestBody ChannelDTO channelDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), channelDTO.spaceId());
-        return channelService.createChannelAsDto(channelDTO.spaceId(), channelDTO.name(), channelDTO.description());
+        marginAuthorizationService.requireSpaceAdmin(user.id(), channelDTO.spaceId());
+        return channelService.createChannelAsDto(channelDTO.spaceId(), channelDTO.name(),
+                channelDTO.description(), channelDTO.channelType());
     }
 
     @PostMapping("/update_channel")
-    public ChannelDTO updateChannel(@AuthenticationPrincipal User user,
+    public ChannelDTO updateChannel(@AuthenticationPrincipal AuthenticatedUser user,
                                     @RequestBody ChannelDTO channelDTO) {
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), channelDTO.spaceId());
+        marginAuthorizationService.requireSpaceAdmin(user.id(), channelDTO.spaceId());
         return channelService.updateChannelAsDto(channelDTO);
     }
 
     @DeleteMapping("/delete_channel")
-    public ResponseEntity<Void> deleteChannel(@AuthenticationPrincipal User user,
+    public ResponseEntity<Void> deleteChannel(@AuthenticationPrincipal AuthenticatedUser user,
                                               @RequestBody Long channelId) {
         Channel channel = channelService.getById(channelId);
-        marginAuthorizationService.requireSpaceAdmin(user.getId(), channel.getSpace().getId());
+        marginAuthorizationService.requireSpaceAdmin(user.id(), channel.getSpace().getId());
         channelService.deleteChannel(channelId);
         return ResponseEntity.ok().build();
     }

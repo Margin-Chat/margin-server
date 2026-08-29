@@ -1,6 +1,6 @@
 package org.margin.server.websocket.processors;
 
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
 
@@ -11,7 +11,7 @@ public class UserJoinedSpaceProcessor implements WebSocketMessageProcessor<Strin
     }
 
     @Override
-    public void process(User user, WebSocketMessageIn<String> message) {
+    public void process(AuthenticatedUser user, WebSocketMessageIn<String> message) {
 
     }
 }

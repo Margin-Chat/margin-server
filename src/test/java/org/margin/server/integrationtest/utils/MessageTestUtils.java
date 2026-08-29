@@ -28,7 +28,7 @@ public class MessageTestUtils {
     public static void saveMessage(Conversation conversation, User fromUser, String content, boolean isDeleted) {
         Message message = new Message();
         message.setConversation(conversation);
-        message.setFromUser(fromUser);
+        message.setFromUserId(fromUser.getId());
         message.setMessage(content);
         message.setIsDeleted(isDeleted);
         message.setCreatedAt(Instant.now());

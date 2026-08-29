@@ -7,12 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.websocket.connection.ClientConnection;
 import org.margin.server.websocket.connection.ConnectionManager;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class ConnectionManagerTest {
@@ -27,12 +28,6 @@ class ConnectionManagerTest {
         connectionManager = new ConnectionManager();
     }
 
-    private User createUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        return user;
-    }
-
     private ClientConnection activeConnection(Channel channel) {
         ClientConnection conn = mock(ClientConnection.class);
         lenient().when(conn.isActive()).thenReturn(true);
@@ -43,7 +38,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("addConnection should store connection and isUserOnline should return true")
     void addConnection_Success() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         when(mockConnection.isActive()).thenReturn(true);
 
         connectionManager.addConnection(user, mockConnection);
@@ -54,7 +49,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("addConnection should allow multiple sessions for the same user")
     void addConnection_MultipleSessions() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         ClientConnection session1 = mock(ClientConnection.class);
         ClientConnection session2 = mock(ClientConnection.class);
         when(session1.isActive()).thenReturn(true);
@@ -68,7 +63,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("removeConnection should return false and keep user online when other sessions remain")
     void removeConnection_NotLastSession_ReturnsFalse() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         Channel channel1 = mock(Channel.class);
         Channel channel2 = mock(Channel.class);
         ClientConnection conn1 = activeConnection(channel1);
@@ -86,7 +81,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("removeConnection should return true and mark user offline when last session closes")
     void removeConnection_LastSession_ReturnsTrue() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         when(mockConnection.getChannel()).thenReturn(mockChannel);
 
         connectionManager.addConnection(user, mockConnection);
@@ -100,7 +95,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("sendToUser should send message to all active sessions")
     void sendToUser_SendsToAllActiveSessions() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         ClientConnection conn1 = mock(ClientConnection.class);
         ClientConnection conn2 = mock(ClientConnection.class);
         when(conn1.isActive()).thenReturn(true);
@@ -118,7 +113,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("sendToUser should skip inactive sessions")
     void sendToUser_SkipsInactiveSessions() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         ClientConnection active = mock(ClientConnection.class);
         ClientConnection inactive = mock(ClientConnection.class);
         when(active.isActive()).thenReturn(true);
@@ -136,9 +131,9 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("broadcast should send to all sessions of all users except the excluded one")
     void broadcast_SendsToOthers() {
-        User user1 = createUser(1L);
-        User user2 = createUser(2L);
-        User user3 = createUser(3L);
+        AuthenticatedUser user1 = authUser(1L);
+        AuthenticatedUser user2 = authUser(2L);
+        AuthenticatedUser user3 = authUser(3L);
 
         ClientConnection conn1 = mock(ClientConnection.class);
         ClientConnection conn2 = mock(ClientConnection.class);
@@ -162,7 +157,7 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("closeAllSessions should close every session for the user")
     void closeAllSessions_ClosesAllSessions() {
-        User user = createUser(1L);
+        AuthenticatedUser user = authUser(1L);
         ClientConnection conn1 = mock(ClientConnection.class);
         ClientConnection conn2 = mock(ClientConnection.class);
 
@@ -179,9 +174,9 @@ class ConnectionManagerTest {
     @Test
     @DisplayName("clearAll should close all connections and clear map")
     void clearAll_ClosesAndClears() {
-        connectionManager.addConnection(createUser(1L), mockConnection);
+        connectionManager.addConnection(authUser(1L), mockConnection);
         ClientConnection mockConnection2 = mock(ClientConnection.class);
-        connectionManager.addConnection(createUser(2L), mockConnection2);
+        connectionManager.addConnection(authUser(2L), mockConnection2);
 
         connectionManager.clearAll();
 

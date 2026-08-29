@@ -1,10 +1,10 @@
 package org.margin.server.notifications.services;
 
 import org.margin.server.notifications.Notification;
-import org.margin.server.notifications.NotificationType;
+import org.margin.server.shared.notifications.NotificationType;
 import org.margin.server.notifications.repositories.NotificationRepository;
-import org.margin.server.users.models.User;
-import org.margin.server.websocket.services.WebSocketDeliveryService;
+import org.margin.server.notifications.events.NotificationDeliveryEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,26 +16,33 @@ import java.util.stream.Collectors;
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
-    private final WebSocketDeliveryService webSocketDeliveryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public NotificationService(NotificationRepository notificationRepository,
-                               WebSocketDeliveryService webSocketDeliveryService) {
+                               ApplicationEventPublisher eventPublisher) {
         this.notificationRepository = notificationRepository;
-        this.webSocketDeliveryService = webSocketDeliveryService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
-    public void createForUsers(List<User> members, User sender, NotificationType type,
+    public void createForUsers(List<Long> recipientIds, Long senderId, NotificationType type,
                                Long referenceId, Long marginId) {
-        List<Notification> notifications = members.stream()
-                .filter(member -> !member.getId().equals(sender.getId()))
-                .map(member -> {
+        createForUsers(recipientIds, senderId, type, referenceId, marginId, null);
+    }
+
+    @Transactional
+    public void createForUsers(List<Long> recipientIds, Long senderId, NotificationType type,
+                               Long referenceId, Long marginId, Long conversationId) {
+        List<Notification> notifications = recipientIds.stream()
+                .filter(recipientId -> senderId == null || !recipientId.equals(senderId))
+                .map(recipientId -> {
                     Notification n = new Notification();
-                    n.setRecipient(member);
-                    n.setSender(sender);
+                    n.setRecipientId(recipientId);
+                    n.setSenderId(senderId);
                     n.setType(type);
                     n.setReferenceId(referenceId);
                     n.setMarginId(marginId);
+                    n.setConversationId(conversationId);
                     n.setSeen(false);
                     n.setCreatedAt(Instant.now());
                     return n;
@@ -44,7 +51,34 @@ public class NotificationService {
 
         notificationRepository.saveAll(notifications);
 
-        notifications.forEach(webSocketDeliveryService::notifyNotification);
+        notifications.forEach(n -> eventPublisher.publishEvent(new NotificationDeliveryEvent(n)));
+    }
+
+    @Transactional
+    public void createOrCollapseThreadReply(List<Long> recipientIds, Long senderId, Long referenceId,
+                                            Long marginId, Long threadConversationId) {
+        for (Long recipientId : recipientIds) {
+            if (senderId != null && recipientId.equals(senderId)) {
+                continue;
+            }
+            Notification notification = notificationRepository
+                    .findFirstByRecipientIdAndTypeAndConversationIdAndSeenFalse(
+                            recipientId, NotificationType.THREAD_REPLY, threadConversationId)
+                    .orElseGet(() -> {
+                        Notification n = new Notification();
+                        n.setRecipientId(recipientId);
+                        n.setType(NotificationType.THREAD_REPLY);
+                        n.setConversationId(threadConversationId);
+                        n.setSeen(false);
+                        return n;
+                    });
+            notification.setSenderId(senderId);
+            notification.setReferenceId(referenceId);
+            notification.setMarginId(marginId);
+            notification.setCreatedAt(Instant.now());
+            notification = notificationRepository.save(notification);
+            eventPublisher.publishEvent(new NotificationDeliveryEvent(notification));
+        }
     }
 
     @Transactional
@@ -54,11 +88,11 @@ public class NotificationService {
     }
 
     public List<Notification> getNotificationsForUser(Long recipientId) {
-        return notificationRepository.findByRecipient_IdOrderByCreatedAtDesc(recipientId);
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId);
     }
 
     public Map<Long, Long> getUnseenCountsPerMargin(Long recipientId) {
-        return notificationRepository.findByRecipient_IdAndSeenFalse(recipientId)
+        return notificationRepository.findByRecipientIdAndSeenFalse(recipientId)
                 .stream()
                 .filter(n -> n.getMarginId() != null)
                 .collect(Collectors.groupingBy(Notification::getMarginId, Collectors.counting()));

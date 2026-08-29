@@ -3,13 +3,16 @@ package org.margin.server.unittest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.services.ConversationService;
 import org.margin.server.social.conversation.services.ConversationValidationService;
 import org.margin.server.social.messages.services.MessageService;
-import org.margin.server.users.models.User;
+import org.margin.server.shared.security.AuthenticatedUser;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
+
+import java.util.List;
+import org.margin.server.websocket.models.payloads.SendMessagePayload;
 import org.margin.server.websocket.processors.SendMessageProcessor;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -19,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.*;
 
 @ExtendWith(MockitoExtension.class)
 class SendMessageProcessorTest {
@@ -42,59 +46,57 @@ class SendMessageProcessorTest {
 
     @Test
     void process_savesMessageAndNotifiesRecipients() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
         conversation.setType(ConversationType.DIRECT);
 
-        WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
+        WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setType(WebSocketMessageType.SEND_MESSAGE);
         message.setRecipientId(10L);
-        message.setPayload("Hello");
+        message.setPayload(new SendMessagePayload("Hello", List.of(7L)));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
-        doNothing().when(messageService).sendMessage(sender, "Hello", conversation);
+        doNothing().when(messageService).sendMessage(sender.id(), "Hello", conversation.getId(), List.of(7L));
 
         processor.process(sender, message);
 
-        verify(conversationService).getById(10L);
-        verify(messageService).sendMessage(sender, "Hello", conversation);
+        verify(messageService).sendMessage(sender.id(), "Hello", conversation.getId(), List.of(7L));
     }
 
     @Test
     void process_passesCorrectPayloadToMessageService() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
         conversation.setType(ConversationType.GROUP);
 
-        String payload = "Test message content";
+        String content = "Test message content";
+        List<Long> ids = List.of(11L, 12L);
 
-        WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
+        WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setRecipientId(10L);
-        message.setPayload(payload);
+        message.setPayload(new SendMessagePayload(content, ids));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
 
         processor.process(sender, message);
 
-        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messageService).sendMessage(eq(sender), payloadCaptor.capture(), eq(conversation));
-        assertEquals(payload, payloadCaptor.getValue());
+        ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
+        verify(messageService).sendMessage(eq(sender.id()), contentCaptor.capture(), eq(conversation.getId()), eq(ids));
+        assertEquals(content, contentCaptor.getValue());
     }
 
     @Test
-    void process_throwsWhenConversationNotFound() {
-        User sender = createUser(1L, "sender");
+    void process_propagatesWhenConversationInvalid() {
+        AuthenticatedUser sender = authUser(1L, "sender");
 
-        WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
+        WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setRecipientId(999L);
-        message.setPayload("Hello");
+        message.setPayload(new SendMessagePayload("Hello", null));
 
-        when(conversationService.getById(999L))
-                .thenThrow(new RuntimeException("Conversation not found"));
+        doThrow(new RuntimeException("Conversation not found"))
+                .when(conversationValidationService).validateUserIsInConversation(sender.id(), 999L);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
         verifyNoInteractions(messageService);
@@ -102,26 +104,19 @@ class SendMessageProcessorTest {
 
     @Test
     void process_doesNotNotifyWhenMessageServiceFails() {
-        User sender = createUser(1L, "sender");
+        AuthenticatedUser sender = authUser(1L, "sender");
 
         Conversation conversation = new Conversation();
         conversation.setId(10L);
         conversation.setType(ConversationType.DIRECT);
 
-        WebSocketMessageIn<String> message = new WebSocketMessageIn<>();
+        WebSocketMessageIn<SendMessagePayload> message = new WebSocketMessageIn<>();
         message.setRecipientId(10L);
-        message.setPayload("Hello");
+        message.setPayload(new SendMessagePayload("Hello", null));
 
-        when(conversationService.getById(10L)).thenReturn(conversation);
-        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender, "Hello", conversation);
+        doThrow(new RuntimeException("DB error")).when(messageService).sendMessage(sender.id(), "Hello", conversation.getId(), null);
 
         assertThrows(RuntimeException.class, () -> processor.process(sender, message));
     }
 
-    private User createUser(Long id, String handle) {
-        User user = new User();
-        user.setId(id);
-        user.setHandle(handle);
-        return user;
-    }
 }

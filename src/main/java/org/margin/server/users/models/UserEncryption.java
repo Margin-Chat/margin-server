@@ -8,7 +8,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@ToString(exclude = {"encryption", "security"})
 @Table(name = "user_encryption")
 public class UserEncryption {
     @Id

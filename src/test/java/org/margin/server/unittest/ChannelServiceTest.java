@@ -10,7 +10,7 @@ import org.margin.server.social.channel.repositories.ChannelRepository;
 import org.margin.server.social.channel.services.ChannelCreationService;
 import org.margin.server.social.channel.services.ChannelService;
 import org.margin.server.social.conversation.models.Conversation;
-import org.margin.server.social.conversation.models.ConversationType;
+import org.margin.server.social.api.ConversationType;
 import org.margin.server.social.conversation.repositories.ConversationMemberRepository;
 import org.margin.server.social.conversation.repositories.ConversationRepository;
 import org.margin.server.social.conversation.services.ConversationService;
@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.margin.server.unittest.utils.UserTestUtils.createUser;
+import static org.margin.server.unittest.utils.SpaceTestUtils.createSpace;
 
 @ExtendWith(MockitoExtension.class)
 class ChannelServiceTest {
@@ -50,14 +52,12 @@ class ChannelServiceTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
+        testUser = createUser(1L);
 
-        testSpace = new Space();
-        testSpace.setId(100L);
+        testSpace = createSpace(100L);
 
         SpaceMember member = new SpaceMember();
-        member.setUser(testUser);
+        member.setUserId(testUser.getId());
         testSpace.setMembers(List.of(member));
     }
 
@@ -91,7 +91,7 @@ class ChannelServiceTest {
 
         verify(channelCreationService).createChannel(testSpace, name, desc);
         verify(conversationService).createNewConversationForUsers(
-                eq(ConversationType.CHANNEL), eq(channel), argThat(users -> users.size() == 1 && users.contains(testUser)));
+                eq(ConversationType.CHANNEL), eq(channel), argThat(ids -> ids.size() == 1 && ids.contains(testUser.getId())));
         verify(channelRepository).save(channel);
     }
 

@@ -1,0 +1,2 @@
+ALTER TABLE users DROP CONSTRAINT IF EXISTS uc_users_handle;
+ALTER TABLE users DROP COLUMN handle;

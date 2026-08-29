@@ -1,14 +1,13 @@
 package org.margin.server.websocket;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.margin.server.websocket.models.WebSocketMessageIn;
 import org.margin.server.websocket.models.WebSocketMessageType;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -25,7 +24,7 @@ public class WebSocketMessageDecoder extends MessageToMessageDecoder<TextWebSock
         try {
             String payload = frame.text();
             JsonNode node = objectMapper.readTree(payload);
-            WebSocketMessageType type = WebSocketMessageType.valueOf(node.get("type").asText());
+            WebSocketMessageType type = WebSocketMessageType.valueOf(node.get("type").asString());
 
             if (type.payloadClass == null) {
                 Long recipientId = node.has("recipientId") ? node.get("recipientId").asLong() : null;
@@ -37,12 +36,10 @@ public class WebSocketMessageDecoder extends MessageToMessageDecoder<TextWebSock
 
         } catch (IllegalArgumentException e) {
             ctx.fireExceptionCaught(new IllegalArgumentException("Unknown message type: " + e.getMessage()));
-        } catch (JsonProcessingException e) {
-            ctx.fireExceptionCaught(new RuntimeException("Failed to parse message: " + e.getMessage()));
         }
     }
 
-    private <T> WebSocketMessageIn<T> parseMessage(String json, Class<T> payloadClass) throws JsonProcessingException {
+    private <T> WebSocketMessageIn<T> parseMessage(String json, Class<T> payloadClass) {
         JavaType type = objectMapper.getTypeFactory()
                 .constructParametricType(WebSocketMessageIn.class, payloadClass);
         return objectMapper.readValue(json, type);
