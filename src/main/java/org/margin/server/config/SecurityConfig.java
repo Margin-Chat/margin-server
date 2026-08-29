@@ -93,7 +93,12 @@ public class SecurityConfig {
                                 "/api/meetings/*/preview",
                                 "/api/meetings/*/guest-session",
                                 "/api/meetings/rsvp").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(
+                                "/api/meetings/*/guest-join",
+                                "/api/meetings/claim",
+                                "/api/meetings/session")
+                        .hasAuthority(MeetingGuestAuthenticationFilter.MEETING_GUEST)
+                        .anyRequest().hasAuthority(JwtAuthenticationFilter.MARGIN_USER)
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(meetingGuestAuthFilter, JwtAuthenticationFilter.class);

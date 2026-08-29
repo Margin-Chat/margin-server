@@ -8,6 +8,7 @@ import lombok.NonNull;
 import org.margin.server.meetings.security.MeetingGuestPrincipal;
 import org.margin.server.meetings.services.MeetingGuestTokenService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,8 @@ import java.util.Optional;
 
 @Component
 public class MeetingGuestAuthenticationFilter extends OncePerRequestFilter {
+
+    public static final String MEETING_GUEST = "MEETING_GUEST";
 
     private final MeetingGuestTokenService guestTokenService;
 
@@ -45,7 +48,8 @@ public class MeetingGuestAuthenticationFilter extends OncePerRequestFilter {
         Optional<MeetingGuestPrincipal> guest = guestTokenService.parse(header.substring(7));
         if (guest.isPresent()) {
             UsernamePasswordAuthenticationToken token =
-                    new UsernamePasswordAuthenticationToken(guest.get(), null, List.of());
+                    new UsernamePasswordAuthenticationToken(
+                            guest.get(), null, List.of(new SimpleGrantedAuthority(MEETING_GUEST)));
             token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(token);
         }

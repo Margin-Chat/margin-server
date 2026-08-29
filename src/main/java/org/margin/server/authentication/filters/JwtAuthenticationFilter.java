@@ -13,16 +13,22 @@ import org.margin.server.authentication.services.JwtService;
 import org.margin.server.users.models.User;
 import org.margin.server.users.api.UserLookup;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    public static final String MARGIN_USER = "MARGIN_USER";
 
     private final JwtService jwtService;
     private final UserLookup userLookup;
@@ -34,6 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
         this.userLookup = userLookup;
         this.userSecurityService = userSecurityService;
+    }
+
+    private static List<GrantedAuthority> marginUserAuthorities(User user) {
+        List<GrantedAuthority> authorities = new ArrayList<>(user.getAuthorities());
+        authorities.add(new SimpleGrantedAuthority(MARGIN_USER));
+        return authorities;
     }
 
     @Override
@@ -69,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(
                                     new AuthenticatedUser(user.getId(), user.getEmail(), user.getDisplayName()),
                                     null,
-                                    user.getAuthorities()
+                                    marginUserAuthorities(user)
                             );
 
                     authToken.setDetails(

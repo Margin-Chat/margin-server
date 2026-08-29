@@ -98,12 +98,40 @@ class MeetingGuestSecurityTest extends MarginTestRunner {
     }
 
     @Test
-    void aGuestTokenIsAcceptedOnTheMeetingsChain() throws Exception {
+    void aGuestTokenIsAcceptedOnTheGuestEndpoints() throws Exception {
         String token = guestToken();
 
-        int status = get("/api/meetings/eligible-margins", token).statusCode();
+        assertEquals(200, get("/api/meetings/session", token).statusCode(),
+                "positive control: the guest token works on the endpoints meant for it");
+    }
 
-        assertNotEquals(401, status,
-                "positive control: the guest token authenticates on its own chain");
+    @Test
+    void aGuestTokenIsRefusedOnTheMarginUserEndpoints() throws Exception {
+        String token = guestToken();
+
+        assertEquals(403, get("/api/meetings/eligible-margins", token).statusCode(),
+                "a guest principal cannot resolve AuthenticatedUser, so this must be refused "
+                        + "rather than reaching the controller");
+        assertEquals(403, get("/api/meetings", token).statusCode());
+    }
+
+    @Test
+    void aGuestCannotEndOrAdministerAMeeting() throws Exception {
+        MeetingDTO meeting = newMeeting();
+        String token = guestService.createGuestSession(meeting.code(), "Wanderer").guestToken();
+
+        assertEquals(403, post("/api/meetings/" + meeting.code() + "/end", token).statusCode());
+        assertEquals(403, get("/api/meetings/" + meeting.code() + "/lobby", token).statusCode());
+        assertEquals(403, post("/api/meetings/" + meeting.code() + "/admit", token).statusCode());
+    }
+
+    private HttpResponse<String> post(String path, String token) throws Exception {
+        return client.send(
+                HttpRequest.newBuilder(URI.create(base() + path))
+                        .header("Authorization", "Bearer " + token)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"participantId\":1}"))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
     }
 }
