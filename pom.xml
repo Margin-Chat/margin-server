@@ -218,7 +218,7 @@
                 <configuration>
                     <mainClass>org.margin.server.MarginServerApplication</mainClass>
                     <image>
-                        <name>codeberg.org/margin/margin-server:${project.version}</name>
+                        <name>ghcr.io/marginchat/margin-server:${project.version}</name>
                     </image>
                     <excludes>
                         <exclude>

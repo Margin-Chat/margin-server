@@ -24,15 +24,15 @@ Dev defaults are in `application-dev.yml`.
 
 ## Got a question?
 
-Check the [wiki](https://codeberg.org/margin/margin-server/wiki) or open an [issue](https://codeberg.org/margin/margin-server/issues).
+Check the [wiki](https://github.com/MarginChat/margin-server/wiki) or open an [issue](https://github.com/MarginChat/margin-server/issues).
 
 ## Found a bug?
 
-Please search [existing issues](https://codeberg.org/margin/margin-server/issues) before opening a new one.
+Please search [existing issues](https://github.com/MarginChat/margin-server/issues) before opening a new one.
 
 ## Contributing
 
-Open an [issue](https://codeberg.org/margin/margin-server/issues) or send a pull request. There are plenty
+Open an [issue](https://github.com/MarginChat/margin-server/issues) or send a pull request. There are plenty
 of ways to help that don't require writing code.
 
 ## License
